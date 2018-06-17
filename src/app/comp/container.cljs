@@ -12,7 +12,8 @@
             [respo-message.comp.messages :refer [comp-messages]]
             [app.comp.reel :refer [comp-reel]]
             [app.config :refer [dev?]]
-            [app.schema :as schema]))
+            [app.schema :as schema]
+            [app.comp.month :refer [comp-month]]))
 
 (defcomp
  comp-offline
@@ -52,7 +53,7 @@
       (comp-navigation (:logged-in? store) (:count store))
       (if (:logged-in? store)
         (case (:name router)
-          :home (div {} (<> "Home"))
+          :home (comp-month (:today store) (get-in store [:session :cursor]))
           :profile (comp-profile (:user store) (:data router))
           (<> router))
         (comp-login states))

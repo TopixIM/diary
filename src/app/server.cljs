@@ -9,7 +9,8 @@
             ["shortid" :as shortid]
             [app.node-config :as node-config]
             [app.config :refer [dev?]]
-            [app.config :as config]))
+            [app.config :as config]
+            [app.util :refer [get-today!]]))
 
 (def initial-db
   (let [filepath (:storage-path node-config/env)]
@@ -40,6 +41,12 @@
            (reset! *reel new-reel)))
      (catch js/Error error (.error js/console error)))))
 
+(defn check-today! []
+  (let [today (get-today!)]
+    (when (not= today (:today (:db @*reel)))
+      (println "A new day:" today)
+      (dispatch! :today today nil))))
+
 (defn on-exit! [code]
   (persist-db!)
   (println "exit code is:" (pr-str code))
@@ -55,6 +62,7 @@
   (render-loop!)
   (.on js/process "SIGINT" on-exit!)
   (js/setInterval #(persist-db!) (* 60 1000 10))
+  (js/setInterval check-today! (* 1000 37))
   (println "Server started."))
 
 (defn reload! []

@@ -6,7 +6,8 @@
             [cljs.reader :refer [read-string]]
             [app.connection :refer [send! setup-socket!]]
             [app.schema :as schema]
-            [app.config :as config]))
+            [app.config :as config]
+            [app.util :as util]))
 
 (declare dispatch!)
 

@@ -20,7 +20,7 @@
             :font-family ui/font-fancy})}
   (div
    {:on-click (action-> :router/change {:name :home}), :style {:cursor :pointer}}
-   (<> span "Cumulo" nil))
+   (<> span "Diary" nil))
   (div
    {:style {:cursor "pointer"}, :on-click (action-> :router/change {:name :profile})}
    (<> (if logged-in? "Me" "Guest"))

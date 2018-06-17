@@ -28,6 +28,7 @@
                   :home (:pages db)
                   :profile (twig-members (:sessions db) (:users db))
                   {})),
+       :today (:today db),
        :count (count (:sessions db)),
        :color (color/randomColor)}
       nil))))
