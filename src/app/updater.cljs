@@ -11,6 +11,7 @@
             :session/connect session/connect
             :session/disconnect session/disconnect
             :session/remove-message session/remove-message
+            :session/set-cursor session/set-cursor
             :user/log-in user/log-in
             :user/sign-up user/sign-up
             :user/log-out user/log-out

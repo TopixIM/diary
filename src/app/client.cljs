@@ -23,7 +23,8 @@
   (let [raw (.getItem js/localStorage (:storage-key config/site))]
     (if (some? raw)
       (do (println "Found storage.") (dispatch! :user/log-in (read-string raw)))
-      (do (println "Found no storage.")))))
+      (do (println "Found no storage."))))
+  (dispatch! :session/set-cursor (util/get-today!)))
 
 (defn dispatch! [op op-data]
   (println "Dispatch" op op-data)

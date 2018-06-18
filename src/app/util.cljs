@@ -21,3 +21,5 @@
 (defn get-today! []
   (let [now (js/Date.)]
     {:year (.getFullYear now), :month (inc (.getMonth now)), :day (.getDate now)}))
+
+(defn same-day? [a b] (and (.hasSame a b "month") (.hasSame a b "day")))

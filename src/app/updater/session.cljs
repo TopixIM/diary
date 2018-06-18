@@ -9,3 +9,6 @@
 
 (defn remove-message [db op-data sid op-id op-time]
   (update-in db [:sessions sid :messages] (fn [messages] (dissoc messages (:id op-data)))))
+
+(defn set-cursor [db op-data sid op-id op-time]
+  (assoc-in db [:sessions sid :cursor] op-data))
