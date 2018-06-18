@@ -10,7 +10,7 @@
 
 (def site
   {:storage-key "diary-storage",
-   :port 5021,
+   :port 11008,
    :title "Diary",
    :icon "http://cdn.tiye.me/logo/topix.png",
    :dev-ui "http://localhost:8100/main.css",

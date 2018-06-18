@@ -14,6 +14,11 @@
             [respo-alerts.comp.alerts :refer [comp-prompt]]
             [respo-ui.comp.icon :refer [comp-icon comp-ion]]))
 
+(defcomp
+ comp-edit-icon
+ ()
+ (comp-ion :edit {:vertical-align :middle, :color (hsl 200 80 70)}))
+
 (defcomp comp-guide (text) (div {:style {:color (hsl 0 0 60), :margin-right 32}} (<> text)))
 
 (defn render-content [x] (if (string/blank? x) (comp-empty) (<> x)))
@@ -32,7 +37,7 @@
     :food
     comp-prompt
     states
-    (comp-ion :edit {:vertical-align :middle})
+    (comp-edit-icon)
     "What have you eaten:"
     (:food diary)
     (fn [data d! m!] (d! :diary/change {:field :food, :date (:date diary), :data data}))))
@@ -45,7 +50,7 @@
     :mood
     comp-prompt
     states
-    (a {:style ui/link} (<> "Edit"))
+    (comp-edit-icon)
     "What's the feelings today:"
     (:mood diary)
     (fn [data d! m!] (d! :diary/change {:field :mood, :date (:date diary), :data data}))))
@@ -58,38 +63,38 @@
     :place
     comp-prompt
     states
-    (a {:style ui/link} (<> "Edit"))
+    (comp-edit-icon)
     "Where have you been today:"
     (:place diary)
     (fn [data d! m!] (d! :diary/change {:field :place, :date (:date diary), :data data}))))))
 
 (defcomp
  comp-diary
- (states date-info diary0)
+ (states date-info diary)
  (let [date (format-to-date date-info)
        original-state (:data states)
-       state (or original-state {:diary (or diary0 (assoc schema/diary :date date))})
-       diary (:diary state)]
+       state (or original-state {:text (or (:text diary) "")})]
    (div
-    {:style (merge ui/flex {:padding 16})}
+    {:style (merge ui/column ui/flex {:padding "32px 120px"})}
     (div
      {:style {}}
-     (<> date)
+     (<> date {:font-size 20, :font-family ui/font-fancy, :font-weight 100})
      (=< 16 nil)
-     (when (not= diary0 diary)
+     (when (not= (:text diary) (:text state))
        (a
-        {:style ui/link, :on-click (fn [e d! m!] (d! :diary/add-one diary) (m! nil))}
+        {:style ui/link,
+         :on-click (fn [e d! m!]
+           (d! :diary/add-one (assoc diary :text (:text state)))
+           (m! nil))}
         (<> "Save")))
      (=< 16 nil)
      (when (some? original-state)
-       (a {:style ui/link, :on-click (fn [e d! m!] (m! nil))} (<> "Clear states"))))
+       (a {:style ui/link, :on-click (fn [e d! m!] (m! nil))} (<> "Reset"))))
     (=< nil 16)
-    (div
-     {:style (merge ui/column {:padding "32px 120px"})}
-     (comp-records states diary)
-     (=< nil 32)
-     (textarea
-      {:value (:text diary),
-       :placeholder "Some diary",
-       :style (merge ui/flex ui/textarea {:min-height 320}),
-       :on-input (fn [e d! m!] (m! (assoc-in state [:diary :text] (:value e))))})))))
+    (comp-records states diary)
+    (=< nil 32)
+    (textarea
+     {:value (:text state),
+      :placeholder "Some diary",
+      :style (merge ui/flex ui/textarea {:min-height 320}),
+      :on-input (fn [e d! m!] (m! (assoc state :text (:value e))))}))))
