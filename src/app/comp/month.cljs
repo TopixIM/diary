@@ -9,11 +9,11 @@
             [app.comp.empty :refer [comp-empty]]))
 
 (def style-cell-size
-  {:width 32, :height 32, :vertical-align :middle, :line-height "32px", :text-align :center})
+  {:width 48, :height 48, :vertical-align :middle, :line-height "48px", :text-align :center})
 
 (defcomp
  comp-cell
- (col row first-day today-info cursor)
+ (col row first-day today-info cursor overview)
  (let [offset (+ (* 7 col) row)
        this-day (.plus first-day (clj->js {:days offset}))
        today (.fromObject DateTime (clj->js today-info))
@@ -24,17 +24,32 @@
    (div
     {:style (merge
              style-cell-size
-             {:cursor :pointer, :font-family ui/font-fancy}
-             (if same-month? {:color (hsl 0 0 0)} {:color (hsl 0 0 80)})
-             (if today?
-               {:background-color (hsl 0 80 70), :color :white, :border-radius "16px"})
+             ui/row-center
+             {:cursor :pointer,
+              :font-family ui/font-fancy,
+              :font-size 16,
+              :font-weight 300,
+              :position :relative,
+              :border (str "1px solid " (hsl 200 80 70 0))}
+             (if same-month? {:color (hsl 0 0 30)} {:color (hsl 0 0 80)})
+             (if today? {:color (hsl 0 0 0), :font-weight :bold, :font-size 24})
              (if selected?
-               {:background-color (hsl 200 80 70), :color :white, :border-radius "16px"})),
+               {:border-radius "50%", :border (str "1px solid " (hsl 200 80 70))})),
      :on-click (fn [e d! m!]
        (d!
         :session/set-cursor
         {:year (.-year this-day), :month (.-month this-day), :day (.-day this-day)}))}
-    (<> (.toFormat this-day "d")))))
+    (<> (.toFormat this-day "d"))
+    (when (get overview (.toFormat this-day "yyyy-MM-dd"))
+      (div
+       {:style {:position :absolute,
+                :bottom 4,
+                :left 15,
+                :width 10,
+                :height 10,
+                :background-color (hsl 200 80 60),
+                :margin-left 4,
+                :border-radius "50%"}})))))
 
 (defcomp
  comp-diary-preview
@@ -57,6 +72,7 @@
      (div {} (<> (:food diary)))
      (div {} (<> (:mood diary)))
      (div {} (<> (:place diary)))
+     (=< nil 32)
      (div {} (<> (:text diary))))
     (comp-empty))))
 
@@ -64,7 +80,10 @@
  comp-weekdays
  ()
  (list->
-  {:style (merge ui/row {:border-bottom (str "1px solid " (hsl 0 0 90))})}
+  {:style (merge
+           ui/row
+           {:border-bottom (str "1px solid " (hsl 0 0 90)),
+            :border-top (str "1px solid " (hsl 0 0 90))})}
   (->> ["Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun"]
        (map
         (fn [x]
@@ -91,7 +110,7 @@
 
 (defcomp
  comp-month
- (today cursor diary)
+ (today cursor diary overview)
  (let [cursor-date (.fromObject DateTime (clj->js cursor))
        month-1st (.fromObject DateTime (clj->js (assoc cursor :day 1)))
        days-length (get-days-by (:year cursor) (:month cursor))
@@ -103,17 +122,15 @@
                      month-1st
                      (clj->js {:days (unchecked-negate (dec (.-weekday month-1st)))}))]
    (div
-    {:style ui/row}
+    {:style (merge ui/row ui/flex {:padding 16})}
     (div
      {:style {:padding 16, :display :inline-block}}
-     (div
-      {:style {:font-family ui/font-fancy, :font-size 18, :font-weight 100}}
-      (<> (.toFormat cursor-date "yyyy-MM")))
      (div
       {:style ui/row-parted}
       (a
        {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor -1 d!))}
        (<> "Prev"))
+      (<> (.toFormat cursor-date "yyyy-MM"))
       (a
        {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor 1 d!))}
        (<> "Next")))
@@ -126,5 +143,7 @@
               [x
                (list->
                 {:style ui/row}
-                (->> (range 7) (map (fn [y] [y (comp-cell x y day-cell-1st today cursor)]))))])))))
+                (->> (range 7)
+                     (map (fn [y] [y (comp-cell x y day-cell-1st today cursor overview)]))))])))))
+    (div {:style {:width 1, :background-color (hsl 0 0 90)}})
     (comp-diary-preview cursor-date diary))))

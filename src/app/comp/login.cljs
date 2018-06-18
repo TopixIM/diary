@@ -24,7 +24,9 @@
    (div
     {:style (merge ui/flex ui/center)}
     (div
-     {}
+     {:style (merge ui/column {:align-items :center})}
+     (div {} (<> "Very tiny app for adding diaries."))
+     (=< nil 16)
      (div
       {:style {}}
       (div

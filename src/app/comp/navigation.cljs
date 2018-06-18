@@ -10,13 +10,13 @@
  (logged-in? count-members)
  (div
   {:style (merge
-           ui/row-center
-           {:height 48,
-            :justify-content :space-between,
-            :padding "0 16px",
+           ui/column-parted
+           {:width 64,
+            :padding "16px 0",
             :font-size 16,
-            :border-bottom (str "1px solid " (hsl 0 0 0 0.1)),
-            :font-family ui/font-fancy})}
+            :border-right (str "1px solid " (hsl 0 0 0 0.1)),
+            :font-family ui/font-fancy,
+            :align-items :center})}
   (div
    {:on-click (action-> :router/change {:name :home}), :style {:cursor :pointer}}
    (<> span "Diary" nil))

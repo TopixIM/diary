@@ -13,6 +13,8 @@
       (map (fn [[k session]] [k (get-in users [(:user-id session) :name])]))
       (into {})))
 
+(deftwig twig-overview (diaries) (->> diaries (map (fn [[k v]] [k (some? v)])) (into {})))
+
 (deftwig
  twig-container
  (db session records)
@@ -27,7 +29,7 @@
                 router
                 :data
                 (case (:name router)
-                  :home nil
+                  :home (twig-overview (:diaries db))
                   :diary nil
                   :profile (twig-members (:sessions db) (:users db))
                   {})),

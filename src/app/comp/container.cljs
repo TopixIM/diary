@@ -49,11 +49,11 @@
    (if (nil? store)
      (comp-offline)
      (div
-      {:style (merge ui/global ui/fullscreen ui/column)}
+      {:style (merge ui/global ui/fullscreen ui/row)}
       (comp-navigation (:logged-in? store) (:count store))
       (if (:logged-in? store)
         (case (:name router)
-          :home (comp-month (:today store) (:cursor session) (:diary store))
+          :home (comp-month (:today store) (:cursor session) (:diary store) (:data router))
           :diary (cursor-> :diary comp-diary states (:cursor session) (:diary store))
           :profile (comp-profile (:user store) (:data router))
           (<> router))

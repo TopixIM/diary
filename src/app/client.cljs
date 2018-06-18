@@ -27,7 +27,7 @@
   (dispatch! :session/set-cursor (util/get-today!)))
 
 (defn dispatch! [op op-data]
-  (println "Dispatch" op op-data)
+  (when config/dev? (println "Dispatch" op op-data))
   (case op
     :states (reset! *states ((mutate op-data) @*states))
     :effect/connect (connect!)
