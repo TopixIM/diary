@@ -20,4 +20,4 @@
 
 (defn get-today! []
   (let [now (js/Date.)]
-    {:year (.getFullYear now), :month (inc (.getMonth now)), :date (.getDate now)}))
+    {:year (.getFullYear now), :month (inc (.getMonth now)), :day (.getDate now)}))

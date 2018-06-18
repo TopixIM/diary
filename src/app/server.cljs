@@ -14,11 +14,14 @@
 
 (def initial-db
   (let [filepath (:storage-path node-config/env)]
-    (if (fs/existsSync filepath)
-      (do
-       (println "Found storage in:" (:storage-path node-config/env))
-       (read-string (fs/readFileSync filepath "utf8")))
-      schema/database)))
+    (assoc
+     (if (fs/existsSync filepath)
+       (do
+        (println "Found storage in:" (:storage-path node-config/env))
+        (read-string (fs/readFileSync filepath "utf8")))
+       schema/database)
+     :today
+     (get-today!))))
 
 (defonce *reel (atom (merge reel-schema {:base initial-db, :db initial-db})))
 

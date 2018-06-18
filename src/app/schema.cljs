@@ -1,7 +1,7 @@
 
 (ns app.schema (:require [app.util :refer [get-today!]]))
 
-(def database {:sessions {}, :users {}, :today {:year 2018, :month 8, :day 18}})
+(def database {:sessions {}, :users {}, :today {:year 2018, :month 6, :day 18}})
 
 (def notification {:id nil, :kind nil, :text nil})
 
