@@ -2,11 +2,11 @@
 (ns app.comp.month
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
-            [respo-ui.colors :as colors]
             [respo.comp.space :refer [=<]]
             [respo.macros :refer [defcomp <> action-> list-> span div a]]
             ["luxon" :refer [DateTime]]
-            [app.util :refer [get-days-by same-day?]]))
+            [app.util :refer [get-days-by same-day?]]
+            [app.comp.empty :refer [comp-empty]]))
 
 (def style-cell-size
   {:width 32, :height 32, :vertical-align :middle, :line-height "32px", :text-align :center})
@@ -35,6 +35,30 @@
         :session/set-cursor
         {:year (.-year this-day), :month (.-month this-day), :day (.-day this-day)}))}
     (<> (.toFormat this-day "d")))))
+
+(defcomp
+ comp-diary-preview
+ (cursor-date diary)
+ (div
+  {:style (merge ui/flex {:padding 16})}
+  (div
+   {:style (merge ui/row {:align-items :center})}
+   (<>
+    (.toFormat cursor-date "yyyy-MM-dd")
+    {:font-family ui/font-fancy, :font-size 20, :font-weight 100})
+   (=< 8 nil)
+   (a
+    {:style ui/link, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+    (<> "Edit")))
+  (=< nil 32)
+  (if (some? diary)
+    (div
+     {}
+     (div {} (<> (:food diary)))
+     (div {} (<> (:mood diary)))
+     (div {} (<> (:place diary)))
+     (div {} (<> (:text diary))))
+    (comp-empty))))
 
 (defcomp
  comp-weekdays
@@ -103,13 +127,4 @@
                (list->
                 {:style ui/row}
                 (->> (range 7) (map (fn [y] [y (comp-cell x y day-cell-1st today cursor)]))))])))))
-    (div
-     {:style (merge ui/flex {:padding 16})}
-     (div
-      {:style (merge ui/row {:align-items :center})}
-      (<> (.toFormat cursor-date "yyyy-MM-dd"))
-      (=< 8 nil)
-      (a
-       {:style ui/link, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
-       (<> "Edit")))
-     (div {} (<> (pr-str diary)))))))
+    (comp-diary-preview cursor-date diary))))

@@ -2,7 +2,6 @@
 (ns app.comp.container
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
-            [respo-ui.colors :as colors]
             [respo.macros :refer [defcomp <> div span action-> cursor-> button]]
             [respo.comp.inspect :refer [comp-inspect]]
             [respo.comp.space :refer [=<]]
@@ -55,7 +54,7 @@
       (if (:logged-in? store)
         (case (:name router)
           :home (comp-month (:today store) (:cursor session) (:diary store))
-          :diary (comp-diary (:cursor session) (:diary store))
+          :diary (cursor-> :diary comp-diary states (:cursor session) (:diary store))
           :profile (comp-profile (:user store) (:data router))
           (<> router))
         (comp-login states))
