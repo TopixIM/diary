@@ -3,6 +3,9 @@
 
 (defn find-first [f xs] (reduce (fn [_ x] (when (f x) (reduced x))) nil xs))
 
+(defn format-to-date [date-info]
+  (str (:year date-info) "-" (.padStart (str (:month date-info)) 2 "0")))
+
 (def months-has-30 #{4 6 9 11})
 
 (def months-has-31 #{1 3 5 7 8 10 12})

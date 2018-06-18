@@ -13,7 +13,8 @@
             [app.comp.reel :refer [comp-reel]]
             [app.config :refer [dev?]]
             [app.schema :as schema]
-            [app.comp.month :refer [comp-month]]))
+            [app.comp.month :refer [comp-month]]
+            [app.comp.diary :refer [comp-diary]]))
 
 (defcomp
  comp-offline
@@ -53,7 +54,8 @@
       (comp-navigation (:logged-in? store) (:count store))
       (if (:logged-in? store)
         (case (:name router)
-          :home (comp-month (:today store) (get-in store [:session :cursor]))
+          :home (comp-month (:today store) (:cursor session) (:diary store))
+          :diary (comp-diary (:cursor session) (:diary store))
           :profile (comp-profile (:user store) (:data router))
           (<> router))
         (comp-login states))

@@ -3,11 +3,13 @@
 
 (def database {:sessions {}, :users {}, :today {:year 2018, :month 6, :day 18}})
 
+(def diary {:date nil, :food "", :mood "", :place "", :text ""})
+
 (def notification {:id nil, :kind nil, :text nil})
 
 (def page {:id nil, :title "", :time nil})
 
-(def router {:name nil, :title nil, :data {}, :router nil})
+(def router {:name nil, :data {}})
 
 (def session
   {:user-id nil,

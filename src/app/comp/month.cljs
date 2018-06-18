@@ -24,7 +24,7 @@
    (div
     {:style (merge
              style-cell-size
-             {:cursor :pointer}
+             {:cursor :pointer, :font-family ui/font-fancy}
              (if same-month? {:color (hsl 0 0 0)} {:color (hsl 0 0 80)})
              (if today?
                {:background-color (hsl 0 80 70), :color :white, :border-radius "16px"})
@@ -67,7 +67,7 @@
 
 (defcomp
  comp-month
- (today cursor)
+ (today cursor diary)
  (let [cursor-date (.fromObject DateTime (clj->js cursor))
        month-1st (.fromObject DateTime (clj->js (assoc cursor :day 1)))
        days-length (get-days-by (:year cursor) (:month cursor))
@@ -82,6 +82,9 @@
     {:style ui/row}
     (div
      {:style {:padding 16, :display :inline-block}}
+     (div
+      {:style {:font-family ui/font-fancy, :font-size 18, :font-weight 100}}
+      (<> (.toFormat cursor-date "yyyy-MM")))
      (div
       {:style ui/row-parted}
       (a
@@ -100,4 +103,13 @@
                (list->
                 {:style ui/row}
                 (->> (range 7) (map (fn [y] [y (comp-cell x y day-cell-1st today cursor)]))))])))))
-    (div {:style ui/flex} (div {} (<> (.toFormat cursor-date "yyyy-MM-dd")))))))
+    (div
+     {:style (merge ui/flex {:padding 16})}
+     (div
+      {:style (merge ui/row {:align-items :center})}
+      (<> (.toFormat cursor-date "yyyy-MM-dd"))
+      (=< 8 nil)
+      (a
+       {:style ui/link, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+       (<> "Edit")))
+     (div {} (<> (pr-str diary)))))))
