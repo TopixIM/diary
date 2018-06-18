@@ -25,7 +25,7 @@
 
 (defcomp
  comp-records
- (states diary)
+ (states diary date)
  (div
   {:style {}}
   (div
@@ -40,7 +40,7 @@
     (comp-edit-icon)
     "What have you eaten:"
     (:food diary)
-    (fn [data d! m!] (d! :diary/change {:field :food, :date (:date diary), :data data}))))
+    (fn [data d! m!] (d! :diary/change {:field :food, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "How you feel?")
@@ -53,7 +53,7 @@
     (comp-edit-icon)
     "What's the feelings today:"
     (:mood diary)
-    (fn [data d! m!] (d! :diary/change {:field :mood, :date (:date diary), :data data}))))
+    (fn [data d! m!] (d! :diary/change {:field :mood, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "Where you went?")
@@ -84,14 +84,14 @@
        (a
         {:style ui/link,
          :on-click (fn [e d! m!]
-           (d! :diary/add-one (assoc diary :text (:text state)))
+           (d! :diary/add-one (merge diary {:text (:text state), :date date}))
            (m! nil))}
         (<> "Save")))
      (=< 16 nil)
      (when (some? original-state)
        (a {:style ui/link, :on-click (fn [e d! m!] (m! nil))} (<> "Reset"))))
     (=< nil 16)
-    (comp-records states diary)
+    (comp-records states diary date)
     (=< nil 32)
     (textarea
      {:value (:text state),
