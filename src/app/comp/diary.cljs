@@ -26,6 +26,7 @@
 (defcomp
  comp-records
  (states diary date)
+ (println "records diary" diary)
  (div
   {:style {}}
   (div
@@ -39,7 +40,7 @@
     states
     (comp-edit-icon)
     "What have you eaten:"
-    (:food diary)
+    (or (:food diary) "")
     (fn [data d! m!] (d! :diary/change {:field :food, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
@@ -52,7 +53,7 @@
     states
     (comp-edit-icon)
     "What's the feelings today:"
-    (:mood diary)
+    (or (:mood diary) "")
     (fn [data d! m!] (d! :diary/change {:field :mood, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
@@ -65,8 +66,10 @@
     states
     (comp-edit-icon)
     "Where have you been today:"
-    (:place diary)
-    (fn [data d! m!] (d! :diary/change {:field :place, :date (:date diary), :data data}))))))
+    (or (:place diary) "")
+    (fn [data d! m!]
+      (println "data" (pr-str data))
+      (d! :diary/change {:field :place, :date date, :data data}))))))
 
 (defcomp
  comp-diary
