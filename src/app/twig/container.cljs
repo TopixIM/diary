@@ -24,19 +24,20 @@
    (merge
     base-data
     (if logged-in?
-      {:user (twig-user (get-in db [:users (:user-id session)])),
-       :router (assoc
-                router
-                :data
-                (case (:name router)
-                  :home (twig-overview (:diaries db))
-                  :diary nil
-                  :profile (twig-members (:sessions db) (:users db))
-                  {})),
-       :today (:today db),
-       :diary (get-in db [:diaries (format-to-date (:cursor session))]),
-       :count (count (:sessions db)),
-       :color (color/randomColor)}
+      (let [user (get-in db [:users (:user-id session)])]
+        {:user (twig-user user),
+         :router (assoc
+                  router
+                  :data
+                  (case (:name router)
+                    :home (twig-overview (:diaries user))
+                    :diary nil
+                    :profile (twig-members (:sessions db) (:users db))
+                    {})),
+         :today (:today db),
+         :diary (get-in user [:diaries (format-to-date (:cursor session))]),
+         :count (count (:sessions db)),
+         :color (color/randomColor)})
       nil))))
 
 (deftwig twig-diary (diaries date) (get diaries date))
