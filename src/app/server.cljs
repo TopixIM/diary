@@ -7,25 +7,30 @@
             [app.reel :refer [reel-reducer refresh-reel reel-schema]]
             ["fs" :as fs]
             ["shortid" :as shortid]
-            [app.node-env :as node-env]
-            [app.schema :refer [dev?]]))
+            [app.node-config :as node-config]
+            [app.config :refer [dev?]]
+            [app.config :as config]
+            [app.util :refer [get-today!]]))
 
 (def initial-db
-  (let [filepath (:storage-path node-env/configs)]
-    (if (fs/existsSync filepath)
-      (do
-       (println "Found storage in:" (:storage-path node-env/configs))
-       (read-string (fs/readFileSync filepath "utf8")))
-      schema/database)))
+  (let [filepath (:storage-path node-config/env)]
+    (assoc
+     (if (fs/existsSync filepath)
+       (do
+        (println "Found storage in:" (:storage-path node-config/env))
+        (read-string (fs/readFileSync filepath "utf8")))
+       schema/database)
+     :today
+     (get-today!))))
 
 (defonce *reel (atom (merge reel-schema {:base initial-db, :db initial-db})))
 
 (defonce *reader-reel (atom @*reel))
 
 (defn persist-db! []
-  (println "Saving file on exit:" (:storage-path node-env/configs))
+  (println "Saving file on exit:" (:storage-path node-config/env))
   (fs/writeFileSync
-   (:storage-path node-env/configs)
+   (:storage-path node-config/env)
    (pr-str (assoc (:db @*reel) :sessions {}))))
 
 (defn dispatch! [op op-data sid]
@@ -39,6 +44,12 @@
            (reset! *reel new-reel)))
      (catch js/Error error (.error js/console error)))))
 
+(defn check-today! []
+  (let [today (get-today!)]
+    (when (not= today (:today (:db @*reel)))
+      (println "A new day:" today)
+      (dispatch! :today today nil))))
+
 (defn on-exit! [code]
   (persist-db!)
   (println "exit code is:" (pr-str code))
@@ -50,10 +61,11 @@
   (js/setTimeout render-loop! 200))
 
 (defn main! []
-  (run-server! #(dispatch! %1 %2 %3) (:port schema/configs))
+  (run-server! #(dispatch! %1 %2 %3) (:port config/site))
   (render-loop!)
   (.on js/process "SIGINT" on-exit!)
   (js/setInterval #(persist-db!) (* 60 1000 10))
+  (js/setInterval check-today! (* 1000 37))
   (println "Server started."))
 
 (defn reload! []

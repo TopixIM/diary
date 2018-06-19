@@ -1,28 +1,22 @@
 
-(ns app.schema )
+(ns app.schema (:require [app.util :refer [get-today!]]))
 
-(def configs
-  {:storage-key "diary",
-   :port 5021,
-   :dev-ui "http://localhost:8100/main.css",
-   :release-ui "http://cdn.tiye.me/favored-fonts/main.css",
-   :cdn "http://cdn.tiye.me/diary/"})
+(def database {:sessions {}, :users {}, :today {:year 2018, :month 6, :day 18}})
 
-(def database {:sessions {}, :users {}})
-
-(def dev? (do ^boolean js/goog.DEBUG))
+(def diary {:date nil, :food "", :mood "", :place "", :text ""})
 
 (def notification {:id nil, :kind nil, :text nil})
 
 (def page {:id nil, :title "", :time nil})
 
-(def router {:name nil, :title nil, :data {}, :router nil})
+(def router {:name nil, :data {}})
 
 (def session
   {:user-id nil,
    :id nil,
    :nickname nil,
-   :router {:name :home, :data nil, :router nil},
-   :notifications []})
+   :router {:name :home, :data nil},
+   :messages {},
+   :cursor (get-today!)})
 
-(def user {:name nil, :id nil, :nickname nil, :avatar nil, :password nil})
+(def user {:name nil, :id nil, :nickname nil, :avatar nil, :password nil, :diaries {}})

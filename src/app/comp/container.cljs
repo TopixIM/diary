@@ -2,17 +2,18 @@
 (ns app.comp.container
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
-            [respo-ui.colors :as colors]
-            [respo.macros :refer [defcomp <> div span action-> button]]
+            [respo.macros :refer [defcomp <> div span action-> cursor-> button]]
             [respo.comp.inspect :refer [comp-inspect]]
             [respo.comp.space :refer [=<]]
             [app.comp.navigation :refer [comp-navigation]]
             [app.comp.profile :refer [comp-profile]]
             [app.comp.login :refer [comp-login]]
-            [respo-message.comp.msg-list :refer [comp-msg-list]]
+            [respo-message.comp.messages :refer [comp-messages]]
             [app.comp.reel :refer [comp-reel]]
-            [app.schema :refer [dev?]]
-            [app.comp.pages :refer [comp-pages]]))
+            [app.config :refer [dev?]]
+            [app.schema :as schema]
+            [app.comp.month :refer [comp-month]]
+            [app.comp.diary :refer [comp-diary]]))
 
 (defcomp
  comp-offline
@@ -48,17 +49,21 @@
    (if (nil? store)
      (comp-offline)
      (div
-      {:style (merge ui/global ui/fullscreen ui/column)}
+      {:style (merge ui/global ui/fullscreen ui/row)}
       (comp-navigation (:logged-in? store) (:count store))
       (if (:logged-in? store)
         (case (:name router)
-          :home (comp-pages router-data)
+          :home (comp-month (:today store) (:cursor session) (:diary store) (:data router))
+          :diary (cursor-> :diary comp-diary states (:cursor session) (:diary store))
           :profile (comp-profile (:user store) (:data router))
           (<> router))
         (comp-login states))
       (comp-status-color (:color store))
       (when dev? (comp-inspect "Store" store {:bottom 0, :left 0, :max-width "100%"}))
-      (comp-msg-list (get-in store [:session :notifications]) :session/remove-notification)
+      (comp-messages
+       (get-in store [:session :messages])
+       {}
+       (fn [info d! m!] (d! :session/remove-message info)))
       (when dev? (comp-reel (:reel-length store) {}))))))
 
 (def style-body {:padding "8px 16px"})

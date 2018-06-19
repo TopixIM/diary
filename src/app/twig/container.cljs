@@ -2,7 +2,9 @@
 (ns app.twig.container
   (:require [recollect.macros :refer [deftwig]]
             [app.twig.user :refer [twig-user]]
-            ["randomcolor" :as color]))
+            ["randomcolor" :as color]
+            [app.schema :as schema]
+            [app.util :refer [format-to-date]]))
 
 (deftwig
  twig-members
@@ -10,6 +12,8 @@
  (->> sessions
       (map (fn [[k session]] [k (get-in users [(:user-id session) :name])]))
       (into {})))
+
+(deftwig twig-overview (diaries) (->> diaries (map (fn [[k v]] [k (some? v)])) (into {})))
 
 (deftwig
  twig-container
@@ -25,9 +29,14 @@
                 router
                 :data
                 (case (:name router)
-                  :home (:pages db)
+                  :home (twig-overview (:diaries db))
+                  :diary nil
                   :profile (twig-members (:sessions db) (:users db))
                   {})),
+       :today (:today db),
+       :diary (get-in db [:diaries (format-to-date (:cursor session))]),
        :count (count (:sessions db)),
        :color (color/randomColor)}
       nil))))
+
+(deftwig twig-diary (diaries date) (get diaries date))

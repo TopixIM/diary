@@ -5,7 +5,9 @@
             [app.comp.container :refer [comp-container]]
             [cljs.reader :refer [read-string]]
             [app.connection :refer [send! setup-socket!]]
-            [app.schema :as schema]))
+            [app.schema :as schema]
+            [app.config :as config]
+            [app.util :as util]))
 
 (declare dispatch!)
 
@@ -18,13 +20,14 @@
 (defonce *store (atom nil))
 
 (defn simulate-login! []
-  (let [raw (.getItem js/localStorage (:storage-key schema/configs))]
+  (let [raw (.getItem js/localStorage (:storage-key config/site))]
     (if (some? raw)
       (do (println "Found storage.") (dispatch! :user/log-in (read-string raw)))
-      (do (println "Found no storage.")))))
+      (do (println "Found no storage."))))
+  (dispatch! :session/set-cursor (util/get-today!)))
 
 (defn dispatch! [op op-data]
-  (println "Dispatch" op op-data)
+  (when config/dev? (println "Dispatch" op op-data))
   (case op
     :states (reset! *states ((mutate op-data) @*states))
     :effect/connect (connect!)
@@ -33,7 +36,7 @@
 (defn connect! []
   (setup-socket!
    *store
-   {:url (str "ws://" (.-hostname js/location) ":" (:port schema/configs)),
+   {:url (str "ws://" (.-hostname js/location) ":" (:port config/site)),
     :on-close! (fn [event] (reset! *store nil) (.error js/console "Lost connection!")),
     :on-open! (fn [event] (simulate-login!))}))
 
