@@ -26,7 +26,6 @@
 (defcomp
  comp-records
  (states diary date)
- (println "records diary" diary)
  (div
   {:style {}}
   (div

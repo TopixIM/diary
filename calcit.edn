@@ -2336,14 +2336,6 @@
          "j" {:type :leaf, :by "root", :at 1529342968266, :text "date", :id "BkeJWhwrWX"}
         }
        }
-       "p" {
-        :type :expr, :by "root", :at 1529429828718, :id "SJTS1TL-Q"
-        :data {
-         "T" {:type :leaf, :by "root", :at 1529429829595, :text "println", :id "SJTS1TL-Qleaf"}
-         "j" {:type :leaf, :by "root", :at 1529429835045, :text "\"records diary", :id "BJ-0SJaUWX"}
-         "r" {:type :leaf, :by "root", :at 1529429836515, :text "diary", :id "SyGmU1pLb7"}
-        }
-       }
        "r" {
         :type :expr, :by "root", :at 1529321533025, :id "S1XBrOMS-m"
         :data {
