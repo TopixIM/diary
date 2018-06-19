@@ -67,9 +67,7 @@
     (comp-edit-icon)
     "Where have you been today:"
     (or (:place diary) "")
-    (fn [data d! m!]
-      (println "data" (pr-str data))
-      (d! :diary/change {:field :place, :date date, :data data}))))))
+    (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))))
 
 (defcomp
  comp-diary
