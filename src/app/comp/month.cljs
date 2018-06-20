@@ -45,8 +45,8 @@
        {:style {:position :absolute,
                 :bottom 4,
                 :left 15,
-                :width 10,
-                :height 10,
+                :width 8,
+                :height 8,
                 :background-color (hsl 200 80 60),
                 :margin-left 4,
                 :border-radius "50%"}})))))
