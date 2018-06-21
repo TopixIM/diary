@@ -33,8 +33,8 @@
   {:style {:width 16,
            :height 16,
            :position :absolute,
-           :top 60,
-           :right 8,
+           :top 16,
+           :right 16,
            :background-color color,
            :border-radius "8px",
            :opacity 0.8}}))

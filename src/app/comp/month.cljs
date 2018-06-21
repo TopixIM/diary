@@ -3,10 +3,11 @@
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
             [respo.comp.space :refer [=<]]
-            [respo.macros :refer [defcomp <> action-> list-> span div a]]
+            [respo.macros :refer [defcomp <> action-> list-> span div a button]]
             ["luxon" :refer [DateTime]]
             [app.util :refer [get-days-by same-day?]]
-            [app.comp.empty :refer [comp-empty]]))
+            [app.comp.empty :refer [comp-empty]]
+            [respo-ui.comp.icon :refer [comp-icon]]))
 
 (def style-cell-size
   {:width 48, :height 48, :vertical-align :middle, :line-height "48px", :text-align :center})
@@ -30,11 +31,11 @@
               :font-size 16,
               :font-weight 300,
               :position :relative,
-              :border (str "1px solid " (hsl 200 80 70 0))}
+              :border (str "2px solid " (hsl 200 80 70 0))}
              (if same-month? {:color (hsl 0 0 30)} {:color (hsl 0 0 80)})
-             (if today? {:color (hsl 0 0 0), :font-weight :bold, :font-size 24})
              (if selected?
-               {:border-radius "50%", :border (str "1px solid " (hsl 200 80 70))})),
+               {:border-radius "50%", :border (str "2px solid " (hsl 200 80 90))})
+             (if today? {:border-radius "50%", :border (str "2px solid " (hsl 20 80 80))})),
      :on-click (fn [e d! m!]
        (d!
         :session/set-cursor
@@ -44,9 +45,9 @@
       (div
        {:style {:position :absolute,
                 :bottom 4,
-                :left 15,
-                :width 10,
-                :height 10,
+                :left 14,
+                :width 8,
+                :height 8,
                 :background-color (hsl 200 80 60),
                 :margin-left 4,
                 :border-radius "50%"}})))))
@@ -60,21 +61,27 @@
    {:style (merge ui/row {:align-items :center})}
    (<>
     (.toFormat cursor-date "yyyy-MM-dd")
-    {:font-family ui/font-fancy, :font-size 20, :font-weight 100})
-   (=< 8 nil)
-   (a
-    {:style ui/link, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
-    (<> "Edit")))
+    {:font-family ui/font-fancy, :font-size 20, :font-weight 100}))
   (=< nil 32)
   (if (some? diary)
     (div
-     {}
+     {:style ui/column}
      (div {} (<> (:food diary)))
      (div {} (<> (:mood diary)))
      (div {} (<> (:place diary)))
      (=< nil 32)
-     (div {} (<> (:text diary))))
-    (comp-empty))))
+     (div {} (<> (:text diary)))
+     (=< nil 32)
+     (div
+      {}
+      (button
+       {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+       (<> "Edit diary"))))
+    (div
+     {}
+     (button
+      {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+      (<> "Add diary"))))))
 
 (defcomp
  comp-weekdays
@@ -82,8 +89,8 @@
  (list->
   {:style (merge
            ui/row
-           {:border-bottom (str "1px solid " (hsl 0 0 90)),
-            :border-top (str "1px solid " (hsl 0 0 90))})}
+           {:border-bottom (str "1px solid " (hsl 0 0 94)),
+            :border-top (str "1px solid " (hsl 0 0 94))})}
   (->> ["Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun"]
        (map
         (fn [x]
@@ -91,7 +98,7 @@
            (div
             {:style (merge
                      style-cell-size
-                     {:color (hsl 0 0 50), :font-family ui/font-fancy})}
+                     {:color (hsl 0 0 80), :font-family ui/font-fancy})}
             (<> x))])))))
 
 (defn on-change-month! [cursor offset d!]
@@ -126,14 +133,16 @@
     (div
      {:style {:padding 16, :display :inline-block}}
      (div
-      {:style ui/row-parted}
+      {:style (merge ui/row-parted {:padding "0 16px"})}
       (a
        {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor -1 d!))}
-       (<> "Prev"))
-      (<> (.toFormat cursor-date "yyyy-MM"))
+       (comp-icon :chevron-left))
+      (<>
+       (.toFormat cursor-date "yyyy-MM")
+       {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
       (a
        {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor 1 d!))}
-       (<> "Next")))
+       (comp-icon :chevron-right)))
      (comp-weekdays)
      (list->
       {:style ui/column}

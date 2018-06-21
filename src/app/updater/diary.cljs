@@ -8,3 +8,5 @@
 (defn change [db op-data sid op-id op-time]
   (let [user-id (get-in db [:sessions sid :user-id])]
     (assoc-in db [:users user-id :diaries (:date op-data) (:field op-data)] (:data op-data))))
+
+(defn set-today [db op-data sid op-id op-time] (assoc db :today op-data))

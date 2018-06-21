@@ -19,5 +19,6 @@
             :router/change router/change
             :diary/add-one diary/add-one
             :diary/change diary/change
+            :today diary/set-today
             (do (println "Unknown op:" op) identity))]
     (f db op-data sid op-id op-time)))
