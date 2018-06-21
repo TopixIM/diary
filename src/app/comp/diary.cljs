@@ -15,11 +15,11 @@
             [respo-ui.comp.icon :refer [comp-icon comp-ion]]))
 
 (defcomp
- comp-edit-icon
- ()
- (comp-ion :edit {:vertical-align :middle, :color (hsl 200 80 70)}))
-
-(defcomp comp-guide (text) (div {:style {:color (hsl 0 0 60), :margin-right 32}} (<> text)))
+ comp-guide
+ (text)
+ (div
+  {:style {:color (hsl 0 0 60), :margin-right 32, :min-width 160, :text-align :right}}
+  (<> text)))
 
 (defn render-content [x] (if (string/blank? x) (comp-empty) (<> x)))
 
@@ -27,43 +27,37 @@
  comp-records
  (states diary date)
  (div
-  {:style {}}
+  {:style {:flex-shrink 0}}
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "What did you eat?")
-   (render-content (:food diary))
-   (=< 8 nil)
    (cursor->
     :food
     comp-prompt
     states
-    (comp-edit-icon)
+    (render-content (:food diary))
     "What have you eaten:"
     (or (:food diary) "")
     (fn [data d! m!] (d! :diary/change {:field :food, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "How you feel?")
-   (render-content (:mood diary))
-   (=< 8 nil)
    (cursor->
     :mood
     comp-prompt
     states
-    (comp-edit-icon)
+    (render-content (:mood diary))
     "What's the feelings today:"
     (or (:mood diary) "")
     (fn [data d! m!] (d! :diary/change {:field :mood, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "Where you went?")
-   (render-content (:place diary))
-   (=< 8 nil)
    (cursor->
     :place
     comp-prompt
     states
-    (comp-edit-icon)
+    (render-content (:place diary))
     "Where have you been today:"
     (or (:place diary) "")
     (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))))
@@ -75,9 +69,9 @@
        original-state (:data states)
        state (or original-state {:text (or (:text diary) "")})]
    (div
-    {:style (merge ui/column ui/flex {:padding "32px 120px"})}
+    {:style (merge ui/column ui/flex {:padding "32px 120px", :overflow :auto})}
     (div
-     {:style {}}
+     {:style {:flex-shrink 0}}
      (<> date {:font-size 20, :font-family ui/font-fancy, :font-weight 100})
      (=< 16 nil)
      (when (not= (:text diary) (:text state))
@@ -96,5 +90,5 @@
     (textarea
      {:value (:text state),
       :placeholder "Some diary",
-      :style (merge ui/flex ui/textarea {:min-height 320}),
+      :style (merge ui/flex ui/textarea {:min-height 320, :flex-shrink 0}),
       :on-input (fn [e d! m!] (m! (assoc state :text (:value e))))}))))

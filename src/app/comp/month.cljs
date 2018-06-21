@@ -53,30 +53,36 @@
                 :border-radius "50%"}})))))
 
 (defcomp
+ comp-divider
+ (padding)
+ (div {:style {:background-color (hsl 0 0 90), :height 1, :margin padding}}))
+
+(defcomp
  comp-diary-preview
  (cursor-date diary)
  (div
-  {:style (merge ui/flex {:padding 16})}
+  {:style (merge ui/flex {:padding "16px 32px"})}
   (div
    {:style (merge ui/row {:align-items :center})}
    (<>
     (.toFormat cursor-date "yyyy-MM-dd")
-    {:font-family ui/font-fancy, :font-size 20, :font-weight 100}))
-  (=< nil 32)
+    {:font-family ui/font-fancy, :font-size 16, :font-weight 300}))
+  (comp-divider "32px 0")
   (if (some? diary)
     (div
      {:style ui/column}
      (div {} (<> (:food diary)))
      (div {} (<> (:mood diary)))
      (div {} (<> (:place diary)))
-     (=< nil 32)
+     (comp-divider "32px 0")
      (div {} (<> (:text diary)))
-     (=< nil 32)
-     (div
-      {}
-      (button
-       {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
-       (<> "Edit diary"))))
+     (comp-divider "32px 0")))
+  (if (some? diary)
+    (div
+     {}
+     (button
+      {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+      (<> "Edit diary")))
     (div
      {}
      (button
@@ -129,7 +135,7 @@
                      month-1st
                      (clj->js {:days (unchecked-negate (dec (.-weekday month-1st)))}))]
    (div
-    {:style (merge ui/row ui/flex {:padding 16})}
+    {:style (merge ui/row ui/flex)}
     (div
      {:style {:padding 16, :display :inline-block}}
      (div
