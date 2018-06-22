@@ -12279,13 +12279,6 @@
                "j" {:type :leaf, :by "root", :at 1529322082707, :text "op-data", :id "SJOwczrbX"}
               }
              }
-             "v" {
-              :type :expr, :by "root", :at 1529322085154, :id "HJaDcMSZX"
-              :data {
-               "T" {:type :leaf, :by "root", :at 1529322086955, :text ":field", :id "H12DqzrZm"}
-               "j" {:type :leaf, :by "root", :at 1529322088516, :text "op-data", :id "ry7yucGBZX"}
-              }
-             }
             }
            }
            "t" {
