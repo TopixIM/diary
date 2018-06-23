@@ -102,7 +102,7 @@
            ui/row
            {:border-bottom (str "1px solid " (hsl 0 0 94)),
             :border-top (str "1px solid " (hsl 0 0 94))})}
-  (->> ["Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun"]
+  (->> ["M" "T" "W" "T" "F" "S" "S"]
        (map
         (fn [x]
           [x
