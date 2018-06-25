@@ -66,7 +66,12 @@
    {:style (merge ui/row {:align-items :center})}
    (<>
     (.toFormat cursor-date "yyyy-MM-dd")
-    {:font-family ui/font-fancy, :font-size 16, :font-weight 300}))
+    {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
+   (=< 8 nil)
+   (if (some? (:time diary))
+     (<>
+      (.toFormat (.fromMillis DateTime (:time diary)) "(yyyy-MM-dd hh:mm)")
+      {:font-size 12, :font-weight 100, :font-family ui/font-fancy, :color (hsl 0 0 72)})))
   (comp-divider "32px 0")
   (if (some? diary)
     (div
@@ -97,7 +102,7 @@
            ui/row
            {:border-bottom (str "1px solid " (hsl 0 0 94)),
             :border-top (str "1px solid " (hsl 0 0 94))})}
-  (->> ["Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun"]
+  (->> ["M" "T" "W" "T" "F" "S" "S"]
        (map
         (fn [x]
           [x
