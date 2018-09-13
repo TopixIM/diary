@@ -61,9 +61,9 @@
  comp-diary-preview
  (cursor-date diary)
  (div
-  {:style (merge ui/flex {:padding "16px 32px"})}
+  {:style (merge ui/flex ui/column {:padding "16px 32px", :height "100%"})}
   (div
-   {:style (merge ui/row {:align-items :center})}
+   {:style (merge ui/row {:align-items :center, :flex-shrink 0})}
    (<>
     (.toFormat cursor-date "yyyy-MM-dd")
     {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
@@ -75,13 +75,14 @@
   (comp-divider "32px 0")
   (if (some? diary)
     (div
-     {:style ui/column}
+     {:style (merge ui/column ui/flex {:overflow :auto})}
      (div {} (<> (:food diary)))
      (div {} (<> (:mood diary)))
      (div {} (<> (:place diary)))
      (comp-divider "32px 0")
      (div {} (<> (:text diary)))
      (comp-divider "32px 0")))
+  (=< nil 16)
   (if (some? diary)
     (div
      {}
