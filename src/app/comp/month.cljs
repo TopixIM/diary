@@ -3,7 +3,7 @@
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
             [respo.comp.space :refer [=<]]
-            [respo.macros :refer [defcomp <> action-> list-> span div a button]]
+            [respo.core :refer [defcomp <> action-> list-> span div a button]]
             ["luxon" :refer [DateTime]]
             [app.util :refer [get-days-by same-day?]]
             [app.comp.empty :refer [comp-empty]]

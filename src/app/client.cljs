@@ -56,5 +56,3 @@
   (println "App started!"))
 
 (defn reload! [] (clear-cache!) (render-app! render!) (println "Code updated."))
-
-(set! js/window.onload main!)

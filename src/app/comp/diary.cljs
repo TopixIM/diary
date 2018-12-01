@@ -1,6 +1,6 @@
 
 (ns app.comp.diary
-  (:require [respo.macros :refer [defcomp <> div input button cursor-> span textarea a]]
+  (:require [respo.core :refer [defcomp <> div input button cursor-> span textarea a]]
             [hsl.core :refer [hsl]]
             [respo.comp.space :refer [=<]]
             [respo.comp.inspect :refer [comp-inspect]]
@@ -35,9 +35,9 @@
     :food
     comp-prompt
     states
-    (render-content (:food diary))
-    "What have you eaten:"
-    (or (:food diary) "")
+    {:trigger (render-content (:food diary)),
+     :text "What have you eaten:",
+     :initial (or (:food diary) "")}
     (fn [data d! m!] (d! :diary/change {:field :food, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
@@ -46,9 +46,9 @@
     :mood
     comp-prompt
     states
-    (render-content (:mood diary))
-    "What's the feelings today:"
-    (or (:mood diary) "")
+    {:trigger (render-content (:mood diary)),
+     :text "What's the feelings today:",
+     :initial (or (:mood diary) "")}
     (fn [data d! m!] (d! :diary/change {:field :mood, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
@@ -57,9 +57,9 @@
     :place
     comp-prompt
     states
-    (render-content (:place diary))
-    "Where have you been today:"
-    (or (:place diary) "")
+    {:trigger (render-content (:place diary)),
+     :text "Where have you been today:",
+     :initial (or (:place diary) "")}
     (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))))
 
 (defcomp
