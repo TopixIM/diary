@@ -1,16 +1,23 @@
 
-(ns app.config (:require [app.util :refer [get-env!]]))
+(ns app.config )
 
-(def bundle-builds #{"release" "local-bundle"})
+(def cdn?
+  (cond
+    (exists? js/window) false
+    (exists? js/process) (= "true" js/process.env.cdn)
+    :else false))
 
 (def dev?
-  (if (exists? js/window)
-    (do ^boolean js/goog.DEBUG)
-    (not (contains? bundle-builds (get-env! "mode")))))
+  (let [debug? (do ^boolean js/goog.DEBUG)]
+    (if debug?
+      (cond
+        (exists? js/window) true
+        (exists? js/process) (not= "true" js/process.env.release)
+        :else true)
+      false)))
 
 (def site
-  {:storage-key "diary-storage",
-   :port 11008,
+  {:port 11008,
    :title "Diary",
    :icon "http://cdn.tiye.me/logo/topix.png",
    :dev-ui "http://localhost:8100/main.css",
@@ -18,4 +25,7 @@
    :cdn-url "http://cdn.tiye.me/diary/",
    :cdn-folder "tiye.me:cdn/diary",
    :upload-folder "tiye.me:repo/TopixIM/diary/",
-   :server-folder "tiye.me:servers/diary"})
+   :server-folder "tiye.me:servers/diary",
+   :theme "#eeeeff",
+   :storage-key "diary",
+   :storage-file "storage.edn"})

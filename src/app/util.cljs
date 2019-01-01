@@ -1,8 +1,6 @@
 
 (ns app.util )
 
-(defn find-first [f xs] (reduce (fn [_ x] (when (f x) (reduced x))) nil xs))
-
 (defn format-to-date [date-info]
   (str
    (:year date-info)
@@ -23,8 +21,6 @@
       (if (zero? (mod year 100))
         (if (zero? (mod (/ year 100) 4)) 29 28)
         (if (zero? (mod year 4)) 29 28))))
-
-(defn get-env! [property] (aget (.-env js/process) property))
 
 (defn get-today! []
   (let [now (js/Date.)]
