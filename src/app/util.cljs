@@ -16,7 +16,7 @@
 (defn get-days-by [year month1]
   (cond
     (contains? months-has-30 month1) 30
-    (contains? months-has-31 month1) 30
+    (contains? months-has-31 month1) 31
     :else
       (if (zero? (mod year 100))
         (if (zero? (mod (/ year 100) 4)) 29 28)
