@@ -8,7 +8,8 @@
             [app.config :as config]
             [ws-edn.client :refer [ws-connect! ws-send!]]
             [recollect.patch :refer [patch-twig]]
-            [cumulo-util.core :refer [on-page-touch]])
+            [cumulo-util.core :refer [on-page-touch]]
+            [app.util :as util])
   (:require-macros [clojure.core.strint :refer [<<]]))
 
 (declare dispatch!)
@@ -24,7 +25,10 @@
 (defn simulate-login! []
   (let [raw (.getItem js/localStorage (:storage-key config/site))]
     (if (some? raw)
-      (do (println "Found storage.") (dispatch! :user/log-in (read-string raw)))
+      (do
+       (println "Found storage.")
+       (dispatch! :user/log-in (read-string raw))
+       (dispatch! :session/set-cursor (util/get-yesterday!)))
       (do (println "Found no storage.")))))
 
 (defn dispatch! [op op-data]

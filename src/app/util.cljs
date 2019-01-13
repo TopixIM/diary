@@ -1,5 +1,5 @@
 
-(ns app.util )
+(ns app.util (:require ["luxon" :refer [DateTime]]))
 
 (defn format-to-date [date-info]
   (str
@@ -25,5 +25,9 @@
 (defn get-today! []
   (let [now (js/Date.)]
     {:year (.getFullYear now), :month (inc (.getMonth now)), :day (.getDate now)}))
+
+(defn get-yesterday! []
+  (let [now (.local DateTime), yesterday (.plus now (clj->js {:days -1}))]
+    {:year (.-year yesterday), :month (.-month yesterday), :day (.-day yesterday)}))
 
 (defn same-day? [a b] (and (.hasSame a b "month") (.hasSame a b "day")))
