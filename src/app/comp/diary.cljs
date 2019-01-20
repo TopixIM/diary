@@ -60,7 +60,18 @@
     {:trigger (render-content (:place diary)),
      :text "Where have you been today:",
      :initial (or (:place diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))))
+    (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))
+  (div
+   {:style (merge ui/row {:align-items :center})}
+   (comp-guide "What's the highlights?")
+   (cursor->
+    :highlight
+    comp-prompt
+    states
+    {:trigger (render-content (:highlight diary)),
+     :text "Highlights of this day:",
+     :initial (or (:highlight diary) "")}
+    (fn [data d! m!] (d! :diary/change {:field :highlight, :date date, :data data}))))))
 
 (defcomp
  comp-diary
