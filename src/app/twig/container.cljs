@@ -13,7 +13,12 @@
       (map (fn [[k session]] [k (get-in users [(:user-id session) :name])]))
       (into {})))
 
-(deftwig twig-overview (diaries) (->> diaries (map (fn [[k v]] [k (some? v)])) (into {})))
+(deftwig
+ twig-overview
+ (diaries)
+ (->> diaries
+      (map (fn [[k v]] [k (if (some? v) (select-keys v [:mood :highlight]) nil)]))
+      (into {})))
 
 (deftwig
  twig-container

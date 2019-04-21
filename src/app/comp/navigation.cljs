@@ -18,8 +18,11 @@
             :font-family ui/font-fancy,
             :align-items :center})}
   (div
-   {:on-click (action-> :router/change {:name :home}), :style {:cursor :pointer}}
-   (<> span "Diary" nil))
+   {:style (merge ui/column)}
+   (span
+    {:inner-text "Diary",
+     :style {:cursor :pointer},
+     :on-click (action-> :router/change {:name :home})}))
   (div
    {:style {:cursor "pointer"}, :on-click (action-> :router/change {:name :profile})}
    (<> (if logged-in? "Me" "Guest"))
