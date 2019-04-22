@@ -7,10 +7,17 @@
             ["luxon" :refer [DateTime]]
             [app.util :refer [get-days-by same-day?]]
             [app.comp.empty :refer [comp-empty]]
-            [respo-ui.comp.icon :refer [comp-icon]]))
+            [feather.core :refer [comp-i]]))
 
-(def style-cell-size
-  {:width 48, :height 48, :vertical-align :middle, :line-height "48px", :text-align :center})
+(def style-cell-size {:width 80, :height 92, :vertical-align :middle, :text-align :center})
+
+(def style-preview
+  {:font-size 12,
+   :white-space :nowrap,
+   :text-overflow :ellipsis,
+   :display :inline-block,
+   :overflow :hidden,
+   :width "100%"})
 
 (defcomp
  comp-cell
@@ -21,36 +28,33 @@
        same-month? (= (.-month this-day) (:month cursor))
        today? (same-day? this-day today)
        selected? (and (= (.-month this-day) (:month cursor))
-                      (= (.-day this-day) (:day cursor)))]
+                      (= (.-day this-day) (:day cursor)))
+       info (get overview (.toFormat this-day "yyyy-MM-dd"))]
    (div
     {:style (merge
              style-cell-size
-             ui/row-center
+             ui/center
              {:cursor :pointer,
               :font-family ui/font-fancy,
-              :font-size 16,
+              :font-size 14,
               :font-weight 300,
               :position :relative,
-              :border (str "2px solid " (hsl 200 80 70 0))}
+              :overflow :hidden,
+              :border-bottom (str "1px solid " (hsl 0 0 94))}
              (if same-month? {:color (hsl 0 0 30)} {:color (hsl 0 0 80)})
-             (if selected?
-               {:border-radius "50%", :border (str "2px solid " (hsl 200 80 90))})
-             (if today? {:border-radius "50%", :border (str "2px solid " (hsl 20 80 80))})),
+             (if selected? {:background-color (hsl 170 80 94)})
+             (if today? {:background-color (hsl 30 80 97)})),
      :on-click (fn [e d! m!]
        (d!
         :session/set-cursor
         {:year (.-year this-day), :month (.-month this-day), :day (.-day this-day)}))}
-    (<> (.toFormat this-day "d"))
-    (when (get overview (.toFormat this-day "yyyy-MM-dd"))
-      (div
-       {:style {:position :absolute,
-                :bottom 4,
-                :left 14,
-                :width 8,
-                :height 8,
-                :background-color (hsl 200 80 60),
-                :margin-left 4,
-                :border-radius "50%"}})))))
+    (div
+     {:style (merge ui/column {:width "100%"})}
+     (<>
+      (.toFormat this-day "d")
+      (merge {:font-size 16} (if (some? info) {:font-weight 500})))
+     (<> (:mood info) style-preview)
+     (<> (:highlight info) style-preview)))))
 
 (defcomp
  comp-divider
@@ -111,7 +115,10 @@
            (div
             {:style (merge
                      style-cell-size
-                     {:color (hsl 0 0 80), :font-family ui/font-fancy})}
+                     {:color (hsl 0 0 80),
+                      :font-family ui/font-fancy,
+                      :height 32,
+                      :line-height "32px"})}
             (<> x))])))))
 
 (defn on-change-month! [cursor offset d!]
@@ -128,6 +135,20 @@
                           {:year year, :month next-month, :day (min count-days day)}))]
     (d! :session/set-cursor next-cursor)))
 
+(def style-month-entry
+  (merge
+   ui/center
+   {:font-family ui/font-fancy,
+    :line-height "40px",
+    :width 40,
+    :font-size 16,
+    :font-weight 100,
+    :cursor :pointer}))
+
+(def style-month-switch {:width 40, :text-align :center, :cursor :pointer})
+
+(def style-year-entry {:cursor :pointer, :width 60, :text-align :center})
+
 (defcomp
  comp-month
  (today cursor diary overview)
@@ -142,30 +163,55 @@
                      month-1st
                      (clj->js {:days (unchecked-negate (dec (.-weekday month-1st)))}))]
    (div
-    {:style (merge ui/row ui/flex)}
+    {:style (merge ui/column ui/flex)}
     (div
-     {:style {:padding 16, :display :inline-block}}
+     {:style (merge ui/row ui/flex)}
      (div
-      {:style (merge ui/row-parted {:padding "0 16px"})}
-      (a
-       {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor -1 d!))}
-       (comp-icon :chevron-left))
-      (<>
-       (.toFormat cursor-date "yyyy-MM")
-       {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
-      (a
-       {:style ui/link, :on-click (fn [e d! m!] (on-change-month! cursor 1 d!))}
-       (comp-icon :chevron-right)))
-     (comp-weekdays)
+      {:style {:padding 16, :display :inline-block}}
+      (div
+       {:style (merge ui/row-parted {:padding "0 16px"})}
+       (a
+        {:style style-month-switch,
+         :on-click (fn [e d! m!] (on-change-month! cursor -1 d!))}
+        (comp-i :chevron-left 16 (hsl 200 80 70)))
+       (<>
+        (.toFormat cursor-date "yyyy-MM")
+        {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
+       (a
+        {:style style-month-switch, :on-click (fn [e d! m!] (on-change-month! cursor 1 d!))}
+        (comp-i :chevron-right 16 (hsl 200 80 70))))
+      (comp-weekdays)
+      (list->
+       {:style ui/column}
+       (->> (range columns)
+            (map
+             (fn [x]
+               [x
+                (list->
+                 {:style ui/row}
+                 (->> (range 7)
+                      (map (fn [y] [y (comp-cell x y day-cell-1st today cursor overview)]))))])))))
+     (div {:style {:width 1, :background-color (hsl 0 0 90)}})
+     (comp-diary-preview cursor-date diary))
+    (div
+     {:style (merge ui/row-middle {:border-top (str "1px solid " (hsl 0 0 90))})}
      (list->
-      {:style ui/column}
-      (->> (range columns)
+      {:style (merge ui/row {:padding "0px 16px"})}
+      (->> (range 1 13)
            (map
-            (fn [x]
-              [x
-               (list->
-                {:style ui/row}
-                (->> (range 7)
-                     (map (fn [y] [y (comp-cell x y day-cell-1st today cursor overview)]))))])))))
-    (div {:style {:width 1, :background-color (hsl 0 0 90)}})
-    (comp-diary-preview cursor-date diary))))
+            (fn [n]
+              [n
+               (span
+                {:inner-text n,
+                 :style style-month-entry,
+                 :on-click (fn [e d! m!] (d! :session/merge-cursor {:month n}))})]))))
+     (div
+      {:style ui/row-middle}
+      (span
+       {:inner-text "2019",
+        :style style-year-entry,
+        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2019}))})
+      (span
+       {:inner-text "2018",
+        :style style-year-entry,
+        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2018}))}))))))
