@@ -71,7 +71,18 @@
     {:trigger (render-content (:highlight diary)),
      :text "Highlights of this day:",
      :initial (or (:highlight diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :highlight, :date date, :data data}))))))
+    (fn [data d! m!] (d! :diary/change {:field :highlight, :date date, :data data}))))
+  (div
+   {:style (merge ui/row {:align-items :center})}
+   (comp-guide "People met?")
+   (cursor->
+    :met
+    comp-prompt
+    states
+    {:trigger (render-content (:met diary)),
+     :text "Met with people:",
+     :initial (or (:met diary) "")}
+    (fn [data d! m!] (d! :diary/change {:field :met, :date date, :data data}))))))
 
 (defcomp
  comp-diary

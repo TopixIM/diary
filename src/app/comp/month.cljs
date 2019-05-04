@@ -84,6 +84,7 @@
      (div {} (<> (:mood diary)))
      (div {} (<> (:place diary)))
      (div {} (<> (:highlight diary)))
+     (div {} (<> (:met diary)))
      (comp-divider "32px 0")
      (div {} (<> (:text diary)))
      (comp-divider "32px 0")))
