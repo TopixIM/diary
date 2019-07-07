@@ -24,8 +24,6 @@
    :release-ui "http://cdn.tiye.me/favored-fonts/main.css",
    :cdn-url "http://cdn.tiye.me/diary/",
    :cdn-folder "tiye.me:cdn/diary",
-   :upload-folder "tiye.me:repo/TopixIM/diary/",
-   :server-folder "tiye.me:servers/diary",
    :theme "#eeeeff",
    :storage-key "diary",
    :storage-file "storage.edn"})
