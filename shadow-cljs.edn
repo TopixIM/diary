@@ -5,13 +5,14 @@
                 [mvc-works/ws-edn       "0.1.3"]
                 [cumulo/recollect       "0.5.0"]
                 [cumulo/reel            "0.1.1"]
-                [cumulo/util            "0.1.8"]
+                [cumulo/util            "0.1.10"]
                 [respo                  "0.10.11"]
-                [respo/ui               "0.3.11"]
-                [respo/alerts           "0.3.11"]
+                [respo/ui               "0.3.13"]
+                [respo/alerts           "0.3.12"]
                 [respo/feather          "0.1.1"]
                 [respo/message          "0.3.4"]
                 [cirru/bisection-key    "0.1.5"]
+                [medley                 "1.2.0"]
                 [org.clojure/core.incubator "0.1.4"]]
  :repositories {"central" {:url "https://maven.aliyun.com/nexus/content/groups/public/"}
                 "clojars" {:url "https://mirrors.ustc.edu.cn/clojars/"}}
@@ -33,8 +34,4 @@
           :page {:target :node-script
                  :output-to "target/page.js"
                  :main app.page/main!
-                 :devtools {:after-load app.page/main!}}
-          :upload {:target :node-script
-                   :output-to "target/upload.js"
-                   :main app.upload/main!
-                   :devtools {:after-load app.upload/main!}}}}
+                 :devtools {:after-load app.page/main!}}}}
