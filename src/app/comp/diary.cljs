@@ -11,8 +11,7 @@
             [app.util :refer [format-to-date]]
             [app.comp.empty :refer [comp-empty]]
             [clojure.string :as string]
-            [respo-alerts.comp.alerts :refer [comp-prompt]]
-            [respo-ui.comp.icon :refer [comp-icon comp-ion]]))
+            [respo-alerts.comp.alerts :refer [comp-prompt]]))
 
 (defcomp
  comp-guide
@@ -101,7 +100,10 @@
         {:style ui/link,
          :on-click (fn [e d! m!]
            (d! :diary/add-one (merge diary {:text (:text state), :date date}))
-           (m! nil))}
+           (m! nil)
+           (let [lost-copy "diary-lost-copy"]
+             (js/localStorage.setItem lost-copy (:text state))
+             (js/console.info "Latest diary saved to" (pr-str lost-copy))))}
         (<> "Save")))
      (=< 16 nil)
      (when (some? original-state)
