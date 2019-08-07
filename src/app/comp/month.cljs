@@ -7,7 +7,27 @@
             ["luxon" :refer [DateTime]]
             [app.util :refer [get-days-by same-day?]]
             [app.comp.empty :refer [comp-empty]]
-            [feather.core :refer [comp-i]]))
+            [feather.core :refer [comp-i]]
+            [shadow.resource :refer [inline]]
+            [cljs.reader :refer [read-string]]
+            [clojure.set :refer [union]]
+            [applied-science.js-interop :as j]))
+
+(def special-days
+  (let [data (read-string (inline "2019.edn"))]
+    {:workingday (->> data
+                      (filter (fn [x] (= :workingday (:type x))))
+                      (map :days)
+                      (apply union)),
+     :holiday (->> data (filter (fn [x] (= :holiday (:type x)))) (map :days) (apply union))}))
+
+(defn is-holiday? [day]
+  (let [d (.toFormat day "yyyy-MM-dd")]
+    (js/console.log day (j/get day :weekday))
+    (cond
+      (contains? (:holiday special-days) d) true
+      (contains? (:workingday special-days) d) false
+      :else (contains? #{6 7} (j/get day :weekday)))))
 
 (def style-cell-size {:width 80, :height 92, :vertical-align :middle, :text-align :center})
 
@@ -43,7 +63,8 @@
               :border-bottom (str "1px solid " (hsl 0 0 94))}
              (if same-month? {:color (hsl 0 0 30)} {:color (hsl 0 0 80)})
              (if selected? {:background-color (hsl 170 80 94)})
-             (if today? {:background-color (hsl 30 80 97)})),
+             (if today? {:background-color (hsl 30 80 97)})
+             (if (is-holiday? this-day) {:border-bottom (str "4px solid " (hsl 200 80 80))})),
      :on-click (fn [e d! m!]
        (d!
         :session/set-cursor
