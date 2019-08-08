@@ -14,7 +14,7 @@
             [applied-science.js-interop :as j]))
 
 (def special-days
-  (let [data (read-string (inline "2019.edn"))]
+  (let [data (concat (read-string (inline "2018.edn")) (read-string (inline "2019.edn")))]
     {:workingday (->> data
                       (filter (fn [x] (= :workingday (:type x))))
                       (map :days)
@@ -23,7 +23,6 @@
 
 (defn is-holiday? [day]
   (let [d (.toFormat day "yyyy-MM-dd")]
-    (js/console.log day (j/get day :weekday))
     (cond
       (contains? (:holiday special-days) d) true
       (contains? (:workingday special-days) d) false
