@@ -81,7 +81,18 @@
     {:trigger (render-content (:met diary)),
      :text "Met with people:",
      :initial (or (:met diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :met, :date date, :data data}))))))
+    (fn [data d! m!] (d! :diary/change {:field :met, :date date, :data data}))))
+  (div
+   {:style (merge ui/row {:align-items :center})}
+   (comp-guide "Exercises?")
+   (cursor->
+    :exercise
+    comp-prompt
+    states
+    {:trigger (render-content (:exercise diary)),
+     :text "Performed exercises:",
+     :initial (or (:exercise diary) "")}
+    (fn [data d! m!] (d! :diary/change {:field :exercise, :date date, :data data}))))))
 
 (defcomp
  comp-diary
