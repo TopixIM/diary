@@ -2,7 +2,15 @@
 (ns app.schema (:require [app.util :refer [get-today!]]))
 
 (def diary
-  {:date nil, :food "", :mood "", :place "", :highlight "", :met "", :text "", :time nil})
+  {:date nil,
+   :food "",
+   :mood "",
+   :place "",
+   :highlight "",
+   :met "",
+   :exercise "",
+   :text "",
+   :time nil})
 
 (def user
   {:name nil, :id nil, :nickname nil, :avatar nil, :password nil, :diaries (do diary {})})
