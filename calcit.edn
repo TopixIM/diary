@@ -12772,6 +12772,8 @@
                      "x" {:type :leaf, :by "B1y7Rc-Zz", :at 1569926742782, :text ":met", :id "t5H6ppje-"}
                      "y" {:type :leaf, :by "B1y7Rc-Zz", :at 1569926756158, :text ":exercise", :id "hlyB7oaxf"}
                      "yT" {:type :leaf, :by "B1y7Rc-Zz", :at 1569926759136, :text ":place", :id "lvINEbp3L"}
+                     "yj" {:type :leaf, :by "B1y7Rc-Zz", :at 1569928091433, :text ":date", :id "4pAYiwbeC"}
+                     "yr" {:type :leaf, :by "B1y7Rc-Zz", :at 1569928103288, :text ":time", :id "m0IQL7beL"}
                     }
                    }
                   }

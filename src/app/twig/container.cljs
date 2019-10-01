@@ -27,7 +27,10 @@
  (->> diaries
       (map-kv
        (fn [k v]
-         [k (if (some? v) (select-keys v [:mood :highlight :food :met :exercise :place]) nil)]))
+         [k
+          (if (some? v)
+            (select-keys v [:mood :highlight :food :met :exercise :place :date :time])
+            nil)]))
       (into {})))
 
 (deftwig
