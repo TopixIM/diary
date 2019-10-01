@@ -24,7 +24,13 @@
      :style {:cursor :pointer},
      :on-click (action-> :router/change {:name :home})}))
   (div
-   {:style {:cursor "pointer"}, :on-click (action-> :router/change {:name :profile})}
-   (<> (if logged-in? "Me" "Guest"))
-   (=< 8 nil)
-   (<> count-members))))
+   {}
+   (span
+    {:inner-text "Data",
+     :style {:cursor :pointer, :margin-bottom 16, :display :inline-block},
+     :on-click (action-> :router/change {:name :data})})
+   (div
+    {:style {:cursor "pointer"}, :on-click (action-> :router/change {:name :profile})}
+    (<> (if logged-in? "Me" "Guest"))
+    (=< 8 nil)
+    (<> count-members)))))
