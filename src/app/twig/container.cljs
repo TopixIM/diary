@@ -4,7 +4,8 @@
             [app.twig.user :refer [twig-user]]
             ["randomcolor" :as color]
             [app.schema :as schema]
-            [app.util :refer [format-to-date]]))
+            [app.util :refer [format-to-date]]
+            [medley.core :refer [map-kv]]))
 
 (deftwig
  twig-members
@@ -18,6 +19,18 @@
  (diaries)
  (->> diaries
       (map (fn [[k v]] [k (if (some? v) (select-keys v [:mood :highlight]) nil)]))
+      (into {})))
+
+(deftwig
+ twig-personal-data
+ (diaries)
+ (->> diaries
+      (map-kv
+       (fn [k v]
+         [k
+          (if (some? v)
+            (select-keys v [:mood :highlight :food :met :exercise :place :date :time])
+            nil)]))
       (into {})))
 
 (deftwig
@@ -38,6 +51,7 @@
                     :home (twig-overview (:diaries user))
                     :diary nil
                     :profile (twig-members (:sessions db) (:users db))
+                    :data (twig-personal-data (:diaries user))
                     {})),
          :today (:today db),
          :diary (get-in user [:diaries (format-to-date (:cursor session))]),
