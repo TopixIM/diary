@@ -185,9 +185,9 @@
                      month-1st
                      (clj->js {:days (unchecked-negate (dec (.-weekday month-1st)))}))]
    (div
-    {:style (merge ui/column ui/flex)}
+    {:style (merge ui/column ui/expand)}
     (div
-     {:style (merge ui/row ui/flex)}
+     {:style (merge ui/row ui/expand)}
      (div
       {:style {:padding 16, :display :inline-block}}
       (div
@@ -229,6 +229,10 @@
                  :on-click (fn [e d! m!] (d! :session/merge-cursor {:month n}))})]))))
      (div
       {:style ui/row-middle}
+      (span
+       {:inner-text "2020",
+        :style style-year-entry,
+        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2020}))})
       (span
        {:inner-text "2019",
         :style style-year-entry,
