@@ -3,7 +3,7 @@
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
             [respo.comp.space :refer [=<]]
-            [respo.core :refer [defcomp <> action-> list-> span div a button]]
+            [respo.core :refer [defcomp <> list-> span div a button]]
             ["luxon" :refer [DateTime]]
             [app.util :refer [get-days-by same-day?]]
             [app.comp.empty :refer [comp-empty]]
@@ -64,7 +64,7 @@
              (if selected? {:background-color (hsl 170 80 94)})
              (if today? {:background-color (hsl 30 80 97)})
              (if (is-holiday? this-day) {:border-bottom (str "4px solid " (hsl 200 80 80))})),
-     :on-click (fn [e d! m!]
+     :on-click (fn [e d!]
        (d!
         :session/set-cursor
         {:year (.-year this-day), :month (.-month this-day), :day (.-day this-day)}))}
@@ -114,12 +114,12 @@
     (div
      {}
      (button
-      {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+      {:style ui/button, :on-click (fn [e d!] (d! :router/change {:name :diary}))}
       (<> "Edit diary")))
     (div
      {}
      (button
-      {:style ui/button, :on-click (fn [e d! m!] (d! :router/change {:name :diary}))}
+      {:style ui/button, :on-click (fn [e d!] (d! :router/change {:name :diary}))}
       (<> "Add diary"))))))
 
 (defcomp
@@ -193,14 +193,13 @@
       (div
        {:style (merge ui/row-parted {:padding "0 16px"})}
        (a
-        {:style style-month-switch,
-         :on-click (fn [e d! m!] (on-change-month! cursor -1 d!))}
+        {:style style-month-switch, :on-click (fn [e d!] (on-change-month! cursor -1 d!))}
         (comp-i :chevron-left 16 (hsl 200 80 70)))
        (<>
         (.toFormat cursor-date "yyyy-MM")
         {:font-family ui/font-fancy, :font-size 16, :font-weight 300})
        (a
-        {:style style-month-switch, :on-click (fn [e d! m!] (on-change-month! cursor 1 d!))}
+        {:style style-month-switch, :on-click (fn [e d!] (on-change-month! cursor 1 d!))}
         (comp-i :chevron-right 16 (hsl 200 80 70))))
       (comp-weekdays)
       (list->
@@ -226,18 +225,18 @@
                (span
                 {:inner-text n,
                  :style style-month-entry,
-                 :on-click (fn [e d! m!] (d! :session/merge-cursor {:month n}))})]))))
+                 :on-click (fn [e d!] (d! :session/merge-cursor {:month n}))})]))))
      (div
       {:style ui/row-middle}
       (span
        {:inner-text "2020",
         :style style-year-entry,
-        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2020}))})
+        :on-click (fn [e d!] (d! :session/merge-cursor {:year 2020}))})
       (span
        {:inner-text "2019",
         :style style-year-entry,
-        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2019}))})
+        :on-click (fn [e d!] (d! :session/merge-cursor {:year 2019}))})
       (span
        {:inner-text "2018",
         :style style-year-entry,
-        :on-click (fn [e d! m!] (d! :session/merge-cursor {:year 2018}))}))))))
+        :on-click (fn [e d!] (d! :session/merge-cursor {:year 2018}))}))))))

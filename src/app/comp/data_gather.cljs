@@ -3,7 +3,7 @@
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
             [respo.comp.space :refer [=<]]
-            [respo.core :refer [defcomp <> action-> list-> span div a textarea button]]
+            [respo.core :refer [defcomp <> list-> span div a textarea button]]
             ["copy-to-clipboard" :as copy!]
             [favored-edn.core :refer [write-edn]]))
 
@@ -20,4 +20,4 @@
    (button
     {:style ui/button,
      :inner-text "Copy",
-     :on-click (fn [e d! m!] (copy! (write-edn (->> diaries (sort-by first) vec))))}))))
+     :on-click (fn [e d!] (copy! (write-edn (->> diaries (sort-by first) vec))))}))))
