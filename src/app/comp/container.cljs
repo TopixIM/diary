@@ -2,7 +2,7 @@
 (ns app.comp.container
   (:require [hsl.core :refer [hsl]]
             [respo-ui.core :as ui]
-            [respo.core :refer [defcomp <> div span action-> cursor-> button]]
+            [respo.core :refer [defcomp <> >> div span button]]
             [respo.comp.inspect :refer [comp-inspect]]
             [respo.comp.space :refer [=<]]
             [app.comp.navigation :refer [comp-navigation]]
@@ -22,7 +22,7 @@
  (div
   {:style (merge ui/global ui/fullscreen ui/center)}
   (span
-   {:style {:cursor :pointer}, :on-click (action-> :effect/connect nil)}
+   {:style {:cursor :pointer}, :on-click (fn [e d!] (d! :effect/connect nil))}
    (<>
     "Socket broken! Click to retry."
     {:font-family ui/font-fancy, :font-weight 100, :font-size 32}))))
@@ -56,7 +56,7 @@
         (case (:name router)
           :home (comp-month (:today store) (:cursor session) (:diary store) (:data router))
           :data (comp-data-gather (:data router))
-          :diary (cursor-> :diary comp-diary states (:cursor session) (:diary store))
+          :diary (comp-diary (>> states :diary) (:cursor session) (:diary store))
           :profile (comp-profile (:user store) (:data router))
           (<> router))
         (comp-login states))
@@ -65,7 +65,7 @@
       (comp-messages
        (get-in store [:session :messages])
        {}
-       (fn [info d! m!] (d! :session/remove-message info)))
+       (fn [info d!] (d! :session/remove-message info)))
       (when dev? (comp-reel (:reel-length store) {}))))))
 
 (def style-body {:padding "8px 16px"})

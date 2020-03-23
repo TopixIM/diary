@@ -1,6 +1,6 @@
 
 (ns app.comp.diary
-  (:require [respo.core :refer [defcomp <> div input button cursor-> span textarea a]]
+  (:require [respo.core :refer [defcomp <> div input button >> span textarea a]]
             [hsl.core :refer [hsl]]
             [respo.comp.space :refer [=<]]
             [respo.comp.inspect :refer [comp-inspect]]
@@ -11,7 +11,7 @@
             [app.util :refer [format-to-date]]
             [app.comp.empty :refer [comp-empty]]
             [clojure.string :as string]
-            [respo-alerts.comp.alerts :refer [comp-prompt]]))
+            [respo-alerts.core :refer [comp-prompt]]))
 
 (defcomp
  comp-guide
@@ -30,75 +30,64 @@
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "What did you eat?")
-   (cursor->
-    :food
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :food)
     {:trigger (render-content (:food diary)),
      :text "What have you eaten:",
      :initial (or (:food diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :food, :date date, :data data}))))
+    (fn [data d!] (d! :diary/change {:field :food, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "How you feel?")
-   (cursor->
-    :mood
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :mood)
     {:trigger (render-content (:mood diary)),
      :text "What's the feelings today:",
      :initial (or (:mood diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :mood, :date date, :data data}))))
+    (fn [data d!] (d! :diary/change {:field :mood, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "Where you went?")
-   (cursor->
-    :place
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :place)
     {:trigger (render-content (:place diary)),
      :text "Where have you been today:",
      :initial (or (:place diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :place, :date date, :data data}))))
+    (fn [data d!] (d! :diary/change {:field :place, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "What's the highlights?")
-   (cursor->
-    :highlight
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :highlight)
     {:trigger (render-content (:highlight diary)),
      :text "Highlights of this day:",
      :initial (or (:highlight diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :highlight, :date date, :data data}))))
+    (fn [data d!] (d! :diary/change {:field :highlight, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "People met?")
-   (cursor->
-    :met
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :met)
     {:trigger (render-content (:met diary)),
      :text "Met with people:",
      :initial (or (:met diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :met, :date date, :data data}))))
+    (fn [data d!] (d! :diary/change {:field :met, :date date, :data data}))))
   (div
    {:style (merge ui/row {:align-items :center})}
    (comp-guide "Exercises?")
-   (cursor->
-    :exercise
-    comp-prompt
-    states
+   (comp-prompt
+    (>> states :exercise)
     {:trigger (render-content (:exercise diary)),
      :text "Performed exercises:",
      :initial (or (:exercise diary) "")}
-    (fn [data d! m!] (d! :diary/change {:field :exercise, :date date, :data data}))))))
+    (fn [data d!] (d! :diary/change {:field :exercise, :date date, :data data}))))))
 
 (defcomp
  comp-diary
  (states date-info diary)
  (let [date (format-to-date date-info)
        original-state (:data states)
+       cursor (:cursor states)
        state (or original-state {:text (or (:text diary) "")})]
    (div
     {:style (merge ui/column ui/flex {:padding "32px 120px", :overflow :auto})}
@@ -109,16 +98,16 @@
      (when (not= (:text diary) (:text state))
        (a
         {:style ui/link,
-         :on-click (fn [e d! m!]
+         :on-click (fn [e d!]
            (d! :diary/add-one (merge diary {:text (:text state), :date date}))
-           (m! nil)
+           (d! cursor nil)
            (let [lost-copy "diary-lost-copy"]
              (js/localStorage.setItem lost-copy (:text state))
              (js/console.info "Latest diary saved to" (pr-str lost-copy))))}
         (<> "Save")))
      (=< 16 nil)
      (when (some? original-state)
-       (a {:style ui/link, :on-click (fn [e d! m!] (m! nil))} (<> "Reset"))))
+       (a {:style ui/link, :on-click (fn [e d!] (d! cursor nil))} (<> "Reset"))))
     (=< nil 16)
     (comp-records states diary date)
     (=< nil 32)
@@ -126,4 +115,4 @@
      {:value (:text state),
       :placeholder "Some diary",
       :style (merge ui/flex ui/textarea {:min-height 320, :flex-shrink 0}),
-      :on-input (fn [e d! m!] (m! (assoc state :text (:value e))))}))))
+      :on-input (fn [e d!] (d! cursor (assoc state :text (:value e))))}))))
