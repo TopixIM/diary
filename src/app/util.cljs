@@ -30,4 +30,4 @@
   (let [now (.local DateTime), yesterday (.plus now (clj->js {:days -1}))]
     {:year (.-year yesterday), :month (.-month yesterday), :day (.-day yesterday)}))
 
-(defn same-day? [a b] (and (.hasSame a b "month") (.hasSame a b "day")))
+(defn same-day? [^js a ^js b] (and (.hasSame a b "month") (.hasSame a b "day")))
