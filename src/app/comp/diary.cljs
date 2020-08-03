@@ -80,7 +80,16 @@
     {:trigger (render-content (:exercise diary)),
      :text "Performed exercises:",
      :initial (or (:exercise diary) "")}
-    (fn [data d!] (d! :diary/change {:field :exercise, :date date, :data data}))))))
+    (fn [data d!] (d! :diary/change {:field :exercise, :date date, :data data}))))
+  (div
+   {:style (merge ui/row {:align-items :center})}
+   (comp-guide "Pains?")
+   (comp-prompt
+    (>> states :pains)
+    {:trigger (render-content (:pains diary)),
+     :text "Pains:",
+     :initial (or (:pains diary) "")}
+    (fn [data d!] (d! :diary/change {:field :pains, :date date, :data data}))))))
 
 (defcomp
  comp-diary

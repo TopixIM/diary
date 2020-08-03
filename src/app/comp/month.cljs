@@ -21,7 +21,7 @@
                       (apply union)),
      :holiday (->> data (filter (fn [x] (= :holiday (:type x)))) (map :days) (apply union))}))
 
-(defn is-holiday? [day]
+(defn is-holiday? [^js day]
   (let [d (.toFormat day "yyyy-MM-dd")]
     (cond
       (contains? (:holiday special-days) d) true
@@ -40,7 +40,7 @@
 
 (defcomp
  comp-cell
- (col row first-day today-info cursor overview)
+ (col row ^js first-day today-info cursor overview)
  (let [offset (+ (* 7 col) row)
        this-day (.plus first-day (clj->js {:days offset}))
        today (.fromObject DateTime (clj->js today-info))
@@ -83,7 +83,7 @@
 
 (defcomp
  comp-diary-preview
- (cursor-date diary)
+ (^js cursor-date diary)
  (div
   {:style (merge ui/flex ui/column {:padding "16px 32px", :height "100%"})}
   (div
@@ -106,6 +106,7 @@
      (div {} (<> (:highlight diary)))
      (div {} (<> (:met diary)))
      (div {} (<> (:exercise diary)))
+     (div {} (<> (:pains diary)))
      (comp-divider "32px 0")
      (div {} (<> (:text diary)))
      (comp-divider "32px 0")))

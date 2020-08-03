@@ -9,6 +9,7 @@
    :highlight "",
    :met "",
    :exercise "",
+   :pains "",
    :text "",
    :time nil})
 
