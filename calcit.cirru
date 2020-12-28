@@ -3109,6 +3109,20 @@
                                     :data $ {}
                                       |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112980737) (:text |inline)
                                       |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112984138) (:text "|\"2019.edn")
+                              |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1565112984820)
+                                :data $ {}
+                                  |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112986261) (:text |read-string)
+                                  |T $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1565112978659)
+                                    :data $ {}
+                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112980737) (:text |inline)
+                                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1609147119657) (:text "|\"2020.edn")
+                              |v $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1565112984820)
+                                :data $ {}
+                                  |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112986261) (:text |read-string)
+                                  |T $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1565112978659)
+                                    :data $ {}
+                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112980737) (:text |inline)
+                                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1609147123669) (:text "|\"2021.edn")
                   |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1565112999227)
                     :data $ {}
                       |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1565112999696) (:text |{})

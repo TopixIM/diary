@@ -14,7 +14,11 @@
             [applied-science.js-interop :as j]))
 
 (def special-days
-  (let [data (concat (read-string (inline "2018.edn")) (read-string (inline "2019.edn")))]
+  (let [data (concat
+              (read-string (inline "2018.edn"))
+              (read-string (inline "2019.edn"))
+              (read-string (inline "2020.edn"))
+              (read-string (inline "2021.edn")))]
     {:workingday (->> data
                       (filter (fn [x] (= :workingday (:type x))))
                       (map :days)
