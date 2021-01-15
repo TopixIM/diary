@@ -6163,7 +6163,7 @@
                                   |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1547393228963)
                                     :data $ {}
                                       |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1547393567853) (:text |util/get-yesterday!)
-                              |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1580656710103) (:text |when)
+                              |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1610695914552) (:text |if)
                               |L $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1580656695544)
                                 :data $ {}
                                   |T $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1580656692638)
@@ -6174,6 +6174,13 @@
                                       |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1580656694928) (:text |.getHours)
                                   |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1580656697073) (:text |<)
                                   |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1580656702181) (:text |3)
+                              |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1547393219982)
+                                :data $ {}
+                                  |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1547393227654) (:text |dispatch!)
+                                  |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1547393222372) (:text |:session/set-cursor)
+                                  |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1547393228963)
+                                    :data $ {}
+                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1610695948785) (:text |util/get-today!)
                       |v $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1546356119175)
                         :data $ {}
                           |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1546356119175) (:text |do)

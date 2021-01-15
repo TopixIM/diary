@@ -28,8 +28,9 @@
       (do
        (println "Found storage.")
        (dispatch! :user/log-in (read-string raw))
-       (when (< (.getHours (js/Date.)) 3)
-         (dispatch! :session/set-cursor (util/get-yesterday!))))
+       (if (< (.getHours (js/Date.)) 3)
+         (dispatch! :session/set-cursor (util/get-yesterday!))
+         (dispatch! :session/set-cursor (util/get-today!))))
       (do (println "Found no storage.")))))
 
 (defn dispatch! [op op-data]
