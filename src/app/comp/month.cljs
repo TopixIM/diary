@@ -234,6 +234,10 @@
      (div
       {:style ui/row-middle}
       (span
+       {:inner-text "2021",
+        :style style-year-entry,
+        :on-click (fn [e d!] (d! :session/merge-cursor {:year 2021}))})
+      (span
        {:inner-text "2020",
         :style style-year-entry,
         :on-click (fn [e d!] (d! :session/merge-cursor {:year 2020}))})
