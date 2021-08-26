@@ -8,7 +8,7 @@ Preview http://diary.topix.im
 
 ### Workflow
 
-https://github.com/Cumulo/cumulo-workflow
+https://github.com/Cumulo/cumulo-workflow.calcit/
 
 ### License
 
