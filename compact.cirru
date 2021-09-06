@@ -948,9 +948,9 @@
       :defs $ {}
         |get-yesterday! $ quote
           defn get-yesterday! () $ let
-              now $ .local DateTime
-              yesterday $ .plus now
-                clj->js $ {} (:days -1)
+              now $ .!local DateTime
+              yesterday $ .!plus now
+                js-object $ "\"days" -1
             {}
               :year $ .-year yesterday
               :month $ .-month yesterday
@@ -991,9 +991,9 @@
           defn get-today! () $ let
               now $ new js/Date
             {}
-              :year $ .getFullYear now
-              :month $ inc (.getMonth now)
-              :day $ .getDate now
+              :year $ .!getFullYear now
+              :month $ inc (.!getMonth now)
+              :day $ .!getDate now
     |app.comp.navigation $ {}
       :ns $ quote
         ns app.comp.navigation $ :require
@@ -1101,6 +1101,7 @@
           "\"bottom-tip" :default hud!
           "\"./calcit.build-errors" :default client-errors
           "\"../js-out/calcit.build-errors" :default server-errors
+          app.util :as util
       :defs $ {}
         |render-app! $ quote
           defn render-app! () $ render! mount-target
@@ -1155,6 +1156,12 @@
             if (some? raw)
               do (println "\"Found storage.")
                 dispatch! :user/log-in $ parse-cirru-edn raw
+                if
+                  <
+                    .!getHours $ new js/Date
+                    , 4
+                  dispatch! :session/set-cursor $ util/get-yesterday!
+                  dispatch! :session/set-cursor $ util/get-today!
               do $ println "\"Found no storage."
         |reload! $ quote
           defn reload! () $ if
