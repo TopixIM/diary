@@ -5,6 +5,8 @@
 js-out/
 node_modules/
 dist/
-out-page/
 
 yarn-error.log
+
+storage.cirru
+backups/
