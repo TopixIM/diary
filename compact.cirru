@@ -480,15 +480,17 @@
                     a
                       {} (:style ui/link)
                         :on-click $ fn (e d!)
-                          d! :diary/add-one $ merge diary
-                            {}
-                              :text $ :text state
-                              :date date
-                          d! cursor nil
-                          let
-                              lost-copy "\"diary-lost-copy"
-                            js/localStorage.setItem lost-copy $ :text state
-                            js/console.info "\"Latest diary saved to" $ pr-str lost-copy
+                          when
+                            not $ blank? (:text state)
+                            d! :diary/add-one $ merge diary
+                              {}
+                                :text $ :text state
+                                :date date
+                            d! cursor nil
+                            let
+                                lost-copy "\"diary-lost-copy"
+                              js/localStorage.setItem lost-copy $ :text state
+                              js/console.info "\"Latest diary saved to" $ pr-str lost-copy
                       <> "\"Save"
                   =< 16 nil
                   when (some? original-state)

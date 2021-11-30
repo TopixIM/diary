@@ -5302,100 +5302,92 @@
                                                 :type :expr
                                                 :at 1529318289536
                                                 :by |root
-                                              |r $ {}
+                                              |x $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235004378)
                                                 :data $ {}
-                                                  |T $ {} (:text |d!) (:type :leaf) (:at 1529319169222) (:by |root)
-                                                  |j $ {} (:text |:diary/add-one) (:type :leaf) (:at 1529318303392) (:by |root)
-                                                  |r $ {}
-                                                    :data $ {}
-                                                      |D $ {} (:text |merge) (:type :leaf) (:at 1529342945110) (:by |root)
-                                                      |T $ {} (:text |diary) (:type :leaf) (:at 1529318307088) (:by |root)
-                                                      |j $ {}
-                                                        :data $ {}
-                                                          |D $ {} (:text |{}) (:type :leaf) (:at 1529342948990) (:by |root)
-                                                          |T $ {}
-                                                            :data $ {}
-                                                              |T $ {} (:text |:text) (:type :leaf) (:at 1529342467218) (:by |root)
-                                                              |j $ {}
-                                                                :data $ {}
-                                                                  |T $ {} (:text |:text) (:type :leaf) (:at 1529342953723) (:by |root)
-                                                                  |j $ {} (:text |state) (:type :leaf) (:at 1529342954303) (:by |root)
-                                                                :type :expr
-                                                                :at 1529342952314
-                                                                :by |root
-                                                            :type :expr
-                                                            :at 1529342946006
-                                                            :by |root
-                                                          |j $ {}
-                                                            :data $ {}
-                                                              |T $ {} (:text |:date) (:type :leaf) (:at 1529342959876) (:by |root)
-                                                              |j $ {} (:text |date) (:type :leaf) (:at 1529342961081) (:by |root)
-                                                            :type :expr
-                                                            :at 1529342957607
-                                                            :by |root
-                                                        :type :expr
-                                                        :at 1529342948332
-                                                        :by |root
-                                                    :type :expr
-                                                    :at 1529342464130
-                                                    :by |root
-                                                :type :expr
-                                                :at 1529318292009
-                                                :by |root
-                                              |v $ {}
-                                                :data $ {}
-                                                  |T $ {} (:text |d!) (:type :leaf) (:at 1584892144985) (:by |B1y7Rc-Zz)
-                                                  |b $ {} (:text |cursor) (:type :leaf) (:at 1584892146501) (:by |B1y7Rc-Zz)
-                                                  |j $ {} (:text |nil) (:type :leaf) (:at 1529319174812) (:by |root)
-                                                :type :expr
-                                                :at 1529319169999
-                                                :by |root
-                                              |x $ {}
-                                                :data $ {}
-                                                  |D $ {} (:text |let) (:type :leaf) (:at 1562474556162) (:by |B1y7Rc-Zz)
-                                                  |L $ {}
-                                                    :data $ {}
-                                                      |T $ {}
-                                                        :data $ {}
-                                                          |T $ {} (:text |lost-copy) (:type :leaf) (:at 1562475393575) (:by |B1y7Rc-Zz)
-                                                          |j $ {} (:text "|\"diary-lost-copy") (:type :leaf) (:at 1562475390716) (:by |B1y7Rc-Zz)
-                                                        :type :expr
-                                                        :at 1562474556555
-                                                        :by |B1y7Rc-Zz
-                                                    :type :expr
-                                                    :at 1562474556400
-                                                    :by |B1y7Rc-Zz
                                                   |T $ {}
                                                     :data $ {}
-                                                      |T $ {} (:text |js/localStorage.setItem) (:type :leaf) (:at 1562474551451) (:by |B1y7Rc-Zz)
-                                                      |j $ {} (:text |lost-copy) (:type :leaf) (:at 1562475394750) (:by |B1y7Rc-Zz)
-                                                      |r $ {}
+                                                      |D $ {} (:text |let) (:type :leaf) (:at 1562474556162) (:by |B1y7Rc-Zz)
+                                                      |L $ {}
                                                         :data $ {}
-                                                          |T $ {} (:text |:text) (:type :leaf) (:at 1562474593687) (:by |B1y7Rc-Zz)
-                                                          |j $ {} (:text |state) (:type :leaf) (:at 1562474594423) (:by |B1y7Rc-Zz)
+                                                          |T $ {}
+                                                            :data $ {}
+                                                              |T $ {} (:text |lost-copy) (:type :leaf) (:at 1562475393575) (:by |B1y7Rc-Zz)
+                                                              |j $ {} (:text "|\"diary-lost-copy") (:type :leaf) (:at 1562475390716) (:by |B1y7Rc-Zz)
+                                                            :type :expr
+                                                            :at 1562474556555
+                                                            :by |B1y7Rc-Zz
                                                         :type :expr
-                                                        :at 1562474585992
+                                                        :at 1562474556400
+                                                        :by |B1y7Rc-Zz
+                                                      |T $ {}
+                                                        :data $ {}
+                                                          |T $ {} (:text |js/localStorage.setItem) (:type :leaf) (:at 1562474551451) (:by |B1y7Rc-Zz)
+                                                          |j $ {} (:text |lost-copy) (:type :leaf) (:at 1562475394750) (:by |B1y7Rc-Zz)
+                                                          |r $ {}
+                                                            :data $ {}
+                                                              |T $ {} (:text |:text) (:type :leaf) (:at 1562474593687) (:by |B1y7Rc-Zz)
+                                                              |j $ {} (:text |state) (:type :leaf) (:at 1562474594423) (:by |B1y7Rc-Zz)
+                                                            :type :expr
+                                                            :at 1562474585992
+                                                            :by |B1y7Rc-Zz
+                                                        :type :expr
+                                                        :at 1562474531455
+                                                        :by |B1y7Rc-Zz
+                                                      |j $ {}
+                                                        :data $ {}
+                                                          |T $ {} (:text |js/console.info) (:type :leaf) (:at 1562474607880) (:by |B1y7Rc-Zz)
+                                                          |j $ {} (:text "|\"Latest diary saved to") (:type :leaf) (:at 1562474651946) (:by |B1y7Rc-Zz)
+                                                          |r $ {}
+                                                            :data $ {}
+                                                              |T $ {} (:text |pr-str) (:type :leaf) (:at 1562474636197) (:by |B1y7Rc-Zz)
+                                                              |j $ {} (:text |lost-copy) (:type :leaf) (:at 1562475395921) (:by |B1y7Rc-Zz)
+                                                            :type :expr
+                                                            :at 1562474634471
+                                                            :by |B1y7Rc-Zz
+                                                        :type :expr
+                                                        :at 1562474600488
                                                         :by |B1y7Rc-Zz
                                                     :type :expr
-                                                    :at 1562474531455
+                                                    :at 1562474555559
                                                     :by |B1y7Rc-Zz
-                                                  |j $ {}
+                                                  |D $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235005444) (:text |when)
+                                                  |L $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235006118)
                                                     :data $ {}
-                                                      |T $ {} (:text |js/console.info) (:type :leaf) (:at 1562474607880) (:by |B1y7Rc-Zz)
-                                                      |j $ {} (:text "|\"Latest diary saved to") (:type :leaf) (:at 1562474651946) (:by |B1y7Rc-Zz)
-                                                      |r $ {}
+                                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235006467) (:text |not)
+                                                      |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235007683)
                                                         :data $ {}
-                                                          |T $ {} (:text |pr-str) (:type :leaf) (:at 1562474636197) (:by |B1y7Rc-Zz)
-                                                          |j $ {} (:text |lost-copy) (:type :leaf) (:at 1562475395921) (:by |B1y7Rc-Zz)
-                                                        :type :expr
-                                                        :at 1562474634471
-                                                        :by |B1y7Rc-Zz
-                                                    :type :expr
-                                                    :at 1562474600488
-                                                    :by |B1y7Rc-Zz
-                                                :type :expr
-                                                :at 1562474555559
-                                                :by |B1y7Rc-Zz
+                                                          |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235009902) (:text |blank?)
+                                                          |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235012391)
+                                                            :data $ {}
+                                                              |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235012391) (:text |:text)
+                                                              |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235012391) (:text |state)
+                                                  |P $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                    :data $ {}
+                                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |d!)
+                                                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |:diary/add-one)
+                                                      |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                        :data $ {}
+                                                          |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |merge)
+                                                          |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |diary)
+                                                          |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                            :data $ {}
+                                                              |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |{})
+                                                              |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                                :data $ {}
+                                                                  |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |:text)
+                                                                  |j $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                                    :data $ {}
+                                                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |:text)
+                                                                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |state)
+                                                              |r $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235309731)
+                                                                :data $ {}
+                                                                  |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |:date)
+                                                                  |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235309731) (:text |date)
+                                                  |R $ {} (:type :expr) (:by |B1y7Rc-Zz) (:at 1638235313486)
+                                                    :data $ {}
+                                                      |T $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235313486) (:text |d!)
+                                                      |j $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235313486) (:text |cursor)
+                                                      |r $ {} (:type :leaf) (:by |B1y7Rc-Zz) (:at 1638235313486) (:text |nil)
                                             :type :expr
                                             :at 1529318288291
                                             :by |root
