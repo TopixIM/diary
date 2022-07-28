@@ -160,19 +160,19 @@
         |comp-data-gather $ quote
           defcomp comp-data-gather (diaries)
             div
-              {} $ :style
-                {}
+              {}
+                :class-name $ str-spaced css/expand css/column
+                :style $ {} (:padding 16)
                   :color $ hsl 0 0 80
-                  :padding 16
               textarea $ {}
-                :class-name $ str-spaced css/textarea css/font-code
+                :class-name $ str-spaced css/expand css/textarea
                 :value $ format-cirru-edn
                   -> diaries (.to-list) (.sort-by first)
-                :style $ {} (:width 1200) (:height 400)
+                :style $ {} (:width "\"auto") (:height 400) (:font-family ui/font-code) (:white-space :pre)
               div
                 {} $ :style
                   {} $ :padding "\"16px 0"
-                button $ {} (:style css/button) (:inner-text "\"Copy")
+                button $ {} (:class-name css/button) (:inner-text "\"Copy")
                   :on-click $ fn (e d!)
                     copy! $ format-cirru-edn
                       -> diaries (.to-list) (.sort-by first)
