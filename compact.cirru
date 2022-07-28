@@ -214,21 +214,16 @@
                     :class-name $ str-spaced css/flex css/column
                     :style $ {} (:flex 2)
                   div
-                    {} (:class-name css/row-middle)
+                    {} (:class-name css/row-parted)
                       :style $ {} (:height 40)
-                    <> "\"Short review" $ {} (:font-size 20) (:font-family ui/font-fancy)
-                      :color $ hsl 0 0 80
-                    =< 20 nil
-                    when (some? original-state)
-                      a
-                        {} (:style ui/link)
-                          :on-click $ fn (e d!) (d! cursor nil)
-                        <> "\"Reset"
-                    =< 20 nil
-                    when
-                      not= (:text diary) (:text state)
-                      a
-                        {} (:class-name css/link)
+                    div
+                      {} $ :class-name css/row-middle
+                      <> "\"Short review" $ {} (:font-size 20) (:font-family ui/font-fancy)
+                        :color $ hsl 0 0 80
+                      =< 20 nil
+                      when
+                        not= (:text diary) (:text state)
+                        button $ {} (:class-name css/button) (:inner-text "\"Save")
                           :on-click $ fn (e d!)
                             when
                               not $ blank? (:text state)
@@ -241,7 +236,12 @@
                                   lost-copy "\"diary-lost-copy"
                                 js/localStorage.setItem lost-copy $ :text state
                                 js/console.info "\"Latest diary saved to" $ pr-str lost-copy
-                        <> "\"Save"
+                    when
+                      not= (:text diary) (:text state)
+                      a
+                        {} (:style ui/link)
+                          :on-click $ fn (e d!) (d! cursor nil)
+                        <> "\"Reset"
                   textarea $ {}
                     :value $ :text state
                     :placeholder "\"Some diary"
