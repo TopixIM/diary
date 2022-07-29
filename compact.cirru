@@ -133,7 +133,8 @@
               :style $ {} (:background-color color)
         |css-status-color $ quote
           defstyle css-status-color $ {}
-            "\"$0" $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius "\"8px") (:opacity 0.8)
+            "\"$0" $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius "\"8px") (:opacity 0.8) (:transition-duration "\"240ms")
+            "\"$0:hover" $ {} (:transform "\"scale(1.1)")
         |style-body $ quote
           def style-body $ {} (:padding "|8px 16px")
       :ns $ quote
@@ -197,46 +198,57 @@
                     or (:text diary) "\""
               div
                 {}
-                  :class-name $ str-spaced css/column css/flex
-                  :style $ {} (:padding "\"32px 120px") (:overflow :auto)
+                  :class-name $ str-spaced css/row css/flex
+                  :style $ {} (:padding "\"32px 80px") (:overflow :auto)
                 div
-                  {} $ :style
-                    {} $ :flex-shrink 0
-                  <> date $ {} (:font-size 20) (:font-family ui/font-fancy) (:font-weight 100)
-                  =< 16 nil
-                  when
-                    not= (:text diary) (:text state)
-                    a
-                      {} (:class-name css/link)
-                        :on-click $ fn (e d!)
-                          when
-                            not $ blank? (:text state)
-                            d! :diary/add-one $ merge diary
-                              {}
-                                :text $ :text state
-                                :date date
-                            d! cursor nil
-                            let
-                                lost-copy "\"diary-lost-copy"
-                              js/localStorage.setItem lost-copy $ :text state
-                              js/console.info "\"Latest diary saved to" $ pr-str lost-copy
-                      <> "\"Save"
-                  =< 16 nil
-                  when (some? original-state)
-                    a
-                      {} (:style ui/link)
-                        :on-click $ fn (e d!) (d! cursor nil)
-                      <> "\"Reset"
-                =< nil 16
-                comp-records states diary date
-                =< nil 32
-                textarea $ {}
-                  :value $ :text state
-                  :placeholder "\"Some diary"
-                  :class-name $ str-spaced css/flex css/textarea
-                  :style $ {} (:min-height 320) (:flex-shrink 0)
-                  :on-input $ fn (e d!)
-                    d! cursor $ assoc state :text (:value e)
+                  {} $ :class-name css/expand
+                  div
+                    {} $ :style
+                      {} $ :flex-shrink 0
+                    <> date $ {} (:font-size 32) (:font-family ui/font-fancy) (:font-weight 100)
+                  =< nil 8
+                  comp-records states diary date
+                =< 32 nil
+                div
+                  {}
+                    :class-name $ str-spaced css/flex css/column
+                    :style $ {} (:flex 2)
+                  div
+                    {} (:class-name css/row-parted)
+                      :style $ {} (:height 40)
+                    div
+                      {} $ :class-name css/row-middle
+                      <> "\"Short review" $ {} (:font-size 20) (:font-family ui/font-fancy)
+                        :color $ hsl 0 0 80
+                      =< 20 nil
+                      when
+                        not= (:text diary) (:text state)
+                        button $ {} (:class-name css/button) (:inner-text "\"Save")
+                          :on-click $ fn (e d!)
+                            when
+                              not $ blank? (:text state)
+                              d! :diary/add-one $ merge diary
+                                {}
+                                  :text $ :text state
+                                  :date date
+                              d! cursor nil
+                              let
+                                  lost-copy "\"diary-lost-copy"
+                                js/localStorage.setItem lost-copy $ :text state
+                                js/console.info "\"Latest diary saved to" $ pr-str lost-copy
+                    when
+                      not= (:text diary) (:text state)
+                      a
+                        {} (:style ui/link)
+                          :on-click $ fn (e d!) (d! cursor nil)
+                        <> "\"Reset"
+                  textarea $ {}
+                    :value $ :text state
+                    :placeholder "\"Some diary"
+                    :class-name $ str-spaced css/flex css/textarea
+                    :style $ {} (:min-height 320) (:flex-shrink 0)
+                    :on-input $ fn (e d!)
+                      d! cursor $ assoc state :text (:value e)
         |comp-guide $ quote
           defcomp comp-guide (text)
             div
@@ -252,8 +264,7 @@
                     {} (:text "\"What have you eaten:")
                       :initial $ or (:food diary) "\""
                 div
-                  {} $ :style
-                    merge ui/row $ {} (:align-items :center)
+                  {} $ :class-name css-record-layout
                   comp-guide "\"What did you eat?"
                   render-content (:food diary)
                     fn (e d!)
@@ -265,8 +276,9 @@
                     {} (:text "\"What's the feelings today:")
                       :initial $ or (:mood diary) "\""
                 div
-                  {} $ :style
-                    merge ui/row $ {} (:align-items :center)
+                  {} (:class-name css-record-layout)
+                    :style $ merge
+                      {} $ :align-items :start
                   comp-guide "\"How you feel?"
                   render-content (:mood diary)
                     fn (e d!)
@@ -278,7 +290,7 @@
                     {} (:text "\"Where have you been today:")
                       :initial $ or (:place diary) "\""
                 div
-                  {} (:class-name css/row)
+                  {} (:class-name css-record-layout)
                     :style $ {} (:align-items :center)
                   comp-guide "\"Where you went?"
                   render-content (:place diary)
@@ -291,7 +303,7 @@
                     {} (:text "\"Highlights of this day:")
                       :initial $ or (:highlight diary) "\""
                 div
-                  {} (:class-name css/row)
+                  {} (:class-name css-record-layout)
                     :style $ {} (:align-items :center)
                   comp-guide "\"What's the highlights?"
                   render-content (:highlight diary)
@@ -304,7 +316,7 @@
                     {} (:text "\"Met with people:")
                       :initial $ or (:met diary) "\""
                 div
-                  {} (:class-name css/row)
+                  {} (:class-name css-record-layout)
                     :style $ {} (:align-items :center)
                   comp-guide "\"People met?"
                   render-content (:met diary)
@@ -317,7 +329,7 @@
                     {} (:text "\"Performed exercises:")
                       :initial $ or (:exercise diary) "\""
                 div
-                  {} (:class-name css/row)
+                  {} (:class-name css-record-layout)
                     :style $ {} (:align-items :center)
                   comp-guide "\"Exercises?"
                   render-content (:exercise diary)
@@ -330,7 +342,7 @@
                     {} (:text "\"Pains:")
                       :initial $ or (:pains diary) "\""
                 div
-                  {} (:class-name css/row)
+                  {} (:class-name css-record-layout)
                     :style $ {} (:align-items :center)
                   comp-guide "\"Pains?"
                   render-content (:pains diary)
@@ -344,12 +356,15 @@
               :color $ hsl 0 0 60
               :margin-right 32
               :min-width 160
-              :text-align :right
+              :text-align :left
+        |css-record-layout $ quote
+          defstyle css-record-layout $ {}
+            "\"$0" $ {} (:margin-bottom 20)
         |render-content $ quote
           defn render-content (x on-click)
             span
               {}
-                :style $ {} (:cursor :pointer)
+                :style $ {} (:margin-left 24) (:cursor :pointer)
                 :on-click on-click
               if (blank? x) (comp-empty) (<> x)
       :ns $ quote
@@ -373,7 +388,8 @@
         |comp-empty $ quote
           defcomp comp-empty () $ div
             {} $ :style
-              {} $ :color (hsl 0 0 80)
+              {} (:display :inline-block)
+                :color $ hsl 0 0 80
             <> "\"Empty"
       :ns $ quote
         ns app.comp.empty $ :require
@@ -450,6 +466,8 @@
                   = (.-month this-day) (:month cursor)
                   = (.-day this-day) (:day cursor)
                 info $ get overview (.toFormat this-day "\"yyyy-MM-dd")
+                preview-mood $ :mood info
+                preview-highlight $ :highlight info
               div
                 {}
                   :class-name $ str-spaced css-cell-size css/center css-day-cell
@@ -458,6 +476,7 @@
                       if same-month? (hsl 0 0 30) (hsl 0 0 80)
                     if selected? $ {}
                       :background-color $ hsl 170 80 94
+                      :transform "\"scale(1.1)"
                     if today? $ {}
                       :background-color $ hsl 30 80 97
                     if (is-holiday? this-day)
@@ -471,13 +490,17 @@
                 div
                   {} (:class-name css/column)
                     :style $ {} (:width "\"100%")
-                  <> (.toFormat this-day "\"d")
+                  <> (.!toFormat this-day "\"d")
                     merge
-                      {} $ :font-size 16
+                      {} (:font-size 16)
+                        :color $ hsl 0 0 60
                       if (some? info)
                         {} $ :font-weight 500
-                  <> (:mood info) style-preview
-                  <> (:highlight info) style-preview
+                      if
+                        and (blank? preview-mood) (blank? preview-highlight)
+                        {} $ :font-size 20
+                  <> preview-mood style-preview
+                  <> preview-highlight style-preview
         |comp-diary-preview $ quote
           defcomp comp-diary-preview (cursor-date diary)
             div
@@ -564,7 +587,7 @@
                   {} $ :class-name (str-spaced css/row css/expand)
                   div
                     {} $ :style
-                      {} (:padding 16) (:display :inline-block)
+                      {} (:padding "\"16px 8px") (:display :inline-block)
                     div
                       {} (:class-name css/row-parted)
                         :style $ {} (:padding "\"0 16px")
@@ -592,34 +615,39 @@
                     :style $ {} (:width 1)
                       :background-color $ hsl 0 0 90
                   comp-diary-preview cursor-date diary
-                div
-                  {} (:class-name css/row-middle)
-                    :style $ {}
-                      :border-top $ str "\"1px solid " (hsl 0 0 90)
-                  list->
-                    {} (:class-name css/row)
-                      :style $ {} (:padding "\"0px 16px")
-                    -> (range 1 13)
-                      map $ fn (n)
-                        [] n $ span
-                          {} (:inner-text n)
-                            :class-name $ str-spaced css/center css-month-entry
-                            :on-click $ fn (e d!)
-                              d! :session/merge-cursor $ {} (:month n)
-                  div
-                    {} $ :class-name css/row-middle
-                    span $ {} (:inner-text "\"2021") (:class-name css-year-entry)
+                comp-month-footer
+        |comp-month-footer $ quote
+          defn comp-month-footer () $ div
+            {} (:class-name css/row-middle)
+              :style $ {}
+                :border-top $ str "\"1px solid " (hsl 0 0 90)
+            list->
+              {} (:class-name css/row)
+                :style $ {} (:padding "\"0px 16px")
+              -> (range 1 13)
+                map $ fn (n)
+                  [] n $ span
+                    {} (:inner-text n)
+                      :class-name $ str-spaced css/center css-month-entry
                       :on-click $ fn (e d!)
-                        d! :session/merge-cursor $ {} (:year 2021)
-                    span $ {} (:inner-text "\"2020") (:class-name css-year-entry)
-                      :on-click $ fn (e d!)
-                        d! :session/merge-cursor $ {} (:year 2020)
-                    span $ {} (:inner-text "\"2019") (:class-name css-year-entry)
-                      :on-click $ fn (e d!)
-                        d! :session/merge-cursor $ {} (:year 2019)
-                    span $ {} (:inner-text "\"2018") (:class-name css-year-entry)
-                      :on-click $ fn (e d!)
-                        d! :session/merge-cursor $ {} (:year 2018)
+                        d! :session/merge-cursor $ {} (:month n)
+            div
+              {} $ :class-name css/row-middle
+              span $ {} (:inner-text "\"2022") (:class-name css-year-entry)
+                :on-click $ fn (e d!)
+                  d! :session/merge-cursor $ {} (:year 2022)
+              span $ {} (:inner-text "\"2021") (:class-name css-year-entry)
+                :on-click $ fn (e d!)
+                  d! :session/merge-cursor $ {} (:year 2021)
+              span $ {} (:inner-text "\"2020") (:class-name css-year-entry)
+                :on-click $ fn (e d!)
+                  d! :session/merge-cursor $ {} (:year 2020)
+              span $ {} (:inner-text "\"2019") (:class-name css-year-entry)
+                :on-click $ fn (e d!)
+                  d! :session/merge-cursor $ {} (:year 2019)
+              span $ {} (:inner-text "\"2018") (:class-name css-year-entry)
+                :on-click $ fn (e d!)
+                  d! :session/merge-cursor $ {} (:year 2018)
         |comp-weekdays $ quote
           defcomp comp-weekdays () $ list->
             {} (:class-name css/row)
@@ -633,11 +661,17 @@
                   <> x
         |css-cell-size $ quote
           defstyle css-cell-size $ {}
-            "\"$0" $ {} (:width 80) (:height 92) (:vertical-align :middle) (:text-align :center)
+            "\"$0" $ {} (:width 92) (:height 84) (:margin 6) (:vertical-align :middle) (:text-align :center)
         |css-day-cell $ quote
           defstyle css-day-cell $ {}
-            "\"$0" $ {} (:cursor :pointer) (:font-family ui/font-fancy) (:font-size 14) (:font-weight 300) (:position :relative) (:overflow :hidden)
-              :border-bottom $ str "\"1px solid " (hsl 0 0 94)
+            "\"$0" $ {} (:cursor :pointer) (:font-family ui/font-fancy) (:font-size 14) (:font-weight 300) (:position :relative) (:overflow :hidden) (:border-radius "\"16px") (:transition-duration "\"200ms")
+              :border $ str "\"1px solid " (hsl 0 0 94)
+              :border-top-color :transparent
+              :border-left-color :transparent
+              :border-right-color :transparent
+            "\"$0:hover" $ {}
+              :background-color $ hsl 0 0 98
+              :transform "\"scale(1.06)"
         |css-month-entry $ quote
           defstyle css-month-entry $ {}
             "\"$0" $ {} (:font-family ui/font-fancy) (:line-height "\"40px") (:width 40) (:font-size 16) (:font-weight 100) (:cursor :pointer)
@@ -750,9 +784,10 @@
         |css-nav $ quote
           defstyle css-nav $ {}
             "\"$0" $ {} (:width 64) (:padding "|16px 0") (:font-size 16)
-              :border-right $ str "|1px solid " (hsl 0 0 0 0.1)
+              :border-right $ str "|1px solid " (hsl 0 0 0 0.05)
               :font-family ui/font-fancy
               :align-items :center
+              :background-color $ hsl 0 0 97
       :ns $ quote
         ns app.comp.navigation $ :require
           respo-ui.core :refer $ hsl
