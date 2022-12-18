@@ -10,7 +10,3 @@ body * {
   box-sizing: border-box;
   flex-shrink: 0;
 }
-
-button:active {
-  background-color: hsl(0,0%,90%) !important;
-}

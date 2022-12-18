@@ -173,7 +173,7 @@
               div
                 {} $ :style
                   {} $ :padding "\"16px 0"
-                button $ {} (:class-name css/button) (:inner-text "\"Copy")
+                button $ {} (:class-name css/button-primary) (:inner-text "\"Copy")
                   :on-click $ fn (e d!)
                     copy! $ format-cirru-edn
                       -> diaries (.to-list) (.sort-by first)
@@ -223,7 +223,7 @@
                       =< 20 nil
                       when
                         not= (:text diary) (:text state)
-                        button $ {} (:class-name css/button) (:inner-text "\"Save")
+                        button $ {} (:class-name css/button-primary) (:inner-text "\"Save")
                           :on-click $ fn (e d!)
                             when
                               not $ blank? (:text state)
@@ -555,7 +555,7 @@
                     <> "\"Edit diary"
                 div ({})
                   button
-                    {} (:class-name css/button)
+                    {} (:class-name css/button-primary)
                       :on-click $ fn (e d!)
                         d! :router/change $ {} (:name :diary)
                     <> "\"Add diary"
