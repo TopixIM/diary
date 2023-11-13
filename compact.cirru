@@ -59,7 +59,7 @@
               println "\"App started!"
         |mount-target $ %{} :CodeEntry (:doc |)
           :code $ quote
-            def mount-target $ .querySelector js/document "\".app"
+            def mount-target $ js/document.querySelector "\".app"
         |on-server-data $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn on-server-data (data)
@@ -514,7 +514,7 @@
                   selected? $ and
                     = (.-month this-day) (:month cursor)
                     = (.-day this-day) (:day cursor)
-                  info $ get overview (.toFormat this-day "\"yyyy-MM-dd")
+                  info $ get overview (.!toFormat this-day "\"yyyy-MM-dd")
                   preview-mood $ :mood info
                   preview-highlight $ :highlight info
                 div
@@ -686,6 +686,9 @@
                           d! :session/merge-cursor $ {} (:month n)
               div
                 {} $ :class-name css/row-middle
+                span $ {} (:inner-text "\"2023") (:class-name css-year-entry)
+                  :on-click $ fn (e d!)
+                    d! :session/merge-cursor $ {} (:year 2023)
                 span $ {} (:inner-text "\"2022") (:class-name css-year-entry)
                   :on-click $ fn (e d!)
                     d! :session/merge-cursor $ {} (:year 2022)
@@ -1090,7 +1093,6 @@
                     do
                       wss-send! sid $ format-cirru-edn (:: :patch changes)
                       swap! *client-caches assoc sid new-store
-              new-twig-loop!
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns app.server $ :require (app.schema :as schema)
@@ -1134,13 +1136,13 @@
                       user $ get-in db
                         [] :users $ :user-id session
                     {}
-                      :user $ memof-call twig-user user
+                      :user $ twig-user user
                       :router $ assoc router :data
                         case-default (:name router) ({})
-                          :home $ memof-call twig-overview (:diaries user)
+                          :home $ twig-overview (:diaries user)
                           :diary nil
-                          :profile $ memof-call twig-members (:sessions db) (:users db)
-                          :data $ memof-call twig-personal-data (:diaries user)
+                          :profile $ twig-members (:sessions db) (:users db)
+                          :data $ twig-personal-data (:diaries user)
                       :today $ :today db
                       :diary $ get-in user
                         [] :diaries $ format-to-date (:cursor session)
@@ -1176,11 +1178,10 @@
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns app.twig.container $ :require
-            [] app.twig.user :refer $ [] twig-user
+            app.twig.user :refer $ [] twig-user
             calcit.std.rand :refer $ rand-hex-color!
-            [] app.schema :as schema
-            [] app.util :refer $ [] format-to-date
-            [] memof.alias :refer $ [] memof-call
+            app.schema :as schema
+            app.util :refer $ [] format-to-date
     |app.twig.user $ %{} :FileEntry
       :defs $ {}
         |twig-user $ %{} :CodeEntry (:doc |)
@@ -1413,7 +1414,7 @@
         |same-day? $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn same-day? (a b)
-              and (.hasSame a b "\"month") (.hasSame a b "\"day")
+              and (.!hasSame a b "\"month") (.!hasSame a b "\"day")
         |zero? $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn zero? (x) (= 0 x)

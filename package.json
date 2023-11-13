@@ -15,15 +15,15 @@
   "author": "jiyinyiyong",
   "license": "MIT",
   "dependencies": {
-    "@calcit/procs": "^0.8.3",
+    "@calcit/procs": "^0.8.9",
     "copy-to-clipboard": "^3.3.3",
-    "luxon": "^3.4.3",
+    "luxon": "^3.4.4",
     "shortid": "^2.2.16"
   },
   "devDependencies": {
     "bottom-tip": "^0.1.5",
     "feather-icons": "^4.29.1",
     "url-parse": "^1.5.10",
-    "vite": "^4.4.9"
+    "vite": "^4.5.0"
   }
 }
