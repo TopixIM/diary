@@ -6,7 +6,7 @@
     |Respo/respo.calcit |main
     |Respo/respo-ui.calcit |main
     |Respo/respo-message.calcit |main
-    |Cumulo/cumulo-util.calcit |0.0.7
+    |Cumulo/cumulo-util.calcit |main
     |Cumulo/cumulo-reel.calcit |main
     |mvc-works/ws-edn.calcit |main
     |Respo/respo-feather.calcit |main

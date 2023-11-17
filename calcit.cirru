@@ -3240,8 +3240,7 @@
                           |r $ %{} :Leaf (:at 1500541010211) (:by |root) (:text |password)
                   |v $ %{} :Expr (:at 1500541010211) (:by nil)
                     :data $ {}
-                      |T $ %{} :Leaf (:at 1500541010211) (:by |root) (:text |.setItem)
-                      |j $ %{} :Leaf (:at 1500541010211) (:by |root) (:text |js/localStorage)
+                      |j $ %{} :Leaf (:at 1700245595112) (:by |B1y7Rc-Zz) (:text |js/localStorage.setItem)
                       |r $ %{} :Expr (:at 1500541010211) (:by nil)
                         :data $ {}
                           |T $ %{} :Leaf (:at 1500541010211) (:by |root) (:text |:storage-key)
