@@ -22,7 +22,8 @@
                 url-obj $ url-parse js/location.href true
                 host $ either (-> url-obj .-query .-host) js/location.hostname
                 port $ either (-> url-obj .-query .-port) (:port config/site)
-              ws-connect! (str "\"ws://" host "\":" port)
+              ws-connect!
+                if config/dev? (str "\"ws://" host "\":" port) "\"wss://diary.topix.im/ws"
                 {}
                   :on-open $ fn (event) (simulate-login!)
                   :on-close $ fn (event)

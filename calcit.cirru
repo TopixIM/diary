@@ -89,13 +89,18 @@
                   |r $ %{} :Expr (:at 1629982058049) (:by |B1y7Rc-Zz)
                     :data $ {}
                       |T $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |ws-connect!)
-                      |j $ %{} :Expr (:at 1629982058049) (:by |B1y7Rc-Zz)
+                      |n $ %{} :Expr (:at 1701194066952) (:by |B1y7Rc-Zz)
                         :data $ {}
-                          |T $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |str)
-                          |j $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text "|\"ws://")
-                          |r $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |host)
-                          |v $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text "|\":")
-                          |x $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |port)
+                          |T $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |if)
+                          |b $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |config/dev?)
+                          |h $ %{} :Expr (:at 1701194066952) (:by |B1y7Rc-Zz)
+                            :data $ {}
+                              |T $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |str)
+                              |b $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text "|\"ws://")
+                              |h $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |host)
+                              |l $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text "|\":")
+                              |o $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |port)
+                          |l $ %{} :Leaf (:at 1701194070648) (:by |B1y7Rc-Zz) (:text "|\"wss://diary.topix.im/ws")
                       |r $ %{} :Expr (:at 1629982058049) (:by |B1y7Rc-Zz)
                         :data $ {}
                           |T $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |{})
