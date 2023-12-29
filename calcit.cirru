@@ -100,7 +100,7 @@
                               |h $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |host)
                               |l $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text "|\":")
                               |o $ %{} :Leaf (:at 1701194066952) (:by |B1y7Rc-Zz) (:text |port)
-                          |l $ %{} :Leaf (:at 1701194070648) (:by |B1y7Rc-Zz) (:text "|\"wss://diary.topix.im/ws")
+                          |l $ %{} :Leaf (:at 1703868170994) (:by |B1y7Rc-Zz) (:text "|\"wss://diary.chenyong.life/ws")
                       |r $ %{} :Expr (:at 1629982058049) (:by |B1y7Rc-Zz)
                         :data $ {}
                           |T $ %{} :Leaf (:at 1629982058049) (:by |B1y7Rc-Zz) (:text |{})
