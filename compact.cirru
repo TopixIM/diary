@@ -126,7 +126,7 @@
                     router $ :router store
                     router-data $ :data router
                   div
-                    {} $ :class-name (str-spaced css/global css/fullscreen css/row)
+                    {} $ :class-name (str-spaced css/preset css/global css/fullscreen css/row)
                     comp-navigation (:logged-in? store) (:count store)
                     if (:logged-in? store)
                       case-default (:name router) (<> router)
@@ -687,6 +687,9 @@
                           d! :session/merge-cursor $ {} (:month n)
               div
                 {} $ :class-name css/row-middle
+                span $ {} (:inner-text "\"2024") (:class-name css-year-entry)
+                  :on-click $ fn (e d!)
+                    d! :session/merge-cursor $ {} (:year 2024)
                 span $ {} (:inner-text "\"2023") (:class-name css-year-entry)
                   :on-click $ fn (e d!)
                     d! :session/merge-cursor $ {} (:year 2023)
@@ -712,7 +715,7 @@
                 :style $ {}
                   :border-bottom $ str "\"1px solid " (hsl 0 0 94)
                   :border-top $ str "\"1px solid " (hsl 0 0 94)
-              -> ([] "\"M" "\"T" "\"W" "\"T" "\"F" "\"S" "\"S")
+              -> ([] "\"Mon" "\"Tue" "\"Wed" "\"Thu" "\"Fri" "\"Sat" "\"Sun")
                 map $ fn (x)
                   [] x $ div
                     {} $ :class-name (str-spaced css-cell-size css-week-note)
