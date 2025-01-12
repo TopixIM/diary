@@ -242,7 +242,7 @@
                     div
                       {} $ :style
                         {} $ :flex-shrink 0
-                      <> date $ {} (:font-size 32) (:font-family ui/font-fancy) (:font-weight 100)
+                      <> date $ str-spaced css/font-fancy style-date-preview
                     =< nil 8
                     comp-records states diary date
                   =< 32 nil
@@ -276,7 +276,7 @@
                       when
                         not= (:text diary) (:text state)
                         a
-                          {} (:style ui/link)
+                          {} (:class-name css/link)
                             :on-click $ fn (e d!) (d! cursor nil)
                           <> "\"Reset"
                     textarea $ {}
@@ -409,6 +409,10 @@
                   :style $ {} (:margin-left 24) (:cursor :pointer)
                   :on-click on-click
                 if (blank? x) (comp-empty) (<> x)
+        |style-date-preview $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstyle style-date-preview $ {}
+              "\"&" $ {} (:font-size 32) (:font-weight 100)
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns app.comp.diary $ :require
@@ -561,8 +565,7 @@
                 div
                   {} (:class-name css/row)
                     :style $ {} (:align-items :center) (:flex-shrink 0)
-                  <> (.!toFormat cursor-date "\"yyyy-MM-dd")
-                    {} (:font-family ui/font-fancy) (:font-size 16) (:font-weight 300)
+                  <> (.!toFormat cursor-date "\"yyyy-MM-dd") (str-spaced css/font-fancy style-date-main)
                   =< 8 nil
                   if
                     some? $ :time diary
@@ -570,8 +573,7 @@
                       .!toFormat
                         .!fromMillis DateTime $ :time diary
                         , "\"(yyyy-MM-dd hh:mm)"
-                      {} (:font-size 12) (:font-weight 100) (:font-family ui/font-fancy)
-                        :color $ hsl 0 0 72
+                      str-spaced css/font-fancy style-date-hint
                 comp-divider "\"32px 0"
                 if (some? diary)
                   div
@@ -648,8 +650,7 @@
                           {} (:class-name css-month-switch)
                             :on-click $ fn (e d!) (on-change-month! cursor -1 d!)
                           comp-i :chevron-left 16 $ hsl 200 80 70
-                        <> (.!toFormat cursor-date "\"yyyy-MM")
-                          {} (:font-family ui/font-fancy) (:font-size 16) (:font-weight 300)
+                        <> (.!toFormat cursor-date "\"yyyy-MM") (str-spaced css/font-fancy style-month-header)
                         a
                           {} (:class-name css-month-switch)
                             :on-click $ fn (e d!) (on-change-month! cursor 1 d!)
@@ -687,6 +688,9 @@
                           d! :session/merge-cursor $ {} (:month n)
               div
                 {} $ :class-name css/row-middle
+                span $ {} (:inner-text "\"2025") (:class-name css-year-entry)
+                  :on-click $ fn (e d!)
+                    d! :session/merge-cursor $ {} (:year 2025)
                 span $ {} (:inner-text "\"2024") (:class-name css-year-entry)
                   :on-click $ fn (e d!)
                     d! :session/merge-cursor $ {} (:year 2024)
@@ -711,10 +715,7 @@
         |comp-weekdays $ %{} :CodeEntry (:doc |)
           :code $ quote
             defcomp comp-weekdays () $ list->
-              {} (:class-name css/row)
-                :style $ {}
-                  :border-bottom $ str "\"1px solid " (hsl 0 0 94)
-                  :border-top $ str "\"1px solid " (hsl 0 0 94)
+              {} $ :class-name (str-spaced css/row style-week-header)
               -> ([] "\"Mon" "\"Tue" "\"Wed" "\"Thu" "\"Fri" "\"Sat" "\"Sun")
                 map $ fn (x)
                   [] x $ div
@@ -813,9 +814,29 @@
                     filter $ fn (x)
                       = :holiday $ :type x
                     map $ fn (x) (:days x)
+        |style-date-hint $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstyle style-date-hint $ {}
+              "\"&" $ {} (:font-size 12) (:font-weight 100)
+                :color $ hsl 0 0 72
+        |style-date-main $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstyle style-date-main $ {}
+              "\"&" $ {} (:font-size 16) (:font-weight 300)
+        |style-month-header $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstyle style-month-header $ {}
+              "\"&" $ {} (:font-size 16) (:font-weight 300)
         |style-preview $ %{} :CodeEntry (:doc |)
           :code $ quote
-            def style-preview $ {} (:font-size 12) (:white-space :nowrap) (:text-overflow :ellipsis) (:display :inline-block) (:overflow :hidden) (:width "\"100%")
+            defstyle style-preview $ {}
+              "\"&" $ {} (:font-size 12) (:white-space :nowrap) (:text-overflow :ellipsis) (:display :inline-block) (:overflow :hidden) (:width "\"100%")
+        |style-week-header $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defstyle style-week-header $ {}
+              "\"&" $ {}
+                :border-bottom $ str "\"1px solid " (hsl 0 0 94)
+                :border-top $ str "\"1px solid " (hsl 0 0 94)
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns app.comp.month $ :require
