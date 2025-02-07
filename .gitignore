@@ -10,3 +10,5 @@ yarn-error.log
 
 storage.cirru
 backups/
+
+.DS_Store

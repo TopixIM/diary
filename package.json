@@ -1,12 +1,12 @@
 {
-  "name": "cumulo-workflow",
+  "name": "@comulo/diary",
   "version": "0.1.0",
-  "description": "Cumulo Workflow",
+  "description": "Cumulo Diary",
   "main": "index.js",
   "scripts": {
-    "compile-page": "cr --emit-js --once",
+    "compile-page": "cr --once js",
     "release-page": "vite build --base=./",
-    "watch-page": "cr --emit-js"
+    "watch-page": "cr js"
   },
   "repository": {
     "type": "git",
@@ -15,15 +15,15 @@
   "author": "jiyinyiyong",
   "license": "MIT",
   "dependencies": {
-    "@calcit/procs": "^0.8.43",
+    "@calcit/procs": "^0.9.7",
     "copy-to-clipboard": "^3.3.3",
-    "luxon": "^3.4.4",
+    "luxon": "^3.5.0",
     "shortid": "^2.2.16"
   },
   "devDependencies": {
     "bottom-tip": "^0.1.5",
-    "feather-icons": "^4.29.1",
+    "feather-icons": "^4.29.2",
     "url-parse": "^1.5.10",
-    "vite": "^5.1.6"
+    "vite": "^6.0.7"
   }
 }
