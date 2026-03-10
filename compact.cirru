@@ -1,5 +1,5 @@
 
-{} (:package |app)
+{} (:about "|file is generated - never edit directly; learn cr edit/tree workflows before changing") (:package |app)
   :configs $ {} (:init-fn |app.client/main!) (:reload-fn |app.client/reload!) (:version |0.0.1)
     :modules $ [] |respo.calcit/ |lilac/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |cumulo-reel.calcit/ |respo-feather.calcit/ |alerts.calcit/
   :entries $ {}
@@ -276,10 +276,18 @@
                         {} $ :class-name css/row-middle
                         <> "\"Short review" $ {} (:font-size 20) (:font-family ui/font-fancy)
                           :color $ hsl 0 0 80
-                        =< 20 nil
+                      div
+                        {} $ :class-name css/row-middle
+                        when
+                          and (blank? (:food diary)) (blank? (:pains diary))
+                          button $ {} (:class-name css/button) (:inner-text "|Like last day")
+                            :style $ {} (:margin-left 16)
+                            :on-click $ fn (e d!)
+                              d! :diary/copy-yesterday $ {} (:date-info date-info)
                         when
                           not= (:text diary) (:text state)
                           button $ {} (:class-name css/button-primary) (:inner-text "\"Save")
+                            :style $ {} (:margin-left 16)
                             :on-click $ fn (e d!)
                               when
                                 not $ blank? (:text state)
@@ -292,12 +300,13 @@
                                     lost-copy "\"diary-lost-copy"
                                   js/localStorage.setItem lost-copy $ :text state
                                   js/console.info "\"Latest diary saved to" $ to-lispy-string lost-copy
-                      when
-                        not= (:text diary) (:text state)
-                        a
-                          {} (:class-name css/link)
-                            :on-click $ fn (e d!) (d! cursor nil)
-                          <> "\"Reset"
+                        when
+                          not= (:text diary) (:text state)
+                          a
+                            {} (:class-name css/link)
+                              :style $ {} (:margin-left 16)
+                              :on-click $ fn (e d!) (d! cursor nil)
+                            <> "\"Reset"
                     textarea $ {}
                       :value $ :text state
                       :placeholder "\"Some diary"
@@ -1339,6 +1348,7 @@
                   (:router/change op-data) (router/change db op-data sid op-id op-time)
                   (:diary/add-one op-data) (diary/add-one db op-data sid op-id op-time)
                   (:diary/change op-data) (diary/change db op-data sid op-id op-time)
+                  (:diary/copy-yesterday op-data) (diary/copy-yesterday db op-data sid op-id op-time)
                   (:today op-data) (diary/set-today db op-data sid op-id op-time)
                   _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
@@ -1377,6 +1387,35 @@
                       assoc (:field op-data) (:data op-data)
                       assoc :time op-time
           :examples $ []
+        |copy-yesterday $ %{} :CodeEntry (:doc |)
+          :code $ quote
+            defn copy-yesterday (db op-data sid op-id op-time)
+              let
+                  user-id $ get-in db ([] :sessions sid :user-id)
+                  date-info $ :date-info op-data
+                  today $ format-to-date date-info
+                  yesterday-info $ let
+                      year $ :year date-info
+                      month $ :month date-info
+                      day $ :day date-info
+                    if (> day 1)
+                      assoc date-info :day $ dec day
+                      if (> month 1)
+                        let
+                            prev-month $ dec month
+                            days $ app.util/get-days-by year prev-month
+                          assoc date-info :month prev-month :day days
+                        {}
+                          :year $ dec year
+                          :month 12
+                          :day 31
+                  yesterday $ format-to-date yesterday-info
+                  yesterday-diary $ get-in db ([] :users user-id :diaries yesterday)
+                if (some? yesterday-diary)
+                  assoc-in db ([] :users user-id :diaries today)
+                    merge yesterday-diary $ {} (:date today) (:time op-time)
+                  db
+          :examples $ []
         |set-today $ %{} :CodeEntry (:doc |)
           :code $ quote
             defn set-today (db op-data sid op-id op-time) (assoc db :today op-data)
@@ -1384,6 +1423,7 @@
       :ns $ %{} :CodeEntry (:doc |)
         :code $ quote
           ns app.updater.diary $ :require (app.schema :as schema)
+            app.util :refer $ format-to-date
         :examples $ []
     |app.updater.router $ %{} :FileEntry
       :defs $ {}
