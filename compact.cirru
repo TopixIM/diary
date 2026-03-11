@@ -278,6 +278,7 @@
                         when
                           and
                             blank? $ :food diary
+                            blank? $ :sleep diary
                             blank? $ :pains diary
                           button $ {} (:class-name css/button) (:inner-text "|Like last day")
                             :style $ {} (:margin-left 16)
@@ -338,6 +339,18 @@
                       fn (e d!)
                         .show plugin d! $ fn (data)
                           d! :diary/change $ {} (:field :food) (:date date) (:data data)
+                    .render plugin
+                let
+                    plugin $ use-prompt (>> states :sleep)
+                      {} (:text "\"How did you sleep:")
+                        :initial $ or (:sleep diary) "\""
+                  div
+                    {} $ :class-name css-record-layout
+                    comp-guide "\"How did you sleep?"
+                    render-content (:sleep diary)
+                      fn (e d!)
+                        .show plugin d! $ fn (data)
+                          d! :diary/change $ {} (:field :sleep) (:date date) (:data data)
                     .render plugin
                 let
                     plugin $ use-prompt (>> states :mood)
@@ -621,6 +634,8 @@
                       :style $ {} (:overflow :auto)
                     div ({})
                       <> $ :food diary
+                    div ({})
+                      <> $ :sleep diary
                     div ({})
                       <> $ :mood diary
                     div ({})
@@ -1032,7 +1047,7 @@
           :examples $ []
         |diary $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
-            def diary $ {} (:date nil) (:food "\"") (:mood "\"") (:place "\"") (:highlight "\"") (:met "\"") (:exercise "\"") (:pains "\"") (:text "\"") (:time nil)
+            def diary $ {} (:date nil) (:food "\"") (:sleep "\"") (:mood "\"") (:place "\"") (:highlight "\"") (:met "\"") (:exercise "\"") (:pains "\"") (:text "\"") (:time nil)
           :examples $ []
         |notification $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
@@ -1289,7 +1304,7 @@
               -> diaries (.to-map)
                 map-kv $ fn (k v)
                   [] k $ if (some? v)
-                    select-keys v $ [] :mood :highlight :food :met :exercise :place :date :time
+                    select-keys v $ [] :mood :highlight :food :sleep :met :exercise :place :date :time
                     , nil
           :examples $ []
       :ns $ %{} :NsEntry (:doc |)
