@@ -2,7 +2,17 @@
 
 **🤖 This guide helps LLM agents add features to Cumulo applications based on [calcium-workflow](https://github.com/Cumulo/calcium-workflow) template.**
 
-📚 **Related**: [Respo UI](./llms/Respo.md)
+要求查看 Calcit 命令行工具的用法:
+
+```bash
+cr docs agents --full
+```
+
+按需查看 Respo 模块的具体用法
+
+```bash
+cr libs readme respo.calcit -f docs/Respo-Agent.md
+```
 
 ---
 
