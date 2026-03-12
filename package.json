@@ -15,7 +15,7 @@
   "author": "jiyinyiyong",
   "license": "MIT",
   "dependencies": {
-    "@calcit/procs": "^0.12.4",
+    "@calcit/procs": "^0.12.5",
     "copy-to-clipboard": "^3.3.3",
     "luxon": "^3.7.2",
     "shortid": "^2.2.17"
