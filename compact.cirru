@@ -1363,7 +1363,7 @@
                   user-id $ get-in db ([] :sessions sid :user-id)
                 assoc-in db
                   [] :users user-id :diaries $ :date op-data
-                  assoc op-data :time op-time
+                  assoc op-data :time $ get-timestamp op-time
           :examples $ []
         |change $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
@@ -1377,12 +1377,12 @@
                     fn (diary)
                       -> diary (either schema/diary)
                         assoc (:field op-data) (:data op-data)
-                        assoc :time op-time
+                        assoc :time $ get-timestamp op-time
                   assoc-in db
                     [] :users user-id :diaries $ :date op-data
                     -> schema/diary
                       assoc (:field op-data) (:data op-data)
-                      assoc :time op-time
+                      assoc :time $ get-timestamp op-time
           :examples $ []
         |copy-yesterday $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
@@ -1410,7 +1410,8 @@
                   yesterday-diary $ get-in db ([] :users user-id :diaries yesterday)
                 if (some? yesterday-diary)
                   assoc-in db ([] :users user-id :diaries today)
-                    merge yesterday-diary $ {} (:date today) (:time op-time)
+                    merge yesterday-diary $ {} (:date today)
+                      :time $ get-timestamp op-time
                   db
           :examples $ []
         |set-today $ %{} :CodeEntry (:doc |) (:schema nil)
@@ -1421,6 +1422,7 @@
         :code $ quote
           ns app.updater.diary $ :require (app.schema :as schema)
             app.util :refer $ format-to-date
+            calcit.std.date :refer $ get-timestamp
     |app.updater.router $ %{} :FileEntry
       :defs $ {}
         |change $ %{} :CodeEntry (:doc |) (:schema nil)
