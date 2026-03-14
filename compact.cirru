@@ -8,17 +8,17 @@
   :files $ {}
     |app.client $ %{} :FileEntry
       :defs $ {}
-        |*states $ %{} :CodeEntry (:doc |)
+        |*states $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defatom *states $ {}
               :states $ {}
                 :cursor $ []
           :examples $ []
-        |*store $ %{} :CodeEntry (:doc |)
+        |*store $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defatom *store $ :: :initial
           :examples $ []
-        |connect! $ %{} :CodeEntry (:doc |)
+        |connect! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn connect! () $ let
                 url-obj $ url-parse js/location.href true
@@ -33,7 +33,7 @@
                     js/console.error "\"Lost connection!"
                   :on-data on-server-data
           :examples $ []
-        |dispatch! $ %{} :CodeEntry (:doc |)
+        |dispatch! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn dispatch! (op)
               when
@@ -45,7 +45,7 @@
                 (:effect/connect) (connect!)
                 _ $ ws-send! op
           :examples $ []
-        |main! $ %{} :CodeEntry (:doc |)
+        |main! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn main! ()
               println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
@@ -63,11 +63,11 @@
                   ws-send! $ :: :effect/ping
               println "\"App started!"
           :examples $ []
-        |mount-target $ %{} :CodeEntry (:doc |)
+        |mount-target $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def mount-target $ js/document.querySelector "\".app"
           :examples $ []
-        |on-server-data $ %{} :CodeEntry (:doc |)
+        |on-server-data $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn on-server-data (data)
               tag-match data
@@ -77,7 +77,7 @@
                     reset! *store $ patch-twig @*store changes
                 (:effect/pong) :ok
           :examples $ []
-        |reload! $ %{} :CodeEntry (:doc |)
+        |reload! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn reload! () $ if
               or (some? client-errors) (some? server-errors)
@@ -87,13 +87,13 @@
                 add-watch *states :changes $ fn (states prev) (render-app!)
                 hud! "\"ok~" "\"Ok"
           :examples $ []
-        |render-app! $ %{} :CodeEntry (:doc |)
+        |render-app! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn render-app! () $ render! mount-target
               comp-container (:states @*states) @*store
               , dispatch!
           :examples $ []
-        |simulate-login! $ %{} :CodeEntry (:doc |)
+        |simulate-login! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn simulate-login! () $ let
                 raw $ js/localStorage.getItem (:storage-key config/site)
@@ -108,7 +108,7 @@
                     dispatch! $ :: :session/set-cursor (util/get-today!)
                 do $ println "\"Found no storage."
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.client $ :require
             respo.core :refer $ render! clear-cache! realize-ssr!
@@ -124,10 +124,9 @@
             "\"./calcit.build-errors" :default client-errors
             "\"../js-out/calcit.build-errors" :default server-errors
             app.util :as util
-        :examples $ []
     |app.comp.container $ %{} :FileEntry
       :defs $ {}
-        |comp-container $ %{} :CodeEntry (:doc |)
+        |comp-container $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-container (states store)
               case-default store
@@ -157,7 +156,7 @@
                 (:: :initial) (comp-offline :initial)
                 (:: :offline) (comp-offline :offline)
           :examples $ []
-        |comp-offline $ %{} :CodeEntry (:doc |)
+        |comp-offline $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-offline (state)
               div
@@ -170,23 +169,23 @@
                     if (= state :offline) "|Socket broken! Click to retry." "\"Loading..."
                     {} (:font-family ui/font-fancy) (:font-weight 100) (:font-size 32)
           :examples $ []
-        |comp-status-color $ %{} :CodeEntry (:doc |)
+        |comp-status-color $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-status-color (color)
               div $ {} (:class-name css-status-color)
                 :style $ {} (:background-color color)
           :examples $ []
-        |css-status-color $ %{} :CodeEntry (:doc |)
+        |css-status-color $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-status-color $ {}
               "\"$0" $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius "\"8px") (:opacity 0.8) (:transition-duration "\"240ms")
               "\"$0:hover" $ {} (:transform "\"scale(1.1)")
           :examples $ []
-        |style-body $ %{} :CodeEntry (:doc |)
+        |style-body $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def style-body $ {} (:padding "|8px 16px")
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.container $ :require
             hsl.core :refer $ hsl
@@ -206,10 +205,9 @@
             app.comp.month :refer $ comp-month
             app.comp.diary :refer $ comp-diary
             app.comp.data-gather :refer $ comp-data-gather
-        :examples $ []
     |app.comp.data-gather $ %{} :FileEntry
       :defs $ {}
-        |comp-data-gather $ %{} :CodeEntry (:doc |)
+        |comp-data-gather $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-data-gather (diaries)
               div
@@ -230,7 +228,7 @@
                       copy! $ format-cirru-edn
                         -> diaries (.to-list) (.sort-by first)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.data-gather $ :require
             respo-ui.core :refer $ hsl
@@ -239,10 +237,9 @@
             respo.comp.space :refer $ =<
             respo.core :refer $ defcomp <> list-> span div a textarea button
             "\"copy-to-clipboard" :default copy!
-        :examples $ []
     |app.comp.diary $ %{} :FileEntry
       :defs $ {}
-        |comp-diary $ %{} :CodeEntry (:doc |)
+        |comp-diary $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-diary (states date-info diary)
               let
@@ -279,7 +276,10 @@
                       div
                         {} $ :class-name css/row-middle
                         when
-                          and (blank? (:food diary)) (blank? (:pains diary))
+                          and
+                            blank? $ :food diary
+                            blank? $ :sleep diary
+                            blank? $ :pains diary
                           button $ {} (:class-name css/button) (:inner-text "|Like last day")
                             :style $ {} (:margin-left 16)
                             :on-click $ fn (e d!)
@@ -315,14 +315,14 @@
                       :on-input $ fn (e d!)
                         d! cursor $ assoc state :text (:value e)
           :examples $ []
-        |comp-guide $ %{} :CodeEntry (:doc |)
+        |comp-guide $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-guide (text)
               div
                 {} $ :class-name css-guide
                 <> text
           :examples $ []
-        |comp-records $ %{} :CodeEntry (:doc |)
+        |comp-records $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-records (states diary date)
               div
@@ -339,6 +339,18 @@
                       fn (e d!)
                         .show plugin d! $ fn (data)
                           d! :diary/change $ {} (:field :food) (:date date) (:data data)
+                    .render plugin
+                let
+                    plugin $ use-prompt (>> states :sleep)
+                      {} (:text "\"How did you sleep:")
+                        :initial $ or (:sleep diary) "\""
+                  div
+                    {} $ :class-name css-record-layout
+                    comp-guide "\"How did you sleep?"
+                    render-content (:sleep diary)
+                      fn (e d!)
+                        .show plugin d! $ fn (data)
+                          d! :diary/change $ {} (:field :sleep) (:date date) (:data data)
                     .render plugin
                 let
                     plugin $ use-prompt (>> states :mood)
@@ -420,7 +432,7 @@
                           d! :diary/change $ {} (:field :pains) (:date date) (:data data)
                     .render plugin
           :examples $ []
-        |css-guide $ %{} :CodeEntry (:doc |)
+        |css-guide $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-guide $ {}
               "\"$0" $ {}
@@ -429,12 +441,12 @@
                 :min-width 160
                 :text-align :left
           :examples $ []
-        |css-record-layout $ %{} :CodeEntry (:doc |)
+        |css-record-layout $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-record-layout $ {}
               "\"$0" $ {} (:margin-bottom 20)
           :examples $ []
-        |render-content $ %{} :CodeEntry (:doc |)
+        |render-content $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn render-content (x on-click)
               span
@@ -443,12 +455,12 @@
                   :on-click on-click
                 if (blank? x) (comp-empty) (<> x)
           :examples $ []
-        |style-date-preview $ %{} :CodeEntry (:doc |)
+        |style-date-preview $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-date-preview $ {}
               "\"&" $ {} (:font-size 32) (:font-weight 100)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.diary $ :require
             respo.core :refer $ defcomp <> div input button >> span textarea a
@@ -465,10 +477,9 @@
             app.comp.empty :refer $ comp-empty
             clojure.string :as string
             respo-alerts.core :refer $ use-prompt
-        :examples $ []
     |app.comp.empty $ %{} :FileEntry
       :defs $ {}
-        |comp-empty $ %{} :CodeEntry (:doc |)
+        |comp-empty $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-empty () $ div
               {} $ :style
@@ -476,17 +487,16 @@
                   :color $ hsl 0 0 80
               <> "\"Empty"
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.empty $ :require
             [] respo-ui.core :refer $ [] hsl
             [] respo-ui.core :as ui
             [] respo.comp.space :refer $ [] =<
             [] respo.core :refer $ [] defcomp <> list-> span div a
-        :examples $ []
     |app.comp.login $ %{} :FileEntry
       :defs $ {}
-        |comp-login $ %{} :CodeEntry (:doc |)
+        |comp-login $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-login (states)
               let
@@ -521,11 +531,11 @@
                       span $ {} (:inner-text "|Log in") (:class-name css/link)
                         :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-        |initial-state $ %{} :CodeEntry (:doc |)
+        |initial-state $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def initial-state $ {} (:username |) (:password |)
           :examples $ []
-        |on-submit $ %{} :CodeEntry (:doc |)
+        |on-submit $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn on-submit (username password signup?)
               fn (e dispatch!)
@@ -533,7 +543,7 @@
                 js/localStorage.setItem (:storage-key config/site)
                   format-cirru-edn $ [] username password
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.login $ :require
             respo.core :refer $ defcomp <> div input button span
@@ -545,10 +555,9 @@
             app.schema :as schema
             app.style :as style
             app.config :as config
-        :examples $ []
     |app.comp.month $ %{} :FileEntry
       :defs $ {}
-        |comp-cell $ %{} :CodeEntry (:doc |)
+        |comp-cell $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-cell (col row first-day today-info cursor overview)
               let
@@ -598,7 +607,7 @@
                     <> preview-mood style-preview
                     <> preview-highlight style-preview
           :examples $ []
-        |comp-diary-preview $ %{} :CodeEntry (:doc |)
+        |comp-diary-preview $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-diary-preview (cursor-date diary)
               div
@@ -625,6 +634,8 @@
                       :style $ {} (:overflow :auto)
                     div ({})
                       <> $ :food diary
+                    div ({})
+                      <> $ :sleep diary
                     div ({})
                       <> $ :mood diary
                     div ({})
@@ -656,7 +667,7 @@
                           d! :router/change $ {} (:name :diary)
                       <> "\"Add diary"
           :examples $ []
-        |comp-divider $ %{} :CodeEntry (:doc |)
+        |comp-divider $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-divider (padding)
               div $ {}
@@ -665,7 +676,7 @@
                   :height 1
                   :margin padding
           :examples $ []
-        |comp-month $ %{} :CodeEntry (:doc |)
+        |comp-month $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-month (today cursor diary overview)
               let
@@ -716,7 +727,7 @@
                     comp-diary-preview cursor-date diary
                   comp-month-footer
           :examples $ []
-        |comp-month-footer $ %{} :CodeEntry (:doc |)
+        |comp-month-footer $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn comp-month-footer () $ div
               {} (:class-name css/row-middle)
@@ -762,7 +773,7 @@
                   :on-click $ fn (e d!)
                     d! :session/merge-cursor $ {} (:year 2018)
           :examples $ []
-        |comp-weekdays $ %{} :CodeEntry (:doc |)
+        |comp-weekdays $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-weekdays () $ list->
               {} $ :class-name (str-spaced css/row style-week-header)
@@ -772,12 +783,12 @@
                     {} $ :class-name (str-spaced css-cell-size css-week-note)
                     <> x
           :examples $ []
-        |css-cell-size $ %{} :CodeEntry (:doc |)
+        |css-cell-size $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-cell-size $ {}
               "\"$0" $ {} (:width 92) (:height 84) (:margin 6) (:vertical-align :middle) (:text-align :center)
           :examples $ []
-        |css-day-cell $ %{} :CodeEntry (:doc |)
+        |css-day-cell $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-day-cell $ {}
               "\"$0" $ {} (:cursor :pointer) (:font-family ui/font-fancy) (:font-size 14) (:font-weight 300) (:position :relative) (:overflow :hidden) (:border-radius "\"16px") (:transition-duration "\"200ms")
@@ -789,17 +800,17 @@
                 :background-color $ hsl 0 0 98
                 :transform "\"scale(1.06)"
           :examples $ []
-        |css-month-entry $ %{} :CodeEntry (:doc |)
+        |css-month-entry $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-month-entry $ {}
               "\"$0" $ {} (:font-family ui/font-fancy) (:line-height "\"40px") (:width 40) (:font-size 16) (:font-weight 100) (:cursor :pointer)
           :examples $ []
-        |css-month-switch $ %{} :CodeEntry (:doc |)
+        |css-month-switch $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-month-switch $ {}
               "\"$0" $ {} (:width 40) (:text-align :center) (:cursor :pointer)
           :examples $ []
-        |css-week-note $ %{} :CodeEntry (:doc |)
+        |css-week-note $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-week-note $ {}
               "\"$0" $ {}
@@ -808,17 +819,17 @@
                 :height 32
                 :line-height "\"32px"
           :examples $ []
-        |css-year-entry $ %{} :CodeEntry (:doc |)
+        |css-year-entry $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-year-entry $ {}
               "\"$0" $ {} (:cursor :pointer) (:width 60) (:text-align :center)
           :examples $ []
-        |inline $ %{} :CodeEntry (:doc |)
+        |inline $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defmacro inline (path)
               read-file $ str "\"holidays/" path
           :examples $ []
-        |is-holiday? $ %{} :CodeEntry (:doc |)
+        |is-holiday? $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn is-holiday? (day)
               let
@@ -830,7 +841,7 @@
                     , false
                   true $ includes? (#{} 6 7) (aget day "\"weekday")
           :examples $ []
-        |on-change-month! $ %{} :CodeEntry (:doc |)
+        |on-change-month! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn on-change-month! (cursor offset d!)
               let
@@ -855,7 +866,7 @@
                         :day $ js/Math.min count-days day
                 d! :session/set-cursor next-cursor
           :examples $ []
-        |special-days $ %{} :CodeEntry (:doc |)
+        |special-days $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def special-days $ let
                 data $ concat
@@ -875,35 +886,35 @@
                       = :holiday $ :type x
                     map $ fn (x) (:days x)
           :examples $ []
-        |style-date-hint $ %{} :CodeEntry (:doc |)
+        |style-date-hint $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-date-hint $ {}
               "\"&" $ {} (:font-size 12) (:font-weight 100)
                 :color $ hsl 0 0 72
           :examples $ []
-        |style-date-main $ %{} :CodeEntry (:doc |)
+        |style-date-main $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-date-main $ {}
               "\"&" $ {} (:font-size 16) (:font-weight 300)
           :examples $ []
-        |style-month-header $ %{} :CodeEntry (:doc |)
+        |style-month-header $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-month-header $ {}
               "\"&" $ {} (:font-size 16) (:font-weight 300)
           :examples $ []
-        |style-preview $ %{} :CodeEntry (:doc |)
+        |style-preview $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-preview $ {}
               "\"&" $ {} (:font-size 12) (:white-space :nowrap) (:text-overflow :ellipsis) (:display :inline-block) (:overflow :hidden) (:width "\"100%")
           :examples $ []
-        |style-week-header $ %{} :CodeEntry (:doc |)
+        |style-week-header $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle style-week-header $ {}
               "\"&" $ {}
                 :border-bottom $ str "\"1px solid " (hsl 0 0 94)
                 :border-top $ str "\"1px solid " (hsl 0 0 94)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.month $ :require
             respo-ui.core :refer $ hsl
@@ -916,10 +927,9 @@
             app.util :refer $ get-days-by same-day?
             app.comp.empty :refer $ comp-empty
             feather.core :refer $ comp-i
-        :examples $ []
     |app.comp.navigation $ %{} :FileEntry
       :defs $ {}
-        |comp-navigation $ %{} :CodeEntry (:doc |)
+        |comp-navigation $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-navigation (logged-in? count-members)
               div
@@ -944,7 +954,7 @@
                     =< 8 nil
                     <> count-members
           :examples $ []
-        |css-nav $ %{} :CodeEntry (:doc |)
+        |css-nav $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-nav $ {}
               "\"$0" $ {} (:width 64) (:padding "|16px 0") (:font-size 16)
@@ -953,7 +963,7 @@
                 :align-items :center
                 :background-color $ hsl 0 0 97
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.navigation $ :require
             respo-ui.core :refer $ hsl
@@ -962,10 +972,9 @@
             respo-ui.core :as ui
             respo.comp.space :refer $ =<
             respo.core :refer $ defcomp <> span div
-        :examples $ []
     |app.comp.profile $ %{} :FileEntry
       :defs $ {}
-        |comp-profile $ %{} :CodeEntry (:doc |)
+        |comp-profile $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defcomp comp-profile (user members)
               div
@@ -996,7 +1005,7 @@
                         js/localStorage.removeItem $ :storage-key config/site
                     <> "|Log out" nil
           :examples $ []
-        |css-member-label $ %{} :CodeEntry (:doc |)
+        |css-member-label $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defstyle css-member-label $ {}
               "\"$0" $ {} (:padding "\"0 8px")
@@ -1004,7 +1013,7 @@
                 :border-radius "\"16px"
                 :margin "\"0 4px"
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.comp.profile $ :require
             respo-ui.core :refer $ hsl
@@ -1015,70 +1024,67 @@
             respo.core :refer $ defcomp list-> button <> span div a
             respo.comp.space :refer $ =<
             app.config :as config
-        :examples $ []
     |app.config $ %{} :FileEntry
       :defs $ {}
-        |dev? $ %{} :CodeEntry (:doc |)
+        |dev? $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def dev? $ = "\"dev" (get-env "\"mode" "\"release")
           :examples $ []
-        |site $ %{} :CodeEntry (:doc |)
+        |site $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def site $ {} (:port 11008) (:title "\"Diary") (:icon "\"http://cdn.tiye.me/logo/topix.png") (:dev-ui "\"http://localhost:8100/main.css") (:release-ui "\"http://cdn.tiye.me/favored-fonts/main.css") (:cdn-url "\"http://cdn.tiye.me/diary/") (:cdn-folder "\"tiye.me:cdn/diary") (:theme "\"#eeeeff") (:storage-key "\"diary") (:storage-file "\"storage.cirru")
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote (ns app.config)
-        :examples $ []
     |app.schema $ %{} :FileEntry
       :defs $ {}
-        |database $ %{} :CodeEntry (:doc |)
+        |database $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def database $ {}
               :sessions $ {}
               :users $ do user ({})
               :today $ {} (:year 2018) (:month 6) (:day 18)
           :examples $ []
-        |diary $ %{} :CodeEntry (:doc |)
+        |diary $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
-            def diary $ {} (:date nil) (:food "\"") (:mood "\"") (:place "\"") (:highlight "\"") (:met "\"") (:exercise "\"") (:pains "\"") (:text "\"") (:time nil)
+            def diary $ {} (:date nil) (:food "\"") (:sleep "\"") (:mood "\"") (:place "\"") (:highlight "\"") (:met "\"") (:exercise "\"") (:pains "\"") (:text "\"") (:time nil)
           :examples $ []
-        |notification $ %{} :CodeEntry (:doc |)
+        |notification $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def notification $ {} (:id nil) (:kind nil) (:text nil)
           :examples $ []
-        |page $ %{} :CodeEntry (:doc |)
+        |page $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def page $ {} (:id nil) (:title "\"") (:time nil)
           :examples $ []
-        |router $ %{} :CodeEntry (:doc |)
+        |router $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def router $ {} (:name nil)
               :data $ {}
           :examples $ []
-        |session $ %{} :CodeEntry (:doc |)
+        |session $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def session $ {} (:user-id nil) (:id nil) (:nickname nil)
               :router $ {} (:name :home) (:data nil)
               :messages $ {}
               :cursor $ get-native-today!
           :examples $ []
-        |user $ %{} :CodeEntry (:doc |)
+        |user $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def user $ {} (:name nil) (:id nil) (:nickname nil) (:avatar nil) (:password nil)
               :diaries $ do diary ({})
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.schema $ :require
             [] app.util :refer $ [] get-native-today!
-        :examples $ []
     |app.server $ %{} :FileEntry
       :defs $ {}
-        |*client-caches $ %{} :CodeEntry (:doc |)
+        |*client-caches $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defatom *client-caches $ {}
           :examples $ []
-        |*initial-db $ %{} :CodeEntry (:doc |)
+        |*initial-db $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defatom *initial-db $ if
               path-exists? $ w-log storage-file
@@ -1086,15 +1092,15 @@
                 merge schema/database $ parse-cirru-edn (read-file storage-file)
               do (println "\"Found no data") schema/database
           :examples $ []
-        |*reader-reel $ %{} :CodeEntry (:doc |)
+        |*reader-reel $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote (defatom *reader-reel @*reel)
           :examples $ []
-        |*reel $ %{} :CodeEntry (:doc |)
+        |*reel $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defatom *reel $ merge reel-schema
               {} (:base @*initial-db) (:db @*initial-db)
           :examples $ []
-        |check-today! $ %{} :CodeEntry (:doc |)
+        |check-today! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn check-today! () $ let
                 today $ get-native-today!
@@ -1103,15 +1109,13 @@
                 println "\"A new day:" today
                 dispatch! (:: :today today) "\"system"
           :examples $ []
-        |dispatch! $ %{} :CodeEntry (:doc |)
+        |dispatch! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn dispatch! (op sid)
               let
                   op-id $ generate-id!
-                  op-time $ -> (:now Date)
-                    apply $ []
-                    .timestamp
-                if config/dev? $ println "\"Dispatch!" (str op) sid
+                  op-time $ get-time!
+                if config/dev? $ println |Dispatch! (str op) sid
                 tag-match op
                     :effect/persist
                     persist-db!
@@ -1119,17 +1123,15 @@
                     wss-send! sid $ format-cirru-edn (:: :effect/pong)
                   _ $ reset! *reel (reel-reducer @*reel updater op sid op-id op-time config/dev?)
           :examples $ []
-        |get-backup-path! $ %{} :CodeEntry (:doc |)
+        |get-backup-path! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn get-backup-path! () $ let
-                now $ -> (:now Date)
-                  apply $ []
-                  .extract
-              join-path calcit-dirname "\"backups"
+                now $ extract-time (get-time!)
+              join-path calcit-dirname |backups
                 str $ :month now
-                str (:day now) "\"-snapshot.cirru"
+                str (:day now) |-snapshot.cirru
           :examples $ []
-        |main! $ %{} :CodeEntry (:doc |)
+        |main! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn main! ()
               println "\"Running mode:" $ if config/dev? "\"dev" "\"release"
@@ -1144,11 +1146,11 @@
               on-control-c on-exit!
               set-interval 37000 $ \ check-today!
           :examples $ []
-        |on-exit! $ %{} :CodeEntry (:doc |)
+        |on-exit! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn on-exit! () (persist-db!) (; println "\"exit code is...") (quit! 0)
           :examples $ []
-        |persist-db! $ %{} :CodeEntry (:doc |)
+        |persist-db! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn persist-db! () $ let
                 file-content $ format-cirru-edn
@@ -1158,7 +1160,7 @@
               check-write-file! storage-path file-content
               check-write-file! backup-path file-content
           :examples $ []
-        |reload! $ %{} :CodeEntry (:doc |)
+        |reload! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn reload! () (println "\"Code updated..")
               if (not config/dev?) (raise "\"reloading only happens in dev mode")
@@ -1166,14 +1168,14 @@
               reset! *reel $ refresh-reel @*reel @*initial-db updater
               sync-clients! @*reader-reel
           :examples $ []
-        |render-loop! $ %{} :CodeEntry (:doc |)
+        |render-loop! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn render-loop! () $ when
               not $ identical? @*reader-reel @*reel
               reset! *reader-reel @*reel
               sync-clients! @*reader-reel
           :examples $ []
-        |run-server! $ %{} :CodeEntry (:doc |)
+        |run-server! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn run-server! (port)
               wss-serve! (&{} :port port)
@@ -1192,13 +1194,13 @@
                         dispatch! (:: :session/disconnect) sid
                     _ $ eprintln "\"unknown data:" data
           :examples $ []
-        |storage-file $ %{} :CodeEntry (:doc |)
+        |storage-file $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def storage-file $ if (empty? calcit-dirname)
               str calcit-dirname $ :storage-file config/site
               str calcit-dirname "\"/" $ :storage-file config/site
           :examples $ []
-        |sync-clients! $ %{} :CodeEntry (:doc |)
+        |sync-clients! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn sync-clients! (reel)
               wss-each! $ fn (sid)
@@ -1217,7 +1219,7 @@
                       wss-send! sid $ format-cirru-edn (:: :patch changes)
                       swap! *client-caches assoc sid new-store
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.server $ :require (app.schema :as schema)
             app.updater :refer $ updater
@@ -1231,26 +1233,24 @@
             app.$meta :refer $ calcit-dirname
             calcit.std.fs :refer $ path-exists? check-write-file!
             calcit.std.time :refer $ set-interval
-            calcit.std.date :refer $ get-time! extract-time Date
+            calcit.std.date :refer $ get-time! extract-time
             calcit.std.path :refer $ join-path
-        :examples $ []
     |app.style $ %{} :FileEntry
       :defs $ {}
-        |link $ %{} :CodeEntry (:doc |)
+        |link $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def link $ {} (:text-decoration :underline) (:cursor :pointer)
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.style $ :require
             [] respo-ui.core :refer $ [] hsl
             [] respo-ui.core :as ui
-        :examples $ []
     |app.twig.container $ %{} :FileEntry
       :defs $ {}
-        |twig-container $ %{} :CodeEntry (:doc |)
+        |twig-container $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-container (db session records)
               let
@@ -1277,11 +1277,11 @@
                       :color $ rand-hex-color!
                   {}
           :examples $ []
-        |twig-diary $ %{} :CodeEntry (:doc |)
+        |twig-diary $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-diary (diaries date) (get diaries date)
           :examples $ []
-        |twig-members $ %{} :CodeEntry (:doc |)
+        |twig-members $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-members (sessions users)
               -> sessions $ .map-kv
@@ -1289,7 +1289,7 @@
                   [] k $ get-in users
                     [] (:user-id session) :name
           :examples $ []
-        |twig-overview $ %{} :CodeEntry (:doc |)
+        |twig-overview $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-overview (diaries)
               -> diaries (.to-map)
@@ -1298,37 +1298,35 @@
                     select-keys v $ [] :mood :highlight
                     , nil
           :examples $ []
-        |twig-personal-data $ %{} :CodeEntry (:doc |)
+        |twig-personal-data $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-personal-data (diaries)
               -> diaries (.to-map)
                 map-kv $ fn (k v)
                   [] k $ if (some? v)
-                    select-keys v $ [] :mood :highlight :food :met :exercise :place :date :time
+                    select-keys v $ [] :mood :highlight :food :sleep :met :exercise :place :date :time
                     , nil
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.twig.container $ :require
             app.twig.user :refer $ [] twig-user
             calcit.std.rand :refer $ rand-hex-color!
             app.schema :as schema
             app.util :refer $ [] format-to-date
-        :examples $ []
     |app.twig.user $ %{} :FileEntry
       :defs $ {}
-        |twig-user $ %{} :CodeEntry (:doc |)
+        |twig-user $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn twig-user (user)
               -> user (dissoc :password) (dissoc :diaries)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.twig.user $ :require
-        :examples $ []
     |app.updater $ %{} :FileEntry
       :defs $ {}
-        |updater $ %{} :CodeEntry (:doc |)
+        |updater $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn updater (db op sid op-id op-time)
               let
@@ -1352,23 +1350,22 @@
                   (:today op-data) (diary/set-today db op-data sid op-id op-time)
                   _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.updater $ :require ([] app.updater.session :as session) ([] app.updater.user :as user) ([] app.updater.router :as router) ([] app.updater.diary :as diary) ([] app.schema :as schema)
             [] respo-message.updater :refer $ [] update-messages
-        :examples $ []
     |app.updater.diary $ %{} :FileEntry
       :defs $ {}
-        |add-one $ %{} :CodeEntry (:doc |)
+        |add-one $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn add-one (db op-data sid op-id op-time)
               let
                   user-id $ get-in db ([] :sessions sid :user-id)
                 assoc-in db
                   [] :users user-id :diaries $ :date op-data
-                  assoc op-data :time op-time
+                  assoc op-data :time $ get-timestamp op-time
           :examples $ []
-        |change $ %{} :CodeEntry (:doc |)
+        |change $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn change (db op-data sid op-id op-time)
               let
@@ -1380,14 +1377,14 @@
                     fn (diary)
                       -> diary (either schema/diary)
                         assoc (:field op-data) (:data op-data)
-                        assoc :time op-time
+                        assoc :time $ get-timestamp op-time
                   assoc-in db
                     [] :users user-id :diaries $ :date op-data
                     -> schema/diary
                       assoc (:field op-data) (:data op-data)
-                      assoc :time op-time
+                      assoc :time $ get-timestamp op-time
           :examples $ []
-        |copy-yesterday $ %{} :CodeEntry (:doc |)
+        |copy-yesterday $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn copy-yesterday (db op-data sid op-id op-time)
               let
@@ -1413,66 +1410,65 @@
                   yesterday-diary $ get-in db ([] :users user-id :diaries yesterday)
                 if (some? yesterday-diary)
                   assoc-in db ([] :users user-id :diaries today)
-                    merge yesterday-diary $ {} (:date today) (:time op-time)
+                    merge yesterday-diary $ {} (:date today)
+                      :time $ get-timestamp op-time
                   db
           :examples $ []
-        |set-today $ %{} :CodeEntry (:doc |)
+        |set-today $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn set-today (db op-data sid op-id op-time) (assoc db :today op-data)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.updater.diary $ :require (app.schema :as schema)
             app.util :refer $ format-to-date
-        :examples $ []
+            calcit.std.date :refer $ get-timestamp
     |app.updater.router $ %{} :FileEntry
       :defs $ {}
-        |change $ %{} :CodeEntry (:doc |)
+        |change $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn change (db op-data sid op-id op-time)
               assoc-in db ([] :sessions sid :router) op-data
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote (ns app.updater.router)
-        :examples $ []
     |app.updater.session $ %{} :FileEntry
       :defs $ {}
-        |connect $ %{} :CodeEntry (:doc |)
+        |connect $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn connect (db sid op-id op-time)
               assoc-in db ([] :sessions sid)
                 merge schema/session $ {} (:id sid)
           :examples $ []
-        |disconnect $ %{} :CodeEntry (:doc |)
+        |disconnect $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn disconnect (db sid op-id op-time)
               update db :sessions $ fn (session) (dissoc session sid)
           :examples $ []
-        |merge-cursor $ %{} :CodeEntry (:doc |)
+        |merge-cursor $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn merge-cursor (db op-data sid op-id op-time)
               update-in db ([] :sessions sid :cursor)
                 fn (x) (merge x op-data)
           :examples $ []
-        |remove-message $ %{} :CodeEntry (:doc |)
+        |remove-message $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn remove-message (db op-data sid op-id op-time)
               update-in db ([] :sessions sid :messages)
                 fn (messages)
                   dissoc messages $ :id op-data
           :examples $ []
-        |set-cursor $ %{} :CodeEntry (:doc |)
+        |set-cursor $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn set-cursor (db op-data sid op-id op-time)
               assoc-in db ([] :sessions sid :cursor) op-data
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.updater.session $ :require ([] app.schema :as schema)
-        :examples $ []
     |app.updater.user $ %{} :FileEntry
       :defs $ {}
-        |log-in $ %{} :CodeEntry (:doc |)
+        |log-in $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn log-in (db op-data sid op-id op-time)
               let-sugar
@@ -1494,20 +1490,19 @@
                         assoc messages op-id $ {} (:id op-id)
                           :text $ str "\"No user named: " username
           :examples $ []
-        |log-out $ %{} :CodeEntry (:doc |)
+        |log-out $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn log-out (db sid op-id op-time)
               assoc-in db ([] :sessions sid :user-id) nil
           :examples $ []
-        |sign-up $ %{} :CodeEntry (:doc |)
+        |sign-up $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn sign-up (db op-data sid op-id op-time)
               let-sugar
                     [] username password
                     , op-data
-                  maybe-user $ find
-                    vals $ :users db
-                    fn (user)
+                  maybe-user $ -> (:users db) (vals) (.to-list)
+                    find $ fn (user)
                       = username $ :name user
                 if (some? maybe-user)
                   update-in db ([] :sessions sid :messages)
@@ -1521,16 +1516,15 @@
                         :password $ md5 password
                         :avatar nil
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.updater.user $ :require
             [] cumulo-util.core :refer $ [] find-first
             calcit.std.hash :refer $ md5
             app.schema :as schema
-        :examples $ []
     |app.util $ %{} :FileEntry
       :defs $ {}
-        |format-to-date $ %{} :CodeEntry (:doc |)
+        |format-to-date $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn format-to-date (date-info)
               str (:year date-info) "\"-"
@@ -1541,7 +1535,7 @@
                   str $ :day date-info
                   , 2 "\"0"
           :examples $ []
-        |get-days-by $ %{} :CodeEntry (:doc |)
+        |get-days-by $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn get-days-by (year month1)
               cond
@@ -1557,18 +1551,16 @@
                     zero? $ .rem year 4
                     , 29 28
           :examples $ []
-        |get-native-today! $ %{} :CodeEntry (:doc |)
+        |get-native-today! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn get-native-today! () $ let
-                now $ -> (:now Date)
-                  apply $ []
-                  .extract
+                now $ extract-time (get-time!)
               {}
                 :year $ :year now
                 :month $ :month now
                 :day $ :day now
           :examples $ []
-        |get-today! $ %{} :CodeEntry (:doc |)
+        |get-today! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn get-today! () $ let
                 now $ new js/Date
@@ -1577,7 +1569,7 @@
                 :month $ inc (.!getMonth now)
                 :day $ .!getDate now
           :examples $ []
-        |get-yesterday! $ %{} :CodeEntry (:doc |)
+        |get-yesterday! $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn get-yesterday! () $ let
                 now $ .!local DateTime
@@ -1588,33 +1580,32 @@
                 :month $ .-month yesterday
                 :day $ .-day yesterday
           :examples $ []
-        |months-has-30 $ %{} :CodeEntry (:doc |)
+        |months-has-30 $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def months-has-30 $ #{} 4 6 9 11
           :examples $ []
-        |months-has-31 $ %{} :CodeEntry (:doc |)
+        |months-has-31 $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             def months-has-31 $ #{} 1 3 5 7 8 10 12
           :examples $ []
-        |pad-start $ %{} :CodeEntry (:doc |)
+        |pad-start $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn pad-start (acc n c)
               if
                 &>= (count acc) n
                 , acc $ recur (str c acc) (dec n) c
           :examples $ []
-        |same-day? $ %{} :CodeEntry (:doc |)
+        |same-day? $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn same-day? (a b)
               and (.!hasSame a b "\"month") (.!hasSame a b "\"day")
           :examples $ []
-        |zero? $ %{} :CodeEntry (:doc |)
+        |zero? $ %{} :CodeEntry (:doc |) (:schema nil)
           :code $ quote
             defn zero? (x) (= 0 x)
           :examples $ []
-      :ns $ %{} :CodeEntry (:doc |)
+      :ns $ %{} :NsEntry (:doc |)
         :code $ quote
           ns app.util $ :require
-            calcit.std.date :refer $ Date
+            calcit.std.date :refer $ get-time! extract-time
             "\"luxon" :refer $ DateTime
-        :examples $ []

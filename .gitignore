@@ -12,3 +12,5 @@ storage.cirru
 backups/
 
 .DS_Store
+
+.yarn/*.gz
