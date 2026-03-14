@@ -119,7 +119,7 @@ defn twig-user (user)
 
 #### 5. **Create/Update UI** (Respo component)
 
-See [Respo.md](./llms/Respo.md) for UI development.
+See the Respo component guide by running `cr libs readme respo.calcit` for UI development.
 
 ```cirru
 defn comp-task-list (tasks)
@@ -615,7 +615,7 @@ When adding a feature:
 
 **Further Reading**:
 
-- UI components → [Respo.md](./llms/Respo.md)
+- UI components → run `cr libs readme respo.calcit` for Respo component docs
 - Template source → https://github.com/Cumulo/calcium-workflow
 
-Also read `llms/*.md` for framework usages.
+Also run `cr docs agents --full` for full CLI reference.
