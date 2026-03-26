@@ -12,18 +12,23 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
-        node-version: 20
-        cache: 'yarn'
+        node-version: 24
+
+    - name: Enable Corepack and Yarn Berry
+      run: |
+        corepack enable
+        corepack prepare yarn@4.12.0 --activate
+        yarn --version
 
     - uses: calcit-lang/setup-cr@0.0.8
 
-    - run: caps --ci && cr --entry server -1 ir
+    - run: caps --ci && cr --entry server ir
 
     - run: yarn && yarn compile-page && yarn release-page
 
-    - run: mkdir -p dist-server && cp deps.cirru compact.cirru dist-server && cp package.json dist-server/ && cp -r holidays dist-server/
+    - run: mkdir -p dist-server && cp -r deps.cirru compact.cirru package.json dist-server/
       name: Copy server scripts
 
     - name: Upload web assets
