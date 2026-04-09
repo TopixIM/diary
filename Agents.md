@@ -2,7 +2,17 @@
 
 **🤖 This guide helps LLM agents add features to Cumulo applications based on [calcium-workflow](https://github.com/Cumulo/calcium-workflow) template.**
 
-📚 **Related**: [Respo UI](./llms/Respo.md)
+要求查看 Calcit 命令行工具的用法:
+
+```bash
+cr docs agents --full
+```
+
+按需查看 Respo 模块的具体用法
+
+```bash
+cr libs readme respo.calcit -f docs/Respo-Agent.md
+```
 
 ---
 
@@ -109,7 +119,7 @@ defn twig-user (user)
 
 #### 5. **Create/Update UI** (Respo component)
 
-See [Respo.md](./llms/Respo.md) for UI development.
+See the Respo component guide by running `cr libs readme respo.calcit` for UI development.
 
 ```cirru
 defn comp-task-list (tasks)
@@ -605,7 +615,7 @@ When adding a feature:
 
 **Further Reading**:
 
-- UI components → [Respo.md](./llms/Respo.md)
+- UI components → run `cr libs readme respo.calcit` for Respo component docs
 - Template source → https://github.com/Cumulo/calcium-workflow
 
-Also read `llms/*.md` for framework usages.
+Also run `cr docs agents --full` for full CLI reference.

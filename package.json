@@ -1,21 +1,16 @@
 {
   "name": "@comulo/diary",
-  "version": "0.1.0",
   "description": "Cumulo Diary",
   "main": "index.js",
   "scripts": {
-    "compile-page": "cr --once js",
+    "compile-page": "cr js",
     "release-page": "vite build --base=./",
-    "watch-page": "cr js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git@github.com:mvc-works/cumulo-workflow.git"
+    "watch-page": "cr --watch js"
   },
   "author": "jiyinyiyong",
   "license": "MIT",
   "dependencies": {
-    "@calcit/procs": "^0.10.9",
+    "@calcit/procs": "^0.12.13",
     "copy-to-clipboard": "^3.3.3",
     "luxon": "^3.7.2",
     "shortid": "^2.2.17"
@@ -24,6 +19,6 @@
     "bottom-tip": "^0.1.5",
     "feather-icons": "^4.29.2",
     "url-parse": "^1.5.10",
-    "vite": "^7.3.1"
+    "vite": "^8.0.2"
   }
 }
