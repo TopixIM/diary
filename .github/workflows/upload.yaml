@@ -1,4 +1,4 @@
-name: Try to upload
+name: Check and deploy
 
 on:
   push:
@@ -6,57 +6,84 @@ on:
       - main
   pull_request: {}
 
+permissions:
+  contents: read
+
+concurrency:
+  group: diary-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
 
-    - uses: actions/setup-node@v6
-      with:
-        node-version: 24
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24
 
-    - name: Enable Corepack and Yarn Berry
-      run: |
-        corepack enable
-        corepack prepare yarn@4.12.0 --activate
-        yarn --version
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.12.0 --activate
 
-    - uses: calcit-lang/setup-cr@0.0.8
+      - uses: calcit-lang/setup-calcit@704b3f5cd6f9ce3bd1e0c926dbdd1d181adb8180
 
-    - run: caps --ci && cr --entry server ir
+      - name: Install dependencies
+        run: |
+          caps --ci
+          caps verify --toolchain
+          yarn install --immutable
 
-    - run: yarn && yarn compile-page && yarn release-page
+      - name: Check Calcit entries
+        run: |
+          calcit calcit.cirru --check-only
+          calcit calcit.cirru --entry server --check-only
+          calcit calcit.cirru analyze dynamic-methods --max 0
+          calcit calcit.cirru --entry server analyze dynamic-methods --max 0
+          calcit test --summary-only
 
-    - run: mkdir -p dist-server && cp -r deps.cirru compact.cirru package.json dist-server/
-      name: Copy server scripts
+      - name: Build client
+        run: |
+          yarn compile-page
+          yarn release-page
 
-    - name: Upload web assets
-      id: deploy
-      uses: Pendect/action-rsyncer@v2.0.0
-      env:
-        DEPLOY_KEY: ${{secrets.rsync_private_key_tc}}
-      with:
-        flags: '-avzr --progress'
-        options: ''
-        ssh_options: ''
-        src: 'dist/*'
-        dest: 'rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}'
+      - name: Prepare server sources
+        if: github.event_name == 'push'
+        run: |
+          mkdir -p dist-server
+          cp deps.cirru calcit.cirru package.json yarn.lock dist-server/
 
-    - name: Display status from deploy
-      run: echo "${{ steps.deploy.outputs.status }}"
+      - name: Configure deploy key
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          DEPLOY_KEY: ${{ secrets.rsync_private_key_tc }}
+        run: |
+          install -m 700 -d "$RUNNER_TEMP/diary-ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/diary-ssh/key"
+          chmod 600 "$RUNNER_TEMP/diary-ssh/key"
 
-    - name: Upload server script
-      id: deploy-server
-      uses: Pendect/action-rsyncer@v2.0.0
-      env:
-        DEPLOY_KEY: ${{secrets.rsync_private_key_tc}}
-      with:
-        flags: '-avzr --progress'
-        options: ''
-        ssh_options: ''
-        src: 'dist-server/*'
-        dest: 'rsync-user@chenyong.life:/servers/diary/'
+      - name: Upload PR preview
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        run: >-
+          rsync -avzr --progress
+          -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"
+          dist/
+          rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}/pr/
 
-    - name: Display status from deploy
-      run: echo "${{ steps.deploy-server.outputs.status }}"
+      - name: Upload production web assets
+        if: github.event_name == 'push'
+        run: >-
+          rsync -avzr --progress
+          -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"
+          dist/
+          rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}/
+
+      - name: Upload server sources
+        if: github.event_name == 'push'
+        run: >-
+          rsync -avzr --progress
+          -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"
+          dist-server/
+          rsync-user@chenyong.life:/servers/diary/
