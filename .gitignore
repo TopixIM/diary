@@ -15,3 +15,5 @@ backups/
 .DS_Store
 
 .yarn/*.gz
+.pnp.cjs
+.pnp.loader.mjs
