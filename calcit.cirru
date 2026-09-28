@@ -14,6 +14,10 @@
   :files $ {}
     'app.client $ %{} 'FileEntry
       :defs $ {}
+        '*resync-attempted? $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *resync-attempted? false
+          :examples $ []
+          :schema $ :: 'Ref 'Bool
         '*states $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *states
             unsafe-coerce
@@ -161,7 +165,15 @@
                       normalize-wire-value $ patch-twig base $ assert-type changes (:: 'List 'recollect.schema/change-op)
                       :: 'Map 'Tag 'Dynamic
                   when config/dev? $ js/console.log |Changes changes
-                  reset! *store $ %:: StorePayload :online next-store
+                  match (schema/try-decode-client-store next-store)
+                    (:ok _)
+                      do (reset! *resync-attempted? false)
+                        reset! *store $ %:: StorePayload :online next-store
+                    (:err reason)
+                      do (js/console.warn |Incomplete-client-store-patch reason)
+                        if (not @*resync-attempted?)
+                          do (reset! *resync-attempted? true) (connect!)
+                          reset! *store $ %:: StorePayload :initial
               (:effect/pong) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -1504,6 +1516,18 @@
               :cursor $ get-native-today!
           :examples $ []
           :schema $ :: 'app.schema/Session
+        'try-decode-client-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-decode-client-store (raw) (try-decode-map-as raw app.schema/ClientStore)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :return $ :: 'Result 'app.schema/ClientStore 'String
+          :tests $ [] $ %{} 'TestEntry (:name |rejects-incomplete-patches)
+            :code $ quote $ match
+              try-decode-client-store $ {} $ :logged-in? false
+              (:ok _) (raise |incomplete-store-was-accepted)
+              (:err reason)
+                assert |reports-missing-color-or-session $ string? reason
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
             %{} User (:name |) (:id |) (:nickname |) (:avatar nil) (:password |)
@@ -1670,7 +1694,7 @@
                 fn (data)
                   match data
                     (:connect sid)
-                      do
+                      do (swap! *client-caches &map:dissoc sid)
                         dispatch! (:: :session/connect) sid
                         println |New\sclient.
                     (:message sid msg)
@@ -1678,7 +1702,7 @@
                           action $ parse-cirru-edn-as msg app.schema/Op
                         dispatch! action sid
                     (:disconnect sid)
-                      do (println |Client\sclosed!)
+                      do (println |Client\sclosed!) (swap! *client-caches &map:dissoc sid)
                         dispatch! (:: :session/disconnect) sid
                     _ $ eprintln |unknown\sdata: data
               , &unit
