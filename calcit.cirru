@@ -1062,15 +1062,27 @@
                 :args $ []
         'parse-holidays $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-holidays (text)
-            match
-              try-parse-cirru-edn-as text $ :: 'List 'app.comp.month/HolidayEntry
-              (:ok data) data
+            match (try-parse-cirru-edn text)
+              (:ok raw)
+                match
+                  try-decode-map-as raw $ :: 'List 'app.comp.month/HolidayEntry
+                  (:ok data) data
+                  (:err message)
+                    raise $ str-spaced |failed |to |decode |holiday |data: message
               (:err message)
                 raise $ str-spaced |failed |to |parse |holiday |data: message
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String
             :return $ :: 'List 'app.comp.month/HolidayEntry
+          :tests $ [] $ %{} 'TestEntry (:name |decodes-legacy-holiday-maps)
+            :code $ quote $ do
+              is= 12 $ count $ parse-holidays (inline |2018.cirru)
+              is= 13 $ count $ parse-holidays (inline |2019.cirru)
+              is= 13 $ count $ parse-holidays (inline |2020.cirru)
+              is= 14 $ count $ parse-holidays (inline |2021.cirru)
+              is= 13 $ count $ parse-holidays (inline |2026.cirru)
+            :tags $ #{} :regression
         'same-luxon-day? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn same-luxon-day? (a b)
             and (a .has-same? b |month) (a .has-same? b |day)
@@ -1140,6 +1152,7 @@
             app.util :refer $ get-days-by same-day?
             app.comp.empty :refer $ comp-empty
             feather.core :refer $ comp-i
+            calcit.test :refer $ is=
     'app.comp.navigation $ %{} 'FileEntry
       :defs $ {}
         'comp-navigation $ %{} 'CodeEntry (:doc |)
