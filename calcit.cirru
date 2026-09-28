@@ -85,7 +85,7 @@
                     , cursor s
                   , 'app.client/ClientStatesPayload
               (:effect/connect) (connect!)
-              _ $ ws-send! op
+              _ $ ws-send! $ to-server-op op
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'app.schema/ClientOp
@@ -109,7 +109,7 @@
               fn ()
                 when
                   not $ enum? @*store
-                  ws-send! $ :: :effect/ping
+                  ws-send! $ %:: schema/Op :effect/ping
                 , &unit
               , nil
             println "|App started!"
@@ -185,6 +185,45 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
+        'to-server-op $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn to-server-op (op)
+            match op
+              (:states _ _) (raise |local-state-op-cannot-be-sent)
+              (:session/connect) (%:: schema/Op :session/connect)
+              (:session/disconnect) (%:: schema/Op :session/disconnect)
+              (:session/remove-message message) (%:: schema/Op :session/remove-message message)
+              (:session/set-cursor cursor) (%:: schema/Op :session/set-cursor cursor)
+              (:session/merge-cursor patch) (%:: schema/Op :session/merge-cursor patch)
+              (:user/log-in credentials) (%:: schema/Op :user/log-in credentials)
+              (:user/sign-up credentials) (%:: schema/Op :user/sign-up credentials)
+              (:user/log-out) (%:: schema/Op :user/log-out)
+              (:router/change router) (%:: schema/Op :router/change router)
+              (:diary/add-one diary) (%:: schema/Op :diary/add-one diary)
+              (:diary/change change) (%:: schema/Op :diary/change change)
+              (:diary/copy-yesterday payload) (%:: schema/Op :diary/copy-yesterday payload)
+              (:today today) (%:: schema/Op :today today)
+              (:effect/persist) (%:: schema/Op :effect/persist)
+              (:effect/ping) (%:: schema/Op :effect/ping)
+              (:effect/pong) (%:: schema/Op :effect/pong)
+              (:effect/connect) (%:: schema/Op :effect/connect)
+              (:reel/reset) (%:: schema/Op :reel/reset)
+              (:reel/merge) (%:: schema/Op :reel/merge)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
+            :args $ [] 'app.schema/ClientOp
+          :tests $ [] $ %{} 'TestEntry (:name |sends-op-with-server-nominal-type)
+            :code $ quote $ do
+              assert= :user/log-in $ &enum:nth
+                parse-cirru-edn-as
+                  format-cirru-edn $ to-server-op $ %:: schema/ClientOp :user/log-in ([] |name |password)
+                  , app.schema/Op
+                , 0
+              assert= :session/set-cursor $ &enum:nth
+                parse-cirru-edn-as
+                  format-cirru-edn $ to-server-op $ %:: schema/ClientOp :session/set-cursor
+                    %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  , app.schema/Op
+                , 0
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.client
           :require
@@ -211,28 +250,28 @@
                 (:offline) (comp-offline :offline)
                 (:online store-typed)
                   let
-                      session store-typed.:session
-                      router store-typed.:router
-                      router-data router.:data
-                      diary $ either store-typed.:diary schema/diary
-                      user $ either store-typed.:user $ %{} schema/ClientUser (:name |) (:id |) (:nickname |) (:avatar nil)
+                      session (:session store-typed)
+                      router $ either (:router store-typed) $ %{} schema/ClientRouter (:name :home) (:data nil)
+                      router-data $ either (:data router) $ {}
+                      diary $ either (:diary store-typed) schema/diary
+                      user $ either (:user store-typed) $ %{} schema/ClientUser (:name |) (:id |) (:nickname |) (:avatar nil)
                     div
                       {} $ :class-name $ str-spaced css/preset css/global css/fullscreen css/row
-                      comp-navigation store-typed.:logged-in? store-typed.:count
-                      if store-typed.:logged-in?
-                        case router.:name
-                          :home $ comp-month store-typed.:today session.:cursor diary $ assert-type router-data
+                      comp-navigation (:logged-in? store-typed) (:count store-typed)
+                      if (:logged-in? store-typed)
+                        case (:name router)
+                          :home $ comp-month (:today store-typed) (:cursor session) diary $ assert-type router-data
                             :: 'Map 'String $ :: 'Map 'Tag 'String
                           :data $ comp-data-gather $ assert-type router-data (:: 'Map 'String 'app.comp.data-gather/DiaryPayload)
-                          :diary $ comp-diary (>> states :diary) session.:cursor diary
+                          :diary $ comp-diary (>> states :diary) (:cursor session) diary
                           :profile $ comp-profile user $ assert-type router-data (:: 'Map 'String 'String)
                           <> $ str router
                         comp-login states
-                      comp-status-color store-typed.:color
+                      comp-status-color (:color store-typed)
                       when dev? $ comp-inspect |Store store-typed $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                      comp-messages session.:messages ({})
+                      comp-messages (:messages session) ({})
                         fn (info d!) (d! :session/remove-message info)
-                      when dev? $ comp-reel store-typed.:reel-length $ {}
+                      when dev? $ comp-reel (:reel-length store-typed) $ {}
               , |comp-container
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
@@ -341,7 +380,7 @@
                 original-state $ &map:get states :data
                 cursor $ unsafe-coerce (&map:get states :cursor) 'Dynamic
                 state $ assert-type
-                  or original-state $ %{} DiaryEditorState $ :text diary.:text
+                  or original-state $ %{} DiaryEditorState $ :text (:text diary)
                   , 'app.comp.diary/DiaryEditorState
               div
                 {}
@@ -414,7 +453,7 @@
                     :class-name $ str-spaced css/flex css/textarea
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
-                      d! cursor $ assoc state :text $ assert-type (input-event-value e) 'String
+                      d! cursor $ assoc state :text $ assert-type (&map:get e :value) 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
@@ -585,7 +624,6 @@
             app.comp.empty :refer $ comp-empty
             clojure.string :as string
             respo-alerts.core :refer $ use-prompt
-            respo.util.format :refer $ input-event-value
     'app.comp.empty $ %{} 'FileEntry
       :defs $ {} $ 'comp-empty
         %{} 'CodeEntry (:doc |)
@@ -629,13 +667,13 @@
                       input $ {} (:placeholder |Username) (:class-name css/input)
                         :value $ :username state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :username $ assert-type (input-event-value e) 'String
+                          d! cursor $ assoc state :username $ assert-type (&map:get e :value) 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password) (:class-name css/input)
                         :value $ :password state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :password $ assert-type (input-event-value e) 'String
+                          d! cursor $ assoc state :password $ assert-type (&map:get e :value) 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -677,7 +715,6 @@
             app.schema :as schema
             app.style :as style
             app.config :as config
-            respo.util.format :refer $ input-event-value
     'app.comp.month $ %{} 'FileEntry
       :defs $ {}
         'HolidayEntry $ %{} 'CodeEntry (:doc |)
@@ -722,8 +759,8 @@
                 offset $ + (* 7 col) row
                 this-day $ first-day .plus $ js-object (:days offset)
                 today $ luxon-from-map today-info
-                cursor-month $ or cursor.:month 0
-                cursor-day $ or cursor.:day 0
+                cursor-month $ or (:month cursor) 0
+                cursor-day $ or (:day cursor) 0
                 same-month? $ = (this-day :month) cursor-month
                 today? $ same-luxon-day? this-day today
                 selected? $ and
@@ -844,7 +881,7 @@
             let
                 cursor-date $ luxon-from-map cursor
                 month-1st $ luxon-from-map $ assoc cursor :day 1
-                days-length $ get-days-by cursor.:year cursor.:month
+                days-length $ get-days-by (:year cursor) (:month cursor)
                 useful-days $ + days-length (month-1st :weekday) -1
                 columns $ if
                   = 0 $ &number:rem useful-days 7
@@ -1035,9 +1072,9 @@
         'on-change-month! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-change-month! (cursor offset d!)
             let
-                year cursor.:year
-                month cursor.:month
-                day cursor.:day
+                year (:year cursor)
+                month (:month cursor)
+                day (:day cursor)
                 next-cursor $ cond
                     and (= month 1) (= offset -1)
                     {}
@@ -1209,7 +1246,7 @@
               div
                 {} (:class-name css/font-fancy)
                   :style $ {} (:font-size 32) (:font-weight 100)
-                <> $ str "|Hello! " $ or user.:name |
+                <> $ str "|Hello! " $ or (:name user) |
               =< nil 16
               div
                 {} $ :class-name css/row
@@ -1415,7 +1452,7 @@
           :schema $ :: 'app.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            %{} Session (:user-id nil) (:id |) (:nickname |) (:router router)
+            %{} Session (:user-id nil) (:id 0) (:nickname |) (:router router)
               :messages $ {}
               :cursor $ get-native-today!
           :examples $ []
@@ -1440,7 +1477,7 @@
             if
               path-exists? $ w-log storage-file
               do (println "|Found local EDN data")
-                parse-cirru-edn-as (read-file storage-file) app.schema/Database
+                parse-stored-db $ read-file storage-file
               do (println "|Found no data") schema/database
           :examples $ []
           :schema $ :: 'Ref 'app.schema/Database
@@ -1459,8 +1496,8 @@
               let
                   today $ get-native-today!
                   reel @*reel
-                  db $ assert-type reel.:db 'app.schema/Database
-                when (not= today db.:today) (println |A\snew\sday: today)
+                  db $ assert-type (:db reel) 'app.schema/Database
+                when (not= today (:today db)) (println |A\snew\sday: today)
                   dispatch! (:: :today today) -1
               , &unit
           :examples $ []
@@ -1484,7 +1521,7 @@
           :code $ quote $ defn get-backup-path! ()
             let
                 today $ get-native-today!
-              join-path calcit-dirname |backups (str today.:month) (str today.:day |-snapshot.cirru)
+              join-path calcit-dirname |backups (str (:month today)) (str (:day today) |-snapshot.cirru)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
@@ -1507,11 +1544,41 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+        'normalize-stored-db $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-stored-db (raw)
+            let
+                db $ assert-type raw $ :: 'Map 'Tag 'Dynamic
+                users $ assert-type (&map:get db :users) (:: 'Map 'String 'Dynamic)
+                normalized-users $ filter-map-kv users $ fn (id raw-user)
+                  let
+                      user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
+                      diaries $ assert-type (&map:get user :diaries) (:: 'Map 'String 'Dynamic)
+                      normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
+                        let
+                            diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
+                          %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
+                    %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
+              &map:assoc db :users normalized-users
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+        'parse-stored-db $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn parse-stored-db (text)
+            match (try-parse-cirru-edn-as text app.schema/Database)
+              (:ok data) data
+              (:err _)
+                decode-map-as
+                  normalize-stored-db $ parse-cirru-edn text
+                  , app.schema/Database
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
+            :args $ [] 'String
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1578,10 +1645,10 @@
           :code $ quote $ defn sync-clients! (reel)
             wss-each! $ fn (sid)
               let
-                  db $ assert-type reel.:db 'app.schema/Database
-                  records reel.:records
+                  db $ assert-type (:db reel) 'app.schema/Database
+                  records $ :records reel
                   session $ assert-type
-                    match (get db.:sessions sid)
+                    match (get (:sessions db) sid)
                       (:some found) found
                       (:none) schema/session
                     , 'app.schema/Session
@@ -1633,32 +1700,32 @@
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
             let
-                router session.:router
+                router (:router session)
                 reel-length $ count records
-                session-count $ count db.:sessions
+                session-count $ count (:sessions db)
                 color $ rand-hex-color!
                 logged-out $ %{} schema/ClientStore (:logged-in? false) (:session session) (:reel-length reel-length)
-                  :router $ %{} schema/ClientRouter (:name router.:name) (:data nil)
-                  :today db.:today
+                  :router $ %{} schema/ClientRouter (:name (:name router)) (:data nil)
+                  :today (:today db)
                   :count session-count
                   :color color
                   :user nil
                   :diary nil
-              match session.:user-id
+              match (optionally (:user-id session))
                 (:some user-id-value)
                   let
                       user-id $ assert-type user-id-value 'String
-                    match (get db.:users user-id)
+                    match (get (:users db) user-id)
                       (:some user)
                         let
-                            route-data $ case-default router.:name nil
-                              :home $ twig-overview user.:diaries
+                            route-data $ case-default (:name router) nil
+                              :home $ twig-overview (:diaries user)
                               :diary nil
-                              :profile $ twig-members db.:sessions db.:users
-                              :data $ twig-personal-data user.:diaries
-                            client-router $ %{} schema/ClientRouter (:name router.:name) (:data route-data)
-                            current-diary $ get user.:diaries $ format-to-date session.:cursor
-                          %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router) (:today db.:today) (:count session-count) (:color color)
+                              :profile $ twig-members (:sessions db) (:users db)
+                              :data $ twig-personal-data (:diaries user)
+                            client-router $ %{} schema/ClientRouter (:name (:name router)) (:data route-data)
+                            current-diary $ get (:diaries user) $ format-to-date (:cursor session)
+                          %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router) (:today (:today db)) (:count session-count) (:color color)
                             :user $ twig-user user
                             :diary current-diary
                       (:none) logged-out
@@ -1668,10 +1735,10 @@
             :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
-            match session.:user-id
+            match (optionally (:user-id session))
               (:some user-id)
                 match (get users user-id)
-                  (:some user) (%:: MapEntryDecision :keep sid user.:name)
+                  (:some user) (%:: MapEntryDecision :keep sid (:name user))
                   (:none) (%:: MapEntryDecision :drop)
               (:none) (%:: MapEntryDecision :drop)
           :examples $ []
@@ -1698,7 +1765,7 @@
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'String
         'twig-overview-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview-entry (date diary)
-            %:: MapEntryDecision :keep date $ {} (:mood diary.:mood) (:highlight diary.:highlight)
+            %:: MapEntryDecision :keep date $ {} (:mood (:mood diary)) (:highlight (:highlight diary))
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String 'app.schema/Diary
@@ -1711,7 +1778,7 @@
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
-            %:: MapEntryDecision :keep date $ {} (:mood diary.:mood) (:highlight diary.:highlight) (:food diary.:food) (:sleep diary.:sleep) (:met diary.:met) (:exercise diary.:exercise) (:place diary.:place) (:date diary.:date) (:time diary.:time)
+            %:: MapEntryDecision :keep date $ {} (:mood (:mood diary)) (:highlight (:highlight diary)) (:food (:food diary)) (:sleep (:sleep diary)) (:met (:met diary)) (:exercise (:exercise diary)) (:place (:place diary)) (:date (:date diary)) (:time (:time diary))
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String 'app.schema/Diary
@@ -1727,7 +1794,7 @@
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-user (user)
-            %{} schema/ClientUser (:name user.:name) (:id user.:id) (:nickname user.:nickname) (:avatar user.:avatar)
+            %{} schema/ClientUser (:name (:name user)) (:id (:id user)) (:nickname (:nickname user)) (:avatar (:avatar user))
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/ClientUser)
             :args $ [] 'app.schema/User
@@ -1777,21 +1844,21 @@
         'add-one $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn add-one (db diary-data sid op-id op-time)
             let
-                session $ get db.:sessions sid
+                session $ get (:sessions db) sid
               match session
                 (:some session-data)
-                  match session-data.:user-id
+                  match (optionally (:user-id session-data))
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get db.:users uid)
+                        match (get (:users db) uid)
                           (:some user)
-                            match diary-data.:date
+                            match (:date diary-data)
                               (:some date)
                                 let
                                     next-diary $ struct-with diary-data $ :time op-time
-                                    next-user $ struct-with user $ :diaries (assoc user.:diaries date next-diary)
-                                  struct-with db $ :users $ assoc db.:users uid next-user
+                                    next-user $ struct-with user $ :diaries (assoc (:diaries user) date next-diary)
+                                  struct-with db $ :users $ assoc (:users db) uid next-user
                               (:none) db
                           (:none) db
                     (:none) db
@@ -1802,42 +1869,42 @@
         'change $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn change (db change-data sid op-id op-time)
             let
-                session $ get db.:sessions sid
+                session $ get (:sessions db) sid
               match session
                 (:some session-data)
-                  match session-data.:user-id
+                  match (optionally (:user-id session-data))
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get db.:users uid)
+                        match (get (:users db) uid)
                           (:some user)
                             let
-                                date change-data.:date
-                                old-diary $ match (get user.:diaries date)
+                                date (:date change-data)
+                                old-diary $ match (get (:diaries user) date)
                                   (:some found) found
                                   (:none) schema/diary
-                                changed-diary $ if (= :food change-data.:field)
-                                  struct-with old-diary $ :food change-data.:data
-                                  if (= :sleep change-data.:field)
-                                    struct-with old-diary $ :sleep change-data.:data
-                                    if (= :mood change-data.:field)
-                                      struct-with old-diary $ :mood change-data.:data
-                                      if (= :place change-data.:field)
-                                        struct-with old-diary $ :place change-data.:data
-                                        if (= :highlight change-data.:field)
-                                          struct-with old-diary $ :highlight change-data.:data
-                                          if (= :met change-data.:field)
-                                            struct-with old-diary $ :met change-data.:data
-                                            if (= :exercise change-data.:field)
-                                              struct-with old-diary $ :exercise change-data.:data
-                                              if (= :pains change-data.:field)
-                                                struct-with old-diary $ :pains change-data.:data
-                                                if (= :text change-data.:field)
-                                                  struct-with old-diary $ :text change-data.:data
+                                changed-diary $ if (= :food (:field change-data))
+                                  struct-with old-diary $ :food (:data change-data)
+                                  if (= :sleep (:field change-data))
+                                    struct-with old-diary $ :sleep (:data change-data)
+                                    if (= :mood (:field change-data))
+                                      struct-with old-diary $ :mood (:data change-data)
+                                      if (= :place (:field change-data))
+                                        struct-with old-diary $ :place (:data change-data)
+                                        if (= :highlight (:field change-data))
+                                          struct-with old-diary $ :highlight (:data change-data)
+                                          if (= :met (:field change-data))
+                                            struct-with old-diary $ :met (:data change-data)
+                                            if (= :exercise (:field change-data))
+                                              struct-with old-diary $ :exercise (:data change-data)
+                                              if (= :pains (:field change-data))
+                                                struct-with old-diary $ :pains (:data change-data)
+                                                if (= :text (:field change-data))
+                                                  struct-with old-diary $ :text (:data change-data)
                                                   , old-diary
                                 next-diary $ struct-with changed-diary (:date date) (:time op-time)
-                                next-user $ struct-with user $ :diaries (assoc user.:diaries date next-diary)
-                              struct-with db $ :users $ assoc db.:users uid next-user
+                                next-user $ struct-with user $ :diaries (assoc (:diaries user) date next-diary)
+                              struct-with db $ :users $ assoc (:users db) uid next-user
                           (:none) db
                     (:none) db
                 (:none) db
@@ -1847,12 +1914,12 @@
         'copy-yesterday $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn copy-yesterday (db date-info sid op-id op-time)
             let
-                session $ get db.:sessions sid
+                session $ get (:sessions db) sid
                 today $ format-to-date date-info
                 yesterday-info $ let
-                    year date-info.:year
-                    month date-info.:month
-                    day date-info.:day
+                    year (:year date-info)
+                    month (:month date-info)
+                    day (:day date-info)
                   if (> day 1)
                     struct-with date-info $ :day $ dec day
                     if (> month 1)
@@ -1867,18 +1934,18 @@
                 yesterday $ format-to-date yesterday-info
               match session
                 (:some session-data)
-                  match session-data.:user-id
+                  match (optionally (:user-id session-data))
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get db.:users uid)
+                        match (get (:users db) uid)
                           (:some user)
-                            match (get user.:diaries yesterday)
+                            match (get (:diaries user) yesterday)
                               (:some yesterday-diary)
                                 let
                                     next-diary $ struct-with yesterday-diary (:date today) (:time op-time)
-                                    next-user $ struct-with user $ :diaries (assoc user.:diaries today next-diary)
-                                  struct-with db $ :users $ assoc db.:users uid next-user
+                                    next-user $ struct-with user $ :diaries (assoc (:diaries user) today next-diary)
+                                  struct-with db $ :users $ assoc (:users db) uid next-user
                               (:none) db
                           (:none) db
                     (:none) db
@@ -1902,12 +1969,12 @@
           :code $ quote $ defn change (db router-data sid op-id op-time)
             let
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
                 next-session $ struct-with session $ :router router-data
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Router 'Number 'String 'Number
@@ -1918,14 +1985,14 @@
       :defs $ {}
         'connect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect (db sid op-id op-time)
-            struct-with db $ :sessions $ assoc db.:sessions sid
+            struct-with db $ :sessions $ assoc (:sessions db) sid
               struct-with schema/session $ :id sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
-            struct-with db $ :sessions $ dissoc db.:sessions sid
+            struct-with db $ :sessions $ dissoc (:sessions db) sid
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
@@ -1933,25 +2000,25 @@
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                cursor session.:cursor
-                next-cursor $ match patch.:year
+                cursor (:cursor session)
+                next-cursor $ match (:year patch)
                   (:some value)
                     struct-with cursor $ :year value
                   (:none)
-                    match patch.:month
+                    match (:month patch)
                       (:some value)
                         struct-with cursor $ :month value
                       (:none)
-                        match patch.:day
+                        match (:day patch)
                           (:some value)
                             struct-with cursor $ :day value
                           (:none) cursor
                 next-session $ struct-with session $ :cursor next-cursor
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/CursorPatch 'Number 'String 'Number
@@ -1959,12 +2026,12 @@
           :code $ quote $ defn remove-message (db message sid op-id op-time)
             let
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                next-session $ struct-with session $ :messages (dissoc session.:messages message.:id)
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+                next-session $ struct-with session $ :messages (dissoc (:messages session) (:id message))
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Message 'Number 'String 'Number
@@ -1972,12 +2039,12 @@
           :code $ quote $ defn set-cursor (db cursor sid op-id op-time)
             let
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
                 next-session $ struct-with session $ :cursor cursor
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
@@ -1990,31 +2057,31 @@
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ vals (:users db)
                   fn (user)
                     hint-fn
                       {}
                         :args $ [] 'app.schema/User
                         :return 'Bool
-                      = username user.:name
+                      = username (:name user)
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
                 next-session $ match maybe-user
                   (:some user)
                     if
-                      = (md5 password) user.:password
-                      struct-with session $ :user-id user.:id
-                      struct-with session $ :messages $ assoc session.:messages op-id
+                      = (md5 password) (:password user)
+                      struct-with session $ :user-id (:id user)
+                      struct-with session $ :messages $ assoc (:messages session) op-id
                         %{} schema/Message (:id op-id)
                           :text $ str |Wrong\spassword\sfor\s username
                   (:none)
-                    struct-with session $ :messages $ assoc session.:messages op-id
+                    struct-with session $ :messages $ assoc (:messages session) op-id
                       %{} schema/Message (:id op-id)
                         :text $ str |No\suser\snamed:\s username
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
@@ -2022,12 +2089,12 @@
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
                 next-session $ struct-with session $ :user-id nil
-              struct-with db $ :sessions $ assoc db.:sessions sid next-session
+              struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
@@ -2035,32 +2102,32 @@
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals db.:users
+                  &set:to-list $ vals (:users db)
                   fn (user)
                     hint-fn
                       {}
                         :args $ [] 'app.schema/User
                         :return 'Bool
-                      = username user.:name
+                      = username (:name user)
                 session $ assert-type
-                  match (get db.:sessions sid)
+                  match (get (:sessions db) sid)
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
               if (option:some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
-                      assoc session.:messages op-id $ %{} schema/Message (:id op-id)
+                      assoc (:messages session) op-id $ %{} schema/Message (:id op-id)
                         :text $ str |Name\sis\staken:\s username
-                  struct-with db $ :sessions $ assoc db.:sessions sid next-session
+                  struct-with db $ :sessions $ assoc (:sessions db) sid next-session
                 let
                     next-session $ struct-with session $ :user-id op-id
                     next-user $ struct-with schema/user (:id op-id) (:name username) (:nickname username)
                       :password $ md5 password
                       :avatar nil
                   struct-with db
-                    :sessions $ assoc db.:sessions sid next-session
-                    :users $ assoc db.:users op-id next-user
+                    :sessions $ assoc (:sessions db) sid next-session
+                    :users $ assoc (:users db) op-id next-user
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
@@ -2091,9 +2158,9 @@
           :schema $ :: 'StructDef
         'format-to-date $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-to-date (date-info)
-            str date-info.:year |-
-              pad-start (str date-info.:month) 2 |0
-              , |- $ pad-start (str date-info.:day) 2 |0
+            str (:year date-info) |-
+              pad-start (str (:month date-info)) 2 |0
+              , |- $ pad-start (str (:day date-info)) 2 |0
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ [] 'app.util/DateInfo
@@ -2139,9 +2206,9 @@
           :code $ quote $ defn get-yesterday! ()
             let
                 today $ get-today!
-                year today.:year
-                month today.:month
-                day today.:day
+                year (:year today)
+                month (:month today)
+                day (:day today)
               if (> day 1)
                 %{} DateInfo (:year year) (:month month)
                   :day $ dec day
