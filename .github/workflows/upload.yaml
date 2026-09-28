@@ -87,7 +87,7 @@ jobs:
             -i "$COS_SECRET_ID" -k "$COS_SECRET_KEY"; then
             echo "::error::COS upload failed; diagnostic codes from COSCLI:"
             if [[ -d coscli_output ]]; then
-              rg --no-filename -o -i 'status(code)?[=: ]+[0-9]{3}|<Code>[^<]+|<Message>[^<]+|AccessDenied|SignatureDoesNotMatch|NoSuchBucket|Invalid[A-Za-z]+' coscli_output | head -40 || true
+              grep -RohEi 'status(code)?[=: ]+[0-9]{3}|<Code>[^<]+|<Message>[^<]+|AccessDenied|SignatureDoesNotMatch|NoSuchBucket|Invalid[A-Za-z]+' coscli_output | head -40 || true
             fi
             exit 1
           fi
