@@ -42,7 +42,8 @@
           :schema $ :: 'Trait
           :tags $ #{} :type-boundary
         'StorePayload $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum StorePayload (:initial) (:offline) (:online 'app.schema/ClientStore)
+          :code $ quote $ defenum StorePayload (:initial) (:offline)
+            :online $ :: 'Map 'Tag 'Dynamic
           :examples $ []
           :schema $ :: 'EnumDef
         'connect! $ %{} 'CodeEntry (:doc |)
@@ -124,6 +125,30 @@
             :args $ []
             :features $ #{} :js-ffi
             :return $ :: 'JsNullish 'JsObject
+        'normalize-wire-value $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-wire-value (value)
+            cond
+                struct? value
+                normalize-wire-value $ &struct:to-map value
+              (map? value)
+                &map:map
+                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
+                  fn (pair)
+                    [] (&list:first pair)
+                      normalize-wire-value $ &list:last pair
+              (list? value) (map value normalize-wire-value)
+              true value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |recursively-converts-struct-patches)
+            :code $ quote $ let
+                value $ %{} schema/ClientRouter (:name :home)
+                  :data $ %{} util/DateInfo (:year 2026) (:month 9) (:day 29)
+                normalized $ normalize-wire-value value
+              do
+                assert |root-is-map $ map? normalized
+                assert |nested-is-map $ map? $ &map:get normalized :data
         'on-server-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-server-data (data)
             match data
@@ -133,8 +158,8 @@
                       (:online store) store
                       _ $ {}
                     next-store $ assert-type
-                      patch-twig base $ assert-type changes $ :: 'List 'recollect.schema/change-op
-                      , 'app.schema/ClientStore
+                      normalize-wire-value $ patch-twig base $ assert-type changes (:: 'List 'recollect.schema/change-op)
+                      :: 'Map 'Tag 'Dynamic
                   when config/dev? $ js/console.log |Changes changes
                   reset! *store $ %:: StorePayload :online next-store
               (:effect/pong) &unit
@@ -248,13 +273,16 @@
               extract-effects-list :comp-container $ match store
                 (:initial) (comp-offline :initial)
                 (:offline) (comp-offline :offline)
-                (:online store-typed)
+                (:online store-map)
                   let
-                      session (:session store-typed)
-                      router $ either (:router store-typed) $ %{} schema/ClientRouter (:name :home) (:data nil)
-                      router-data $ either (:data router) $ {}
+                      store-typed $ schema/decode-client-store store-map
+                      session $ :session store-typed
+                      router $ either (:router store-typed)
+                        %{} schema/ClientRouter (:name :home) (:data nil)
+                      router-data $ either (:data router) ({})
                       diary $ either (:diary store-typed) schema/diary
-                      user $ either (:user store-typed) $ %{} schema/ClientUser (:name |) (:id |) (:nickname |) (:avatar nil)
+                      user $ either (:user store-typed)
+                        %{} schema/ClientUser (:name |) (:id |) (:nickname |) (:avatar nil)
                     div
                       {} $ :class-name $ str-spaced css/preset css/global css/fullscreen css/row
                       comp-navigation (:logged-in? store-typed) (:count store-typed)
@@ -267,11 +295,11 @@
                           :profile $ comp-profile user $ assert-type router-data (:: 'Map 'String 'String)
                           <> $ str router
                         comp-login states
-                      comp-status-color (:color store-typed)
+                      comp-status-color $ :color store-typed
                       when dev? $ comp-inspect |Store store-typed $ {} (:bottom 0) (:left 0) (:max-width |100%)
                       comp-messages (:messages session) ({})
                         fn (info d!) (d! :session/remove-message info)
-                      when dev? $ comp-reel (:reel-length store-typed) $ {}
+                      when dev? $ comp-reel (:reel-length store-typed) ({})
               , |comp-container
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
@@ -1072,9 +1100,9 @@
         'on-change-month! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-change-month! (cursor offset d!)
             let
-                year (:year cursor)
-                month (:month cursor)
-                day (:day cursor)
+                year $ :year cursor
+                month $ :month cursor
+                day $ :day cursor
                 next-cursor $ cond
                     and (= month 1) (= offset -1)
                     {}
@@ -1429,6 +1457,25 @@
               :today $ %{} app.util/DateInfo (:year 2018) (:month 6) (:day 18)
           :examples $ []
           :schema $ :: 'app.schema/Database
+        'decode-client-store $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-client-store (raw) (decode-map-as raw app.schema/ClientStore)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
+            :args $ [] $ :: 'Map 'Tag 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |decodes-plain-wire-maps)
+            :code $ quote $ let
+                raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                  :router $ {} (:name :home) (:data nil)
+                  :today $ {} (:year 2026) (:month 9) (:day 29)
+                  :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                    :messages $ {}
+                    :router $ {} (:name :home) (:data nil)
+                    :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                decoded $ decode-client-store raw
+              do
+                assert |client-store-decoded $ struct? decoded
+                assert |session-decoded $ struct? $ :session decoded
+                assert= 9 $ :id $ :session decoded
         'diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def diary
             %{} Diary (:date nil) (:food |) (:sleep |) (:mood |) (:place |) (:highlight |) (:met |) (:exercise |) (:pains |) (:text |) (:time nil)
@@ -1497,7 +1544,9 @@
                   today $ get-native-today!
                   reel @*reel
                   db $ assert-type (:db reel) 'app.schema/Database
-                when (not= today (:today db)) (println |A\snew\sday: today)
+                when
+                  not= today $ :today db
+                  println |A\snew\sday: today
                   dispatch! (:: :today today) -1
               , &unit
           :examples $ []
@@ -1521,7 +1570,9 @@
           :code $ quote $ defn get-backup-path! ()
             let
                 today $ get-native-today!
-              join-path calcit-dirname |backups (str (:month today)) (str (:day today) |-snapshot.cirru)
+              join-path calcit-dirname |backups
+                str $ :month today
+                str (:day today) |-snapshot.cirru
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
@@ -1648,7 +1699,8 @@
                   db $ assert-type (:db reel) 'app.schema/Database
                   records $ :records reel
                   session $ assert-type
-                    match (get (:sessions db) sid)
+                    match
+                      get (:sessions db) sid
                       (:some found) found
                       (:none) schema/session
                     , 'app.schema/Session
@@ -1700,32 +1752,42 @@
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session records)
             let
-                router (:router session)
+                router $ :router session
                 reel-length $ count records
-                session-count $ count (:sessions db)
+                session-count $ count $ :sessions db
                 color $ rand-hex-color!
                 logged-out $ %{} schema/ClientStore (:logged-in? false) (:session session) (:reel-length reel-length)
-                  :router $ %{} schema/ClientRouter (:name (:name router)) (:data nil)
-                  :today (:today db)
+                  :router $ %{} schema/ClientRouter
+                    :name $ :name router
+                    :data nil
+                  :today $ :today db
                   :count session-count
                   :color color
                   :user nil
                   :diary nil
-              match (optionally (:user-id session))
+              match
+                optionally $ :user-id session
                 (:some user-id-value)
                   let
                       user-id $ assert-type user-id-value 'String
-                    match (get (:users db) user-id)
+                    match
+                      get (:users db) user-id
                       (:some user)
                         let
                             route-data $ case-default (:name router) nil
-                              :home $ twig-overview (:diaries user)
+                              :home $ twig-overview $ :diaries user
                               :diary nil
                               :profile $ twig-members (:sessions db) (:users db)
-                              :data $ twig-personal-data (:diaries user)
-                            client-router $ %{} schema/ClientRouter (:name (:name router)) (:data route-data)
-                            current-diary $ get (:diaries user) $ format-to-date (:cursor session)
-                          %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router) (:today (:today db)) (:count session-count) (:color color)
+                              :data $ twig-personal-data $ :diaries user
+                            client-router $ %{} schema/ClientRouter
+                              :name $ :name router
+                              :data route-data
+                            current-diary $ get (:diaries user)
+                              format-to-date $ :cursor session
+                          %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router)
+                            :today $ :today db
+                            :count session-count
+                            :color color
                             :user $ twig-user user
                             :diary current-diary
                       (:none) logged-out
@@ -1735,10 +1797,12 @@
             :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
-            match (optionally (:user-id session))
+            match
+              optionally $ :user-id session
               (:some user-id)
                 match (get users user-id)
-                  (:some user) (%:: MapEntryDecision :keep sid (:name user))
+                  (:some user)
+                    %:: MapEntryDecision :keep sid $ :name user
                   (:none) (%:: MapEntryDecision :drop)
               (:none) (%:: MapEntryDecision :drop)
           :examples $ []
@@ -1765,7 +1829,9 @@
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'String
         'twig-overview-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview-entry (date diary)
-            %:: MapEntryDecision :keep date $ {} (:mood (:mood diary)) (:highlight (:highlight diary))
+            %:: MapEntryDecision :keep date $ {}
+              :mood $ :mood diary
+              :highlight $ :highlight diary
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String 'app.schema/Diary
@@ -1778,7 +1844,16 @@
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
-            %:: MapEntryDecision :keep date $ {} (:mood (:mood diary)) (:highlight (:highlight diary)) (:food (:food diary)) (:sleep (:sleep diary)) (:met (:met diary)) (:exercise (:exercise diary)) (:place (:place diary)) (:date (:date diary)) (:time (:time diary))
+            %:: MapEntryDecision :keep date $ {}
+              :mood $ :mood diary
+              :highlight $ :highlight diary
+              :food $ :food diary
+              :sleep $ :sleep diary
+              :met $ :met diary
+              :exercise $ :exercise diary
+              :place $ :place diary
+              :date $ :date diary
+              :time $ :time diary
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String 'app.schema/Diary
@@ -1794,7 +1869,11 @@
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-user (user)
-            %{} schema/ClientUser (:name (:name user)) (:id (:id user)) (:nickname (:nickname user)) (:avatar (:avatar user))
+            %{} schema/ClientUser
+              :name $ :name user
+              :id $ :id user
+              :nickname $ :nickname user
+              :avatar $ :avatar user
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/ClientUser)
             :args $ [] 'app.schema/User
@@ -1847,17 +1926,20 @@
                 session $ get (:sessions db) sid
               match session
                 (:some session-data)
-                  match (optionally (:user-id session-data))
+                  match
+                    optionally $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get (:users db) uid)
+                        match
+                          get (:users db) uid
                           (:some user)
                             match (:date diary-data)
                               (:some date)
                                 let
                                     next-diary $ struct-with diary-data $ :time op-time
-                                    next-user $ struct-with user $ :diaries (assoc (:diaries user) date next-diary)
+                                    next-user $ struct-with user $ :diaries
+                                      assoc (:diaries user) date next-diary
                                   struct-with db $ :users $ assoc (:users db) uid next-user
                               (:none) db
                           (:none) db
@@ -1872,38 +1954,51 @@
                 session $ get (:sessions db) sid
               match session
                 (:some session-data)
-                  match (optionally (:user-id session-data))
+                  match
+                    optionally $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get (:users db) uid)
+                        match
+                          get (:users db) uid
                           (:some user)
                             let
-                                date (:date change-data)
-                                old-diary $ match (get (:diaries user) date)
+                                date $ :date change-data
+                                old-diary $ match
+                                  get (:diaries user) date
                                   (:some found) found
                                   (:none) schema/diary
-                                changed-diary $ if (= :food (:field change-data))
-                                  struct-with old-diary $ :food (:data change-data)
-                                  if (= :sleep (:field change-data))
-                                    struct-with old-diary $ :sleep (:data change-data)
-                                    if (= :mood (:field change-data))
-                                      struct-with old-diary $ :mood (:data change-data)
-                                      if (= :place (:field change-data))
-                                        struct-with old-diary $ :place (:data change-data)
-                                        if (= :highlight (:field change-data))
-                                          struct-with old-diary $ :highlight (:data change-data)
-                                          if (= :met (:field change-data))
-                                            struct-with old-diary $ :met (:data change-data)
-                                            if (= :exercise (:field change-data))
-                                              struct-with old-diary $ :exercise (:data change-data)
-                                              if (= :pains (:field change-data))
-                                                struct-with old-diary $ :pains (:data change-data)
-                                                if (= :text (:field change-data))
-                                                  struct-with old-diary $ :text (:data change-data)
+                                changed-diary $ if
+                                  = :food $ :field change-data
+                                  struct-with old-diary $ :food $ :data change-data
+                                  if
+                                    = :sleep $ :field change-data
+                                    struct-with old-diary $ :sleep $ :data change-data
+                                    if
+                                      = :mood $ :field change-data
+                                      struct-with old-diary $ :mood $ :data change-data
+                                      if
+                                        = :place $ :field change-data
+                                        struct-with old-diary $ :place $ :data change-data
+                                        if
+                                          = :highlight $ :field change-data
+                                          struct-with old-diary $ :highlight $ :data change-data
+                                          if
+                                            = :met $ :field change-data
+                                            struct-with old-diary $ :met $ :data change-data
+                                            if
+                                              = :exercise $ :field change-data
+                                              struct-with old-diary $ :exercise $ :data change-data
+                                              if
+                                                = :pains $ :field change-data
+                                                struct-with old-diary $ :pains $ :data change-data
+                                                if
+                                                  = :text $ :field change-data
+                                                  struct-with old-diary $ :text $ :data change-data
                                                   , old-diary
                                 next-diary $ struct-with changed-diary (:date date) (:time op-time)
-                                next-user $ struct-with user $ :diaries (assoc (:diaries user) date next-diary)
+                                next-user $ struct-with user $ :diaries
+                                  assoc (:diaries user) date next-diary
                               struct-with db $ :users $ assoc (:users db) uid next-user
                           (:none) db
                     (:none) db
@@ -1917,9 +2012,9 @@
                 session $ get (:sessions db) sid
                 today $ format-to-date date-info
                 yesterday-info $ let
-                    year (:year date-info)
-                    month (:month date-info)
-                    day (:day date-info)
+                    year $ :year date-info
+                    month $ :month date-info
+                    day $ :day date-info
                   if (> day 1)
                     struct-with date-info $ :day $ dec day
                     if (> month 1)
@@ -1934,17 +2029,21 @@
                 yesterday $ format-to-date yesterday-info
               match session
                 (:some session-data)
-                  match (optionally (:user-id session-data))
+                  match
+                    optionally $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
-                        match (get (:users db) uid)
+                        match
+                          get (:users db) uid
                           (:some user)
-                            match (get (:diaries user) yesterday)
+                            match
+                              get (:diaries user) yesterday
                               (:some yesterday-diary)
                                 let
                                     next-diary $ struct-with yesterday-diary (:date today) (:time op-time)
-                                    next-user $ struct-with user $ :diaries (assoc (:diaries user) today next-diary)
+                                    next-user $ struct-with user $ :diaries
+                                      assoc (:diaries user) today next-diary
                                   struct-with db $ :users $ assoc (:users db) uid next-user
                               (:none) db
                           (:none) db
@@ -1969,7 +2068,8 @@
           :code $ quote $ defn change (db router-data sid op-id op-time)
             let
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
@@ -2000,11 +2100,12 @@
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                cursor (:cursor session)
+                cursor $ :cursor session
                 next-cursor $ match (:year patch)
                   (:some value)
                     struct-with cursor $ :year value
@@ -2026,11 +2127,13 @@
           :code $ quote $ defn remove-message (db message sid op-id op-time)
             let
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                next-session $ struct-with session $ :messages (dissoc (:messages session) (:id message))
+                next-session $ struct-with session $ :messages
+                  dissoc (:messages session) (:id message)
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
@@ -2039,7 +2142,8 @@
           :code $ quote $ defn set-cursor (db cursor sid op-id op-time)
             let
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
@@ -2057,15 +2161,16 @@
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals (:users db)
+                  &set:to-list $ vals $ :users db
                   fn (user)
                     hint-fn
                       {}
                         :args $ [] 'app.schema/User
                         :return 'Bool
-                      = username (:name user)
+                      = username $ :name user
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
@@ -2073,7 +2178,7 @@
                   (:some user)
                     if
                       = (md5 password) (:password user)
-                      struct-with session $ :user-id (:id user)
+                      struct-with session $ :user-id $ :id user
                       struct-with session $ :messages $ assoc (:messages session) op-id
                         %{} schema/Message (:id op-id)
                           :text $ str |Wrong\spassword\sfor\s username
@@ -2089,7 +2194,8 @@
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
@@ -2102,15 +2208,16 @@
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
                 maybe-user $ find
-                  &set:to-list $ vals (:users db)
+                  &set:to-list $ vals $ :users db
                   fn (user)
                     hint-fn
                       {}
                         :args $ [] 'app.schema/User
                         :return 'Bool
-                      = username (:name user)
+                      = username $ :name user
                 session $ assert-type
-                  match (get (:sessions db) sid)
+                  match
+                    get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
@@ -2159,8 +2266,12 @@
         'format-to-date $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-to-date (date-info)
             str (:year date-info) |-
-              pad-start (str (:month date-info)) 2 |0
-              , |- $ pad-start (str (:day date-info)) 2 |0
+              pad-start
+                str $ :month date-info
+                , 2 |0
+              , |- $ pad-start
+                str $ :day date-info
+                , 2 |0
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ [] 'app.util/DateInfo
@@ -2206,9 +2317,9 @@
           :code $ quote $ defn get-yesterday! ()
             let
                 today $ get-today!
-                year (:year today)
-                month (:month today)
-                day (:day today)
+                year $ :year today
+                month $ :month today
+                day $ :day today
               if (> day 1)
                 %{} DateInfo (:year year) (:month month)
                   :day $ dec day
