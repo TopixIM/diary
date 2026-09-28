@@ -3,17 +3,11 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |app
   :entries $ {}
-    :default $ {} (:description |)
-      :init-fn 'app.client/main!
-      :mode :native
-      :reload-fn 'app.client/reload!
+    :default $ {} (:description |) (:init-fn 'app.client/main!) (:mode :native) (:reload-fn 'app.client/reload!)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |cumulo-reel.calcit/ |respo-feather.calcit/ |alerts.calcit/
       :type-slots $ {}
-    :server $ {} (:description |)
-      :init-fn 'app.server/main!
-      :mode :native
-      :reload-fn 'app.server/reload!
+    :server $ {} (:description |) (:init-fn 'app.server/main!) (:mode :native) (:reload-fn 'app.server/reload!)
       :feature-policy $ {}
       :modules $ [] |recollect/ |memof/ |cumulo-util.calcit/ |cumulo-reel.calcit/ |calcit.std/ |calcit-wss/
       :type-slots $ {}
@@ -48,8 +42,7 @@
           :schema $ :: 'Trait
           :tags $ #{} :type-boundary
         'StorePayload $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum StorePayload (:initial) (:offline)
-            :online 'app.schema/ClientStore
+          :code $ quote $ defenum StorePayload (:initial) (:offline) (:online 'app.schema/ClientStore)
           :examples $ []
           :schema $ :: 'EnumDef
         'connect! $ %{} 'CodeEntry (:doc |)
@@ -125,10 +118,12 @@
             :args $ []
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def mount-target
-            js/document.querySelector |.app
+          :code $ quote $ defn mount-target () (js/document.querySelector |.app)
           :examples $ []
-          :schema $ :: 'JsNullish 'JsObject
+          :schema $ :: 'Fn $ {}
+            :args $ []
+            :features $ #{} :js-ffi
+            :return $ :: 'JsNullish 'JsObject
         'on-server-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-server-data (data)
             match data
@@ -167,7 +162,7 @@
                 raw-states $ unsafe-coerce (deref *states) (:: 'Map 'Tag 'Dynamic)
                 states $ unsafe-coerce (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
                 store $ deref *store
-              render! mount-target (comp-container states store) dispatch!
+              render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -228,8 +223,7 @@
                         case router.:name
                           :home $ comp-month store-typed.:today session.:cursor diary $ assert-type router-data
                             :: 'Map 'String $ :: 'Map 'Tag 'String
-                          :data $ comp-data-gather $ assert-type router-data
-                            :: 'Map 'String 'app.comp.data-gather/DiaryPayload
+                          :data $ comp-data-gather $ assert-type router-data (:: 'Map 'String 'app.comp.data-gather/DiaryPayload)
                           :diary $ comp-diary (>> states :diary) session.:cursor diary
                           :profile $ comp-profile user $ assert-type router-data (:: 'Map 'String 'String)
                           <> $ str router
@@ -237,13 +231,11 @@
                       comp-status-color store-typed.:color
                       when dev? $ comp-inspect |Store store-typed $ {} (:bottom 0) (:left 0) (:max-width |100%)
                       comp-messages session.:messages ({})
-                        fn (info d!)
-                          d! :session/remove-message info
+                        fn (info d!) (d! :session/remove-message info)
                       when dev? $ comp-reel store-typed.:reel-length $ {}
               , |comp-container
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.client/StorePayload
             :features $ #{} :js-ffi
         'comp-offline $ %{} 'CodeEntry (:doc |)
@@ -258,22 +250,19 @@
                   if (= state :offline) "|Socket broken! Click to retry." |Loading...
                   {} (:font-family ui/font-fancy) (:font-weight 100) (:font-size 32)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'Tag
         'comp-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-status-color (color)
             div $ {} (:class-name css-status-color)
               :style $ {} $ :background-color color
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'String
         'css-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-status-color
             {}
-              |$0 $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius |8px) (:opacity 0.8)
-                :transition-duration |240ms
+              |$0 $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius |8px) (:opacity 0.8) (:transition-duration |240ms)
               |$0:hover $ {} $ :transform "|scale(1.1)"
           :examples $ []
           :schema $ :: 'String
@@ -322,14 +311,11 @@
                 :style $ {} (:width |auto) (:height 400) (:font-family ui/font-code) (:white-space :pre)
               div
                 {} $ :style $ {} (:padding "|16px 0")
-                button $ {}
-                  :class-name css/button-primary
-                  :inner-text |Copy
+                button $ {} (:class-name css/button-primary) (:inner-text |Copy)
                   :on-click $ fn (e d!)
                     copy! $ format-cirru-edn $ &map:to-list diaries
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] $ :: 'Map 'String 'app.comp.data-gather/DiaryPayload
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
@@ -393,9 +379,7 @@
                             d! :diary/copy-yesterday $ {} $ :date-info date-info
                       when
                         not= (:text diary) (:text state)
-                        button $ {}
-                          :class-name css/button-primary
-                          :inner-text |Save
+                        button $ {} (:class-name css/button-primary) (:inner-text |Save)
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
                             when
@@ -430,12 +414,9 @@
                     :class-name $ str-spaced css/flex css/textarea
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
-                      d! cursor $ assoc state :text $ assert-type
-                        input-event-value e
-                        , 'String
+                      d! cursor $ assoc state :text $ assert-type (input-event-value e) 'String
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
@@ -445,8 +426,7 @@
               {} $ :class-name css-guide
               <> text
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'String
         'comp-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-records (states diary date)
@@ -454,8 +434,7 @@
               {} $ :style $ {} (:flex-shrink 0)
               let
                   plugin $ use-prompt (>> states :food)
-                    {}
-                      :text "|What have you eaten:"
+                    {} (:text "|What have you eaten:")
                       :initial $ or (:food diary) |
                 div
                   {} $ :class-name css-record-layout
@@ -467,8 +446,7 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :sleep)
-                    {}
-                      :text "|How did you sleep:"
+                    {} (:text "|How did you sleep:")
                       :initial $ or (:sleep diary) |
                 div
                   {} $ :class-name css-record-layout
@@ -480,12 +458,10 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :mood)
-                    {}
-                      :text "|What's the feelings today:"
+                    {} (:text "|What's the feelings today:")
                       :initial $ or (:mood diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ merge $ {} (:align-items :start)
                   comp-guide "|How you feel?"
                   render-content (:mood diary)
@@ -495,12 +471,10 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :place)
-                    {}
-                      :text "|Where have you been today:"
+                    {} (:text "|Where have you been today:")
                       :initial $ or (:place diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ {} $ :align-items :center
                   comp-guide "|Where you went?"
                   render-content (:place diary)
@@ -510,12 +484,10 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :highlight)
-                    {}
-                      :text "|Highlights of this day:"
+                    {} (:text "|Highlights of this day:")
                       :initial $ or (:highlight diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ {} $ :align-items :center
                   comp-guide "|What's the highlights?"
                   render-content (:highlight diary)
@@ -525,12 +497,10 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :met)
-                    {}
-                      :text "|Met with people:"
+                    {} (:text "|Met with people:")
                       :initial $ or (:met diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ {} $ :align-items :center
                   comp-guide "|People met?"
                   render-content (:met diary)
@@ -540,12 +510,10 @@
                   .render plugin
               let
                   plugin $ use-prompt (>> states :exercise)
-                    {}
-                      :text "|Performed exercises:"
+                    {} (:text "|Performed exercises:")
                       :initial $ or (:exercise diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ {} $ :align-items :center
                   comp-guide |Exercises?
                   render-content (:exercise diary)
@@ -558,8 +526,7 @@
                     {} (:text |Pains:)
                       :initial $ or (:pains diary) |
                 div
-                  {}
-                    :class-name css-record-layout
+                  {} (:class-name css-record-layout)
                     :style $ {} $ :align-items :center
                   comp-guide |Pains?
                   render-content (:pains diary)
@@ -568,8 +535,7 @@
                         d! :diary/change $ {} (:field :pains) (:date date) (:data data)
                   .render plugin
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Diary 'String
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
@@ -593,8 +559,7 @@
                 :on-click on-click
               if (blank? x) (comp-empty) (<> x)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Element
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
             :args $ [] 'String $ :: 'Fn
               {} (:return 'Unit)
                 :args $ [] 'Dynamic 'Dynamic
@@ -630,8 +595,7 @@
                 :color $ hsl 0 0 80
               <> |Empty
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ []
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.empty
@@ -649,7 +613,7 @@
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
-                cursor $ unsafe-coerce (&map:get states :cursor) 'Dynamic
+                cursor $ &map:get states :cursor
                 state $ assert-type
                   or (&map:get states :data) initial-state
                   , 'app.comp.login/LoginState
@@ -658,25 +622,20 @@
                 div
                   {} (:class-name css/column)
                     :style $ {} $ :align-items :center
-                  div ({})
-                    <> "|Very tiny app for adding diaries."
+                  div ({}) (<> "|Very tiny app for adding diaries.")
                   =< nil 16
                   div ({})
                     div ({})
                       input $ {} (:placeholder |Username) (:class-name css/input)
                         :value $ :username state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :username $ assert-type
-                            input-event-value e
-                            , 'String
+                          d! cursor $ assoc state :username $ assert-type (input-event-value e) 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password) (:class-name css/input)
                         :value $ :password state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :password $ assert-type
-                            input-event-value e
-                            , 'String
+                          d! cursor $ assoc state :password $ assert-type (input-event-value e) 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -686,8 +645,7 @@
                     span $ {} (:inner-text "|Log in") (:class-name css/link)
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] $ :: 'Map 'Tag 'Dynamic
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state
@@ -797,16 +755,14 @@
                   <> (this-day .to-format |d)
                     {}
                       :font-size $ if
-                        and (blank? preview-mood)
-                          blank? preview-highlight
+                        and (blank? preview-mood) (blank? preview-highlight)
                         , 20 16
                       :color $ hsl 0 0 60
                       :font-weight $ if (some? info-option) 500 nil
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'Number 'Number 'app.comp.month/LuxonDateTime 'app.util/DateInfo 'app.util/DateInfo $ :: 'Map 'String (:: 'Map 'Tag 'String)
             :features $ #{} :js-ffi
         'comp-diary-preview $ %{} 'CodeEntry (:doc |)
@@ -823,8 +779,9 @@
                 if
                   some? $ :time diary
                   <>
-                        luxon-from-millis $ unsafe-coerce (:time diary) 'Number
-                        , .to-format "|(yyyy-MM-dd hh:mm)"
+                    let
+                        date $ luxon-from-millis $ unsafe-coerce (:time diary) 'Number
+                      date .to-format "|(yyyy-MM-dd hh:mm)"
                     str-spaced css/font-fancy style-date-hint
               comp-divider "|32px 0"
               if
@@ -864,14 +821,12 @@
                     <> "|Edit diary"
                 div ({})
                   button
-                    {}
-                      :class-name css/button-primary
+                    {} (:class-name css/button-primary)
                       :on-click $ fn (e d!)
                         d! :router/change $ {} $ :name :diary
                     <> "|Add diary"
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'app.comp.month/LuxonDateTime 'app.schema/Diary
             :features $ #{} :js-ffi
         'comp-divider $ %{} 'CodeEntry (:doc |)
@@ -882,8 +837,7 @@
                 :height 1
                 :margin padding
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'String
         'comp-month $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-month (today cursor diary overview)
@@ -911,8 +865,7 @@
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!) (on-change-month! cursor -1 d!)
                         comp-i :chevron-left 16 $ hsl 200 80 70
-                      <> (cursor-date .to-format |yyyy-MM)
-                        str-spaced css/font-fancy style-month-header
+                      <> (cursor-date .to-format |yyyy-MM) (str-spaced css/font-fancy style-month-header)
                       a
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!) (on-change-month! cursor 1 d!)
@@ -933,8 +886,7 @@
                   comp-diary-preview cursor-date diary
                 comp-month-footer
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'app.util/DateInfo 'app.util/DateInfo 'app.schema/Diary $ :: 'Map 'String (:: 'Map 'Tag 'String)
             :features $ #{} :js-ffi
         'comp-month-footer $ %{} 'CodeEntry (:doc |)
@@ -982,8 +934,7 @@
                   :on-click $ fn (e d!)
                     d! :session/merge-cursor $ {} $ :year 2018
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Element
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
             :args $ []
         'comp-weekdays $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-weekdays ()
@@ -995,8 +946,7 @@
                     {} $ :class-name $ str-spaced css-cell-size css-week-note
                     <> x
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ []
         'css-cell-size $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-cell-size
@@ -1006,8 +956,7 @@
         'css-day-cell $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-day-cell
             {}
-              |$0 $ {} (:cursor :pointer) (:font-family ui/font-fancy) (:font-size 14) (:font-weight 300) (:position :relative) (:overflow :hidden) (:border-radius |16px)
-                :transition-duration |200ms
+              |$0 $ {} (:cursor :pointer) (:font-family ui/font-fancy) (:font-size 14) (:font-weight 300) (:position :relative) (:overflow :hidden) (:border-radius |16px) (:transition-duration |200ms)
                 :border $ str "|1px solid " $ hsl 0 0 94
                 :border-top-color :transparent
                 :border-left-color :transparent
@@ -1054,9 +1003,11 @@
             let
                 d $ day .to-format |yyyy-MM-dd
               cond
-                  includes? (:holiday special-days) d
+                  includes?
+                    option:unwrap $ :holiday special-days
+                    , d
                   , true
-                (includes? (:workingday special-days) d)
+                (includes? (option:unwrap (:workingday special-days)) d)
                   , false
                 true $ includes? (#{} 6 7) (day :weekday)
           :examples $ []
@@ -1070,16 +1021,14 @@
               .!fromObject DateTime $ to-js-data date-info
               , LuxonDateTime
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.comp.month/LuxonDateTime
+          :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
             :args $ [] 'app.util/DateInfo
             :features $ #{} :js-ffi
         'luxon-from-millis $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn luxon-from-millis (timestamp)
             unsafe-coerce (.!fromMillis DateTime timestamp) 'app.comp.month/LuxonDateTime
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.comp.month/LuxonDateTime
+          :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
             :args $ [] 'Number
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
@@ -1217,8 +1166,7 @@
                   =< 8 nil
                   <> $ str count-members
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'Bool 'Number
         'css-nav $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-nav
@@ -1270,8 +1218,7 @@
                       js/localStorage.removeItem $ :storage-key config/site
                   <> "|Log out" nil
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'respo.schema/Component
+          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] 'app.schema/ClientUser $ :: 'Map 'String 'String
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
@@ -1307,15 +1254,7 @@
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
-            %{} SiteConfig (:port 11008) (:title |Diary)
-              :icon |http://cdn.tiye.me/logo/topix.png
-              :dev-ui |http://localhost:8100/main.css
-              :release-ui |http://cdn.tiye.me/favored-fonts/main.css
-              :cdn-url |http://cdn.tiye.me/diary/
-              :cdn-folder |tiye.me:cdn/diary
-              :theme |#eeeeff
-              :storage-key |diary
-              :storage-file |storage.cirru
+            %{} SiteConfig (:port 11008) (:title |Diary) (:icon |http://cdn.tiye.me/logo/topix.png) (:dev-ui |http://localhost:8100/main.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main.css) (:cdn-url |http://cdn.tiye.me/diary/) (:cdn-folder |tiye.me:cdn/diary) (:theme |#eeeeff) (:storage-key |diary) (:storage-file |storage.cirru)
           :examples $ []
           :schema $ :: 'app.config/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
@@ -1323,11 +1262,7 @@
     'app.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientOp $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum ClientOp (:states 'Dynamic 'Dynamic) (:session/connect)
-            :session/disconnect
-            :session/remove-message 'Message
-            :session/set-cursor 'app.util/DateInfo
-            :session/merge-cursor 'CursorPatch
+          :code $ quote $ defenum ClientOp (:states 'Dynamic 'Dynamic) (:session/connect) (:session/disconnect) (:session/remove-message 'Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'CursorPatch)
             :user/log-in $ :: 'List 'String
             :user/sign-up $ :: 'List 'String
             :user/log-out
@@ -1349,10 +1284,7 @@
           :examples $ []
           :schema $ :: 'StructDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientStore (:logged-in? 'Bool) (:session 'Session) (:reel-length 'Number) (:router 'ClientRouter)
-            :today 'app.util/DateInfo
-            :count 'Number
-            :color 'String
+          :code $ quote $ defstruct ClientStore (:logged-in? 'Bool) (:session 'Session) (:reel-length 'Number) (:router 'ClientRouter) (:today 'app.util/DateInfo) (:count 'Number) (:color 'String)
             :user $ :: 'Optional 'ClientUser
             :diary $ :: 'Optional 'Diary
           :examples $ []
@@ -1363,8 +1295,7 @@
           :examples $ []
           :schema $ :: 'StructDef
         'CopyYesterday $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct CopyYesterday
-            :date-info 'app.util/DateInfo
+          :code $ quote $ defstruct CopyYesterday (:date-info 'app.util/DateInfo)
           :examples $ []
           :schema $ :: 'StructDef
         'CursorPatch $ %{} 'CodeEntry (:doc |)
@@ -1400,11 +1331,7 @@
           :examples $ []
           :schema $ :: 'StructDef
         'Op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum Op (:session/connect)
-            :session/disconnect
-            :session/remove-message 'Message
-            :session/set-cursor 'app.util/DateInfo
-            :session/merge-cursor 'CursorPatch
+          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'CursorPatch)
             :user/log-in $ :: 'List 'String
             :user/sign-up $ :: 'List 'String
             :user/log-out
@@ -1499,8 +1426,7 @@
           :code $ quote $ defatom *initial-db
             if
               path-exists? $ w-log storage-file
-              do
-                println "|Found local EDN data"
+              do (println "|Found local EDN data")
                 parse-cirru-edn-as (read-file storage-file) app.schema/Database
               do (println "|Found no data") schema/database
           :examples $ []
@@ -1559,9 +1485,7 @@
                   (:none) (:port config/site)
               run-server! port
               println $ str |Server\sstarted\son\sport: port
-            do
-              ; |init\sit\sbefore\sdoing\smulti-threading
-              identity @*reader-reel
+            do (; |init\sit\sbefore\sdoing\smulti-threading) (identity @*reader-reel)
             set-interval 200 $ fn () $ render-loop!
             set-interval 600000 $ fn () $ persist-db!
             on-control-c on-exit!
@@ -1590,8 +1514,7 @@
             :args $ []
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated..")
-            if (not config/dev?)
-              raise "|reloading only happens in dev mode"
+            if (not config/dev?) (raise "|reloading only happens in dev mode")
             clear-twig-caches!
             reset! *reel $ refresh-reel @*reel @*initial-db updater
             sync-clients! @*reader-reel
@@ -1625,9 +1548,7 @@
                         dispatch! action sid
                     (:disconnect sid)
                       do (println |Client\sclosed!)
-                        dispatch!
-                          :: :session/disconnect
-                          , sid
+                        dispatch! (:: :session/disconnect) sid
                     _ $ eprintln |unknown\sdata: data
               , &unit
           :examples $ []
@@ -1730,8 +1651,7 @@
                       (:none) logged-out
                 (:none) logged-out
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/ClientStore
+          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
             :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
@@ -1755,13 +1675,10 @@
                 twig-member-entry users sid session
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ []
-              :: 'Map 'Number 'app.schema/Session
-              :: 'Map 'String 'app.schema/User
+            :args $ [] (:: 'Map 'Number 'app.schema/Session) (:: 'Map 'String 'app.schema/User)
             :return $ :: 'Map 'Number 'String
         'twig-overview $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn twig-overview (diaries)
-            filter-map-kv diaries twig-overview-entry
+          :code $ quote $ defn twig-overview (diaries) (filter-map-kv diaries twig-overview-entry)
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] $ :: 'Map 'String 'app.schema/Diary
@@ -1774,8 +1691,7 @@
             :args $ [] 'String 'app.schema/Diary
             :return $ :: 'MapEntryDecision 'String $ :: 'Map 'Tag 'String
         'twig-personal-data $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn twig-personal-data (diaries)
-            filter-map-kv diaries twig-personal-entry
+          :code $ quote $ defn twig-personal-data (diaries) (filter-map-kv diaries twig-personal-entry)
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] $ :: 'Map 'String 'app.schema/Diary
@@ -1800,8 +1716,7 @@
           :code $ quote $ defn twig-user (user)
             %{} schema/ClientUser (:name user.:name) (:id user.:id) (:nickname user.:nickname) (:avatar user.:avatar)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/ClientUser
+          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientUser)
             :args $ [] 'app.schema/User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.user
@@ -1812,14 +1727,10 @@
           :code $ quote $ defn updater (db op sid op-id op-time)
             match op
               (:session/connect) (session/connect db sid op-id op-time)
-              (:session/disconnect)
-                session/disconnect db sid op-id op-time
-              (:session/remove-message message)
-                session/remove-message db message sid op-id op-time
-              (:session/set-cursor cursor)
-                session/set-cursor db cursor sid op-id op-time
-              (:session/merge-cursor patch)
-                session/merge-cursor db patch sid op-id op-time
+              (:session/disconnect) (session/disconnect db sid op-id op-time)
+              (:session/remove-message message) (session/remove-message db message sid op-id op-time)
+              (:session/set-cursor cursor) (session/set-cursor db cursor sid op-id op-time)
+              (:session/merge-cursor patch) (session/merge-cursor db patch sid op-id op-time)
               (:user/log-in credentials)
                 match (get credentials 0)
                   (:some username)
@@ -1838,22 +1749,15 @@
               (:router/change router-data) (router/change db router-data sid op-id op-time)
               (:diary/add-one diary-data) (diary/add-one db diary-data sid op-id op-time)
               (:diary/change change-data) (diary/change db change-data sid op-id op-time)
-              (:diary/copy-yesterday payload)
-                diary/copy-yesterday db payload.:date-info sid op-id op-time
+              (:diary/copy-yesterday payload) (diary/copy-yesterday db payload.:date-info sid op-id op-time)
               (:today date-info) (diary/set-today db date-info sid op-id op-time)
               _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Op 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
-          :require
-            [] app.updater.session :as session
-            [] app.updater.user :as user
-            [] app.updater.router :as router
-            [] app.updater.diary :as diary
-            [] app.schema :as schema
+          :require ([] app.updater.session :as session) ([] app.updater.user :as user) ([] app.updater.router :as router) ([] app.updater.diary :as diary) ([] app.schema :as schema)
             [] respo-message.updater :refer $ [] update-messages
     'app.updater.diary $ %{} 'FileEntry
       :defs $ {}
@@ -1880,8 +1784,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Diary 'Number 'String 'Number
         'change $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn change (db change-data sid op-id op-time)
@@ -1900,32 +1803,23 @@
                                 old-diary $ match (get user.:diaries date)
                                   (:some found) found
                                   (:none) schema/diary
-                                changed-diary $ if
-                                  = :food change-data.:field
+                                changed-diary $ if (= :food change-data.:field)
                                   struct-with old-diary $ :food change-data.:data
-                                  if
-                                    = :sleep change-data.:field
+                                  if (= :sleep change-data.:field)
                                     struct-with old-diary $ :sleep change-data.:data
-                                    if
-                                      = :mood change-data.:field
+                                    if (= :mood change-data.:field)
                                       struct-with old-diary $ :mood change-data.:data
-                                      if
-                                        = :place change-data.:field
+                                      if (= :place change-data.:field)
                                         struct-with old-diary $ :place change-data.:data
-                                        if
-                                          = :highlight change-data.:field
+                                        if (= :highlight change-data.:field)
                                           struct-with old-diary $ :highlight change-data.:data
-                                          if
-                                            = :met change-data.:field
+                                          if (= :met change-data.:field)
                                             struct-with old-diary $ :met change-data.:data
-                                            if
-                                              = :exercise change-data.:field
+                                            if (= :exercise change-data.:field)
                                               struct-with old-diary $ :exercise change-data.:data
-                                              if
-                                                = :pains change-data.:field
+                                              if (= :pains change-data.:field)
                                                 struct-with old-diary $ :pains change-data.:data
-                                                if
-                                                  = :text change-data.:field
+                                                if (= :text change-data.:field)
                                                   struct-with old-diary $ :text change-data.:data
                                                   , old-diary
                                 next-diary $ struct-with changed-diary (:date date) (:time op-time)
@@ -1935,8 +1829,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/DiaryChange 'Number 'String 'Number
         'copy-yesterday $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn copy-yesterday (db date-info sid op-id op-time)
@@ -1978,14 +1871,12 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
         'set-today $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-today (db op-data sid op-id op-time) (assoc db :today op-data)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.diary
@@ -2005,8 +1896,7 @@
                 next-session $ struct-with session $ :router router-data
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Router 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.router
@@ -2018,15 +1908,13 @@
             struct-with db $ :sessions $ assoc db.:sessions sid
               struct-with schema/session $ :id sid
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ dissoc db.:sessions sid
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
         'merge-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
@@ -2052,8 +1940,7 @@
                 next-session $ struct-with session $ :cursor next-cursor
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/CursorPatch 'Number 'String 'Number
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message sid op-id op-time)
@@ -2063,12 +1950,10 @@
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                next-session $ struct-with session $ :messages
-                  dissoc session.:messages message.:id
+                next-session $ struct-with session $ :messages (dissoc session.:messages message.:id)
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.schema/Message 'Number 'String 'Number
         'set-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-cursor (db cursor sid op-id op-time)
@@ -2081,8 +1966,7 @@
                 next-session $ struct-with session $ :cursor cursor
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.session
@@ -2119,8 +2003,7 @@
                         :text $ str |No\suser\snamed:\s username
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
@@ -2133,8 +2016,7 @@
                 next-session $ struct-with session $ :user-id nil
               struct-with db $ :sessions $ assoc db.:sessions sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
@@ -2167,8 +2049,7 @@
                     :sessions $ assoc db.:sessions sid next-session
                     :users $ assoc db.:users op-id next-user
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.schema/Database
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.user
@@ -2226,8 +2107,7 @@
                 now $ extract-time $ get-time!
               %{} DateInfo (:year now.:year) (:month now.:month) (:day now.:day)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.util/DateInfo
+          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
         'get-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-today! ()
@@ -2238,8 +2118,7 @@
                 :month $ inc $ now .get-month
                 :day $ now .get-date
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.util/DateInfo
+          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
@@ -2263,8 +2142,7 @@
                     :month 12
                     :day 31
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :return 'app.util/DateInfo
+          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi

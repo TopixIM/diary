@@ -38,10 +38,11 @@ jobs:
 
       - name: Check Calcit entries
         run: |
+          set -o pipefail
           calcit calcit.cirru --check-only
           calcit calcit.cirru --entry server --check-only
-          calcit calcit.cirru analyze dynamic-methods --max 0
-          calcit calcit.cirru --entry server analyze dynamic-methods --max 0
+          calcit calcit.cirru analyze dynamic-methods --summary-only --format json | tail -n 1 | jq -e '.data.summary.findings == 0'
+          calcit calcit.cirru --entry server analyze dynamic-methods --summary-only --format json | tail -n 1 | jq -e '.data.summary.findings == 0'
           calcit test --summary-only
 
       - name: Build client
