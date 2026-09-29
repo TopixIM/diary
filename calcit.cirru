@@ -309,8 +309,12 @@
                         comp-login states
                       comp-status-color $ :color store-typed
                       when dev? $ comp-inspect |Store store-typed $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                      comp-messages (:messages session) ({})
-                        fn (info d!) (d! :session/remove-message info)
+                      comp-messages (to-respo-messages $ :messages session) ({})
+                        fn (info d!)
+                          match
+                            get (:messages session) $ assert-type (&map:get info :id) 'String
+                            (:some message) (d! :session/remove-message message)
+                            (:none) &unit
                       when dev? $ comp-reel (:reel-length store-typed) ({})
               , |comp-container
           :examples $ []
@@ -350,6 +354,24 @@
             {} $ :padding "|8px 16px"
           :examples $ []
           :schema $ :: 'Dynamic
+        'to-respo-messages $ %{} 'CodeEntry (:doc "|Convert typed session messages to the map contract expected by respo-message.")
+          :code $ quote $ defn to-respo-messages (messages)
+            filter-map-kv messages $ fn (id message)
+              %:: MapEntryDecision :keep id $ &struct:to-map message
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'String 'app.schema/Message
+            :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |converts-typed-toast-messages)
+            :code $ quote $ let
+                messages $ {} $ |message-1 $ %{} schema/Message (:id |message-1) (:text |Hello)
+                rendered $ to-respo-messages messages
+                message $ &map:get rendered |message-1
+              do
+                assert |toast-is-map $ map? message
+                assert= |message-1 $ &map:get message :id
+                assert= |Hello $ &map:get message :text
+            :tags $ #{} :regression
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
