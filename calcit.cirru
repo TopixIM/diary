@@ -1710,6 +1710,59 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+        'parse-client-op $ %{} 'CodeEntry (:doc "|Accept nominal operations and legacy map payloads from JS clients.")
+          :code $ quote $ defn parse-client-op (text)
+            match (try-parse-cirru-edn-as text app.schema/Op)
+              (:ok op) op
+              (:err _)
+                match (parse-cirru-edn text)
+                  (:session/set-cursor payload)
+                    %:: schema/Op :session/set-cursor $ decode-map-as payload app.util/DateInfo
+                  (:session/merge-cursor payload)
+                    %:: schema/Op :session/merge-cursor $ decode-map-as payload app.schema/CursorPatch
+                  (:session/remove-message payload)
+                    %:: schema/Op :session/remove-message $ decode-map-as payload app.schema/Message
+                  (:router/change payload)
+                    %:: schema/Op :router/change $ decode-map-as payload app.schema/Router
+                  (:diary/add-one payload)
+                    %:: schema/Op :diary/add-one $ decode-map-as payload app.schema/Diary
+                  (:diary/change payload)
+                    %:: schema/Op :diary/change $ decode-map-as payload app.schema/DiaryChange
+                  (:diary/copy-yesterday payload)
+                    %:: schema/Op :diary/copy-yesterday $ decode-map-as payload app.schema/CopyYesterday
+                  (:today payload)
+                    %:: schema/Op :today $ decode-map-as payload app.util/DateInfo
+                  _ $ raise |Unsupported-client-operation
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
+            :args $ [] 'String
+          :tests $ []
+            %{} 'TestEntry (:name |decodes-legacy-map-date-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :session/set-cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op legacy
+                match op
+                  (:session/set-cursor date) (assert= 2026 $ :year date)
+                  _ $ raise |Expected-cursor-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-nested-legacy-map-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :diary/copy-yesterday $ {} $ :date-info $ {} (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op legacy
+                match op
+                  (:diary/copy-yesterday payload)
+                    let
+                        typed $ assert-type payload 'app.schema/CopyYesterday
+                        date $ assert-type (:date-info typed) 'app.util/DateInfo
+                      assert= 29 $ :day date
+                  _ $ raise |Expected-copy-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |preserves-nominal-operation-payload)
+              :code $ quote $ let
+                  original $ %:: schema/Op :session/set-cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op $ format-cirru-edn original
+                assert= original op
+              :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1755,7 +1808,7 @@
                         println |New\sclient.
                     (:message sid msg)
                       let
-                          action $ parse-cirru-edn-as msg app.schema/Op
+                          action $ parse-client-op msg
                         dispatch! action sid
                     (:disconnect sid)
                       do (println |Client\sclosed!) (swap! *client-caches &map:dissoc sid)
