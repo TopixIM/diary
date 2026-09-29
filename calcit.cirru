@@ -1719,11 +1719,15 @@
                   (:session/set-cursor payload)
                     %:: schema/Op :session/set-cursor $ decode-map-as payload app.util/DateInfo
                   (:session/merge-cursor payload)
-                    %:: schema/Op :session/merge-cursor $ decode-map-as payload app.schema/CursorPatch
+                    %:: schema/Op :session/merge-cursor $ decode-map-as
+                      &merge ({} (:year nil) (:month nil) (:day nil)) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      , app.schema/CursorPatch
                   (:session/remove-message payload)
                     %:: schema/Op :session/remove-message $ decode-map-as payload app.schema/Message
                   (:router/change payload)
-                    %:: schema/Op :router/change $ decode-map-as payload app.schema/Router
+                    %:: schema/Op :router/change $ decode-map-as
+                      &merge (&struct:to-map schema/router) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      , app.schema/Router
                   (:diary/add-one payload)
                     %:: schema/Op :diary/add-one $ decode-map-as payload app.schema/Diary
                   (:diary/change payload)
@@ -1756,6 +1760,32 @@
                         date $ assert-type (:date-info typed) 'app.util/DateInfo
                       assert= 29 $ :day date
                   _ $ raise |Expected-copy-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |fills-omitted-router-data)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :router/change $ {} $ :name :diary
+                  op $ parse-client-op legacy
+                match op
+                  (:router/change payload)
+                    let
+                        router $ assert-type payload 'app.schema/Router
+                      do
+                        assert= :diary $ :name router
+                        assert= ({}) $ :data router
+                  _ $ raise |Expected-router-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |fills-omitted-cursor-patch-fields)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :session/merge-cursor $ {} $ :month 9
+                  op $ parse-client-op legacy
+                match op
+                  (:session/merge-cursor payload)
+                    let
+                        patch $ assert-type payload 'app.schema/CursorPatch
+                      do
+                        assert= 9 $ :month patch
+                        assert= nil $ :year patch
+                  _ $ raise |Expected-cursor-patch-operation
               :tags $ #{} :regression
             %{} 'TestEntry (:name |preserves-nominal-operation-payload)
               :code $ quote $ let
