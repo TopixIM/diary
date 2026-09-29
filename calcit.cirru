@@ -1710,6 +1710,22 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+        'normalize-client-payload $ %{} 'CodeEntry (:doc "|Convert nominal structs in legacy client operations back to maps before schema decoding.")
+          :code $ quote $ defn normalize-client-payload (value)
+            cond
+                struct? value
+                normalize-client-payload $ &struct:to-map value
+              (map? value)
+                &map:map
+                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
+                  fn (pair)
+                    [] (&list:first pair)
+                      normalize-client-payload $ &list:last pair
+              (list? value) (map value normalize-client-payload)
+              true value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] 'Dynamic
         'parse-client-op $ %{} 'CodeEntry (:doc "|Accept nominal operations and legacy map payloads from JS clients.")
           :code $ quote $ defn parse-client-op (text)
             match (try-parse-cirru-edn-as text app.schema/Op)
@@ -1717,13 +1733,14 @@
               (:err _)
                 match (parse-cirru-edn text)
                   (:session/set-cursor payload)
-                    %:: schema/Op :session/set-cursor $ decode-map-as payload app.util/DateInfo
+                    %:: schema/Op :session/set-cursor $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
                   (:session/merge-cursor payload)
                     %:: schema/Op :session/merge-cursor $ decode-map-as
-                      &merge ({} (:year nil) (:month nil) (:day nil)) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      &merge ({} (:year nil) (:month nil) (:day nil))
+                        assert-type (normalize-client-payload payload) $ :: 'Map 'Tag 'Dynamic
                       , app.schema/CursorPatch
                   (:session/remove-message payload)
-                    %:: schema/Op :session/remove-message $ decode-map-as payload app.schema/Message
+                    %:: schema/Op :session/remove-message $ decode-map-as (normalize-client-payload payload) app.schema/Message
                   (:session/connect) (%:: schema/Op :session/connect)
                   (:session/disconnect) (%:: schema/Op :session/disconnect)
                   (:user/log-in credentials) (%:: schema/Op :user/log-in credentials)
@@ -1733,16 +1750,17 @@
                   (:user/log-out) (%:: schema/Op :user/log-out)
                   (:router/change payload)
                     %:: schema/Op :router/change $ decode-map-as
-                      &merge (&struct:to-map schema/router) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      &merge (&struct:to-map schema/router)
+                        assert-type (normalize-client-payload payload) $ :: 'Map 'Tag 'Dynamic
                       , app.schema/Router
                   (:diary/add-one payload)
-                    %:: schema/Op :diary/add-one $ decode-map-as payload app.schema/Diary
+                    %:: schema/Op :diary/add-one $ decode-map-as (normalize-client-payload payload) app.schema/Diary
                   (:diary/change payload)
-                    %:: schema/Op :diary/change $ decode-map-as payload app.schema/DiaryChange
+                    %:: schema/Op :diary/change $ decode-map-as (normalize-client-payload payload) app.schema/DiaryChange
                   (:diary/copy-yesterday payload)
-                    %:: schema/Op :diary/copy-yesterday $ decode-map-as payload app.schema/CopyYesterday
+                    %:: schema/Op :diary/copy-yesterday $ decode-map-as (normalize-client-payload payload) app.schema/CopyYesterday
                   (:today payload)
-                    %:: schema/Op :today $ decode-map-as payload app.util/DateInfo
+                    %:: schema/Op :today $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
                   (:effect/persist) (%:: schema/Op :effect/persist)
                   (:effect/ping) (%:: schema/Op :effect/ping)
                   (:effect/pong) (%:: schema/Op :effect/pong)
@@ -1762,6 +1780,14 @@
                   (:session/set-cursor date) (assert= 2026 $ :year date)
                   _ $ raise |Expected-cursor-operation
               :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-legacy-struct-date-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :session/set-cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 30)
+                  op $ parse-client-op legacy
+                match op
+                  (:session/set-cursor date) (assert= 30 $ :day date)
+                  _ $ raise |Expected-cursor-operation
+              :tags $ #{} :regression
             %{} 'TestEntry (:name |decodes-nested-legacy-map-payload)
               :code $ quote $ let
                   legacy $ format-cirru-edn $ :: :diary/copy-yesterday $ {} $ :date-info $ {} (:year 2026) (:month 9) (:day 29)
@@ -1772,6 +1798,19 @@
                         typed $ assert-type payload 'app.schema/CopyYesterday
                         date $ assert-type (:date-info typed) 'app.util/DateInfo
                       assert= 29 $ :day date
+                  _ $ raise |Expected-copy-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-nested-legacy-struct-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :diary/copy-yesterday $ %{} schema/CopyYesterday
+                    :date-info $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 30)
+                  op $ parse-client-op legacy
+                match op
+                  (:diary/copy-yesterday payload)
+                    let
+                        typed $ assert-type payload 'app.schema/CopyYesterday
+                        date $ assert-type (:date-info typed) 'app.util/DateInfo
+                      assert= 30 $ :day date
                   _ $ raise |Expected-copy-operation
               :tags $ #{} :regression
             %{} 'TestEntry (:name |decodes-legacy-login-payloads)
