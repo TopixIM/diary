@@ -1724,6 +1724,13 @@
                       , app.schema/CursorPatch
                   (:session/remove-message payload)
                     %:: schema/Op :session/remove-message $ decode-map-as payload app.schema/Message
+                  (:session/connect) (%:: schema/Op :session/connect)
+                  (:session/disconnect) (%:: schema/Op :session/disconnect)
+                  (:user/log-in credentials) (%:: schema/Op :user/log-in credentials)
+                  (:user/log-in username password) (%:: schema/Op :user/log-in $ [] username password)
+                  (:user/sign-up credentials) (%:: schema/Op :user/sign-up credentials)
+                  (:user/sign-up username password) (%:: schema/Op :user/sign-up $ [] username password)
+                  (:user/log-out) (%:: schema/Op :user/log-out)
                   (:router/change payload)
                     %:: schema/Op :router/change $ decode-map-as
                       &merge (&struct:to-map schema/router) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
@@ -1736,6 +1743,12 @@
                     %:: schema/Op :diary/copy-yesterday $ decode-map-as payload app.schema/CopyYesterday
                   (:today payload)
                     %:: schema/Op :today $ decode-map-as payload app.util/DateInfo
+                  (:effect/persist) (%:: schema/Op :effect/persist)
+                  (:effect/ping) (%:: schema/Op :effect/ping)
+                  (:effect/pong) (%:: schema/Op :effect/pong)
+                  (:effect/connect) (%:: schema/Op :effect/connect)
+                  (:reel/reset) (%:: schema/Op :reel/reset)
+                  (:reel/merge) (%:: schema/Op :reel/merge)
                   _ $ raise |Unsupported-client-operation
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
@@ -1760,6 +1773,26 @@
                         date $ assert-type (:date-info typed) 'app.util/DateInfo
                       assert= 29 $ :day date
                   _ $ raise |Expected-copy-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-legacy-login-payloads)
+              :code $ quote $ do
+                let
+                    op $ parse-client-op $ format-cirru-edn $ :: :user/log-in $ [] |name |password
+                  match op
+                    (:user/log-in credentials) (assert= ([] |name |password) credentials)
+                    _ $ raise |Expected-login-operation
+                let
+                    op $ parse-client-op $ format-cirru-edn $ :: :user/sign-up |name |password
+                  match op
+                    (:user/sign-up credentials) (assert= ([] |name |password) credentials)
+                    _ $ raise |Expected-signup-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-legacy-ping)
+              :code $ quote $ let
+                  op $ parse-client-op $ format-cirru-edn $ :: :effect/ping
+                match op
+                  (:effect/ping) (assert= true true)
+                  _ $ raise |Expected-ping-operation
               :tags $ #{} :regression
             %{} 'TestEntry (:name |fills-omitted-router-data)
               :code $ quote $ let
