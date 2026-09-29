@@ -1862,8 +1862,10 @@
                             client-router $ %{} schema/ClientRouter
                               :name $ :name router
                               :data route-data
-                            current-diary $ get (:diaries user)
-                              format-to-date $ :cursor session
+                            current-diary $ match
+                              get (:diaries user) $ format-to-date $ :cursor session
+                              (:some diary) diary
+                              (:none) nil
                           %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router)
                             :today $ :today db
                             :count session-count
