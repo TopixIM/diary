@@ -309,8 +309,12 @@
                         comp-login states
                       comp-status-color $ :color store-typed
                       when dev? $ comp-inspect |Store store-typed $ {} (:bottom 0) (:left 0) (:max-width |100%)
-                      comp-messages (:messages session) ({})
-                        fn (info d!) (d! :session/remove-message info)
+                      comp-messages (to-respo-messages $ :messages session) ({})
+                        fn (info d!)
+                          match
+                            get (:messages session) $ assert-type (&map:get info :id) 'String
+                            (:some message) (d! :session/remove-message message)
+                            (:none) &unit
                       when dev? $ comp-reel (:reel-length store-typed) ({})
               , |comp-container
           :examples $ []
@@ -350,6 +354,24 @@
             {} $ :padding "|8px 16px"
           :examples $ []
           :schema $ :: 'Dynamic
+        'to-respo-messages $ %{} 'CodeEntry (:doc "|Convert typed session messages to the map contract expected by respo-message.")
+          :code $ quote $ defn to-respo-messages (messages)
+            filter-map-kv messages $ fn (id message)
+              %:: MapEntryDecision :keep id $ &struct:to-map message
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] $ :: 'Map 'String 'app.schema/Message
+            :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |converts-typed-toast-messages)
+            :code $ quote $ let
+                messages $ {} $ |message-1 $ %{} schema/Message (:id |message-1) (:text |Hello)
+                rendered $ to-respo-messages messages
+                message $ &map:get rendered |message-1
+              do
+                assert |toast-is-map $ map? message
+                assert= |message-1 $ &map:get message :id
+                assert= |Hello $ &map:get message :text
+            :tags $ #{} :regression
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
           :require
@@ -1625,19 +1647,53 @@
                 db $ assert-type raw $ :: 'Map 'Tag 'Dynamic
                 users $ assert-type (&map:get db :users) (:: 'Map 'String 'Dynamic)
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
-                  let
-                      user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
-                      diaries $ assert-type (&map:get user :diaries) (:: 'Map 'String 'Dynamic)
-                      normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
-                        let
-                            diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
-                          %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
-                    %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
+                  if (= nil raw-user)
+                    %:: MapEntryDecision :drop
+                    let
+                        user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
+                        raw-diaries $ &map:get user :diaries
+                        diaries $ assert-type
+                          if (= nil raw-diaries) ({}) raw-diaries
+                          :: 'Map 'String 'Dynamic
+                        normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
+                          if (= nil raw-diary)
+                            %:: MapEntryDecision :drop
+                            let
+                                diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
+                              %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
+                      %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
               &map:assoc db :users normalized-users
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Dynamic
             :return $ :: 'Map 'Tag 'Dynamic
+          :tests $ []
+            %{} 'TestEntry (:name |normalizes-empty-legacy-records)
+              :code $ quote $ let
+                  raw $ {} (:sessions $ {})
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :users $ {} (|empty-user nil)
+                      |user-1 $ {}
+                        :name |user-1
+                        :id |user-1
+                        :nickname |User
+                        :password |secret
+                        :avatar nil
+                        :diaries $ {} (|2026-09-28 nil)
+                          |2026-09-29 $ {} (:text |legacy-entry)
+                      |user-2 $ {} (:name |user-2) (:id |user-2) (:nickname |User) (:password |secret) (:avatar nil) (:diaries nil)
+                  db $ parse-stored-db $ format-cirru-edn raw
+                  user $ &map:get (:users db) |user-1
+                  diaries $ :diaries user
+                  diary $ &map:get diaries |2026-09-29
+                do
+                  assert= 2 $ count $ :users db
+                  assert= 1 $ count diaries
+                  assert= false $ contains? diaries |2026-09-28
+                  assert= |legacy-entry $ :text diary
+                  assert= | $ :sleep diary
+                  assert= 0 $ count $ :diaries $ &map:get (:users db) |user-2
+              :tags $ #{} :regression
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
@@ -1654,6 +1710,118 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+        'parse-client-op $ %{} 'CodeEntry (:doc "|Accept nominal operations and legacy map payloads from JS clients.")
+          :code $ quote $ defn parse-client-op (text)
+            match (try-parse-cirru-edn-as text app.schema/Op)
+              (:ok op) op
+              (:err _)
+                match (parse-cirru-edn text)
+                  (:session/set-cursor payload)
+                    %:: schema/Op :session/set-cursor $ decode-map-as payload app.util/DateInfo
+                  (:session/merge-cursor payload)
+                    %:: schema/Op :session/merge-cursor $ decode-map-as
+                      &merge ({} (:year nil) (:month nil) (:day nil)) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      , app.schema/CursorPatch
+                  (:session/remove-message payload)
+                    %:: schema/Op :session/remove-message $ decode-map-as payload app.schema/Message
+                  (:router/change payload)
+                    %:: schema/Op :router/change $ decode-map-as
+                      &merge (&struct:to-map schema/router) $ assert-type payload (:: 'Map 'Tag 'Dynamic)
+                      , app.schema/Router
+                  (:diary/add-one payload)
+                    %:: schema/Op :diary/add-one $ decode-map-as payload app.schema/Diary
+                  (:diary/change payload)
+                    %:: schema/Op :diary/change $ decode-map-as payload app.schema/DiaryChange
+                  (:diary/copy-yesterday payload)
+                    %:: schema/Op :diary/copy-yesterday $ decode-map-as payload app.schema/CopyYesterday
+                  (:today payload)
+                    %:: schema/Op :today $ decode-map-as payload app.util/DateInfo
+                  _ $ raise |Unsupported-client-operation
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
+            :args $ [] 'String
+          :tests $ []
+            %{} 'TestEntry (:name |decodes-legacy-map-date-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :session/set-cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op legacy
+                match op
+                  (:session/set-cursor date) (assert= 2026 $ :year date)
+                  _ $ raise |Expected-cursor-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |decodes-nested-legacy-map-payload)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :diary/copy-yesterday $ {} $ :date-info $ {} (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op legacy
+                match op
+                  (:diary/copy-yesterday payload)
+                    let
+                        typed $ assert-type payload 'app.schema/CopyYesterday
+                        date $ assert-type (:date-info typed) 'app.util/DateInfo
+                      assert= 29 $ :day date
+                  _ $ raise |Expected-copy-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |fills-omitted-router-data)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :router/change $ {} $ :name :diary
+                  op $ parse-client-op legacy
+                match op
+                  (:router/change payload)
+                    let
+                        router $ assert-type payload 'app.schema/Router
+                      do
+                        assert= :diary $ :name router
+                        assert= ({}) $ :data router
+                  _ $ raise |Expected-router-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |fills-omitted-cursor-patch-fields)
+              :code $ quote $ let
+                  legacy $ format-cirru-edn $ :: :session/merge-cursor $ {} $ :month 9
+                  op $ parse-client-op legacy
+                match op
+                  (:session/merge-cursor payload)
+                    let
+                        patch $ assert-type payload 'app.schema/CursorPatch
+                      do
+                        assert= 9 $ :month patch
+                        assert= nil $ :year patch
+                  _ $ raise |Expected-cursor-patch-operation
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |preserves-nominal-operation-payload)
+              :code $ quote $ let
+                  original $ %:: schema/Op :session/set-cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  op $ parse-client-op $ format-cirru-edn original
+                assert= original op
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |saves-diary-from-client-map-payload)
+              :code $ quote $ let
+                  user $ struct-with schema/user (:id |user-1) (:name |tester)
+                  session $ %{} schema/Session (:id 1) (:nickname |) (:router schema/router) (:messages $ {}) (:user-id |user-1)
+                    :cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  db $ %{} schema/Database
+                    :users $ {} (|user-1 user)
+                    :sessions $ {} (1 session)
+                    :today $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  raw $ &merge (&struct:to-map schema/diary) $ {} (:date |2026-09-29) (:text |saved-entry)
+                  op $ parse-client-op $ format-cirru-edn $ :: :diary/add-one raw
+                  updated $ match op
+                    (:diary/add-one payload) (diary-updater/add-one db payload 1 |op-1 123)
+                    _ $ raise |Expected-diary-add-operation
+                  updated-user $ assert-type (&map:get (:users updated) |user-1) 'app.schema/User
+                  saved $ assert-type (&map:get (:diaries updated-user) |2026-09-29) 'app.schema/Diary
+                do
+                  assert= |saved-entry $ :text saved
+                  assert= 123 $ :time saved
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |updates-cursor-from-partial-map-payload)
+              :code $ quote $ let
+                  cursor $ %{} app.util/DateInfo (:year 2026) (:month 8) (:day 29)
+                  op $ parse-client-op $ format-cirru-edn $ :: :session/merge-cursor $ {} $ :month 9
+                  updated-cursor $ match op
+                    (:session/merge-cursor payload) (session-updater/merge-cursor-value cursor payload)
+                    _ $ raise |Expected-cursor-patch-operation
+                assert= 9 $ :month updated-cursor
+              :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1699,7 +1867,7 @@
                         println |New\sclient.
                     (:message sid msg)
                       let
-                          action $ parse-cirru-edn-as msg app.schema/Op
+                          action $ parse-client-op msg
                         dispatch! action sid
                     (:disconnect sid)
                       do (println |Client\sclosed!) (swap! *client-caches &map:dissoc sid)
@@ -1745,6 +1913,8 @@
         :code $ quote $ ns app.server
           :require (app.schema :as schema)
             app.updater :refer $ updater
+            app.updater.diary :as diary-updater
+            app.updater.session :as session-updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             app.config :as config
             app.twig.container :refer $ twig-container
@@ -1806,8 +1976,10 @@
                             client-router $ %{} schema/ClientRouter
                               :name $ :name router
                               :data route-data
-                            current-diary $ get (:diaries user)
-                              format-to-date $ :cursor session
+                            current-diary $ match
+                              get (:diaries user) $ format-to-date $ :cursor session
+                              (:some diary) diary
+                              (:none) nil
                           %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router)
                             :today $ :today db
                             :count session-count
@@ -1958,7 +2130,7 @@
                         match
                           get (:users db) uid
                           (:some user)
-                            match (:date diary-data)
+                            match (optionally $ :date diary-data)
                               (:some date)
                                 let
                                     next-diary $ struct-with diary-data $ :time op-time
@@ -2120,6 +2292,23 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
+        'merge-cursor-value $ %{} 'CodeEntry (:doc "|Apply a nullable cursor patch to a date.")
+          :code $ quote $ defn merge-cursor-value (cursor patch)
+            match (optionally $ :year patch)
+              (:some value)
+                struct-with cursor $ :year value
+              (:none)
+                match (optionally $ :month patch)
+                  (:some value)
+                    struct-with cursor $ :month value
+                  (:none)
+                    match (optionally $ :day patch)
+                      (:some value)
+                        struct-with cursor $ :day value
+                      (:none) cursor
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
+            :args $ [] 'app.util/DateInfo 'app.schema/CursorPatch
         'merge-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
@@ -2130,18 +2319,7 @@
                     (:none) schema/session
                   , 'app.schema/Session
                 cursor $ :cursor session
-                next-cursor $ match (:year patch)
-                  (:some value)
-                    struct-with cursor $ :year value
-                  (:none)
-                    match (:month patch)
-                      (:some value)
-                        struct-with cursor $ :month value
-                      (:none)
-                        match (:day patch)
-                          (:some value)
-                            struct-with cursor $ :day value
-                          (:none) cursor
+                next-cursor $ merge-cursor-value cursor patch
                 next-session $ struct-with session $ :cursor next-cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
@@ -2181,17 +2359,36 @@
           :require $ [] app.schema :as schema
     'app.updater.user $ %{} 'FileEntry
       :defs $ {}
+        'find-user-by-name $ %{} 'CodeEntry (:doc "|Find a typed user by account name without erasing struct field types.")
+          :code $ quote $ defn find-user-by-name (users username)
+            let
+                matching-users $ filter-map-kv users $ fn (id user)
+                  let
+                      typed-user $ assert-type user 'app.schema/User
+                    if (= username $ :name typed-user)
+                      %:: MapEntryDecision :keep id typed-user
+                      %:: MapEntryDecision :drop
+              first $ &set:to-list $ vals matching-users
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'String 'app.schema/User) 'String
+            :return $ :: 'Option 'app.schema/User
+          :tests $ [] $ %{} 'TestEntry (:name |finds-typed-user-by-name)
+            :code $ quote $ let
+                user $ %{} schema/User (:name |chen) (:id |user-1) (:nickname |chen) (:password |unused-hash) (:diaries $ {}) (:avatar nil)
+                users $ {} (|user-1 user)
+              do
+                match (find-user-by-name users |chen)
+                  (:some found) (assert= |user-1 $ :id found)
+                  (:none) (raise |expected-existing-user)
+                match (find-user-by-name users |missing)
+                  (:none) &unit
+                  (:some _) (raise |unexpected-user)
+            :tags $ #{} :regression
         'log-in $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
-                maybe-user $ find
-                  &set:to-list $ vals $ :users db
-                  fn (user)
-                    hint-fn
-                      {}
-                        :args $ [] 'app.schema/User
-                        :return 'Bool
-                      = username $ :name user
+                maybe-user $ find-user-by-name (:users db) username
                 session $ assert-type
                   match
                     get (:sessions db) sid
@@ -2231,14 +2428,7 @@
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
-                maybe-user $ find
-                  &set:to-list $ vals $ :users db
-                  fn (user)
-                    hint-fn
-                      {}
-                        :args $ [] 'app.schema/User
-                        :return 'Bool
-                      = username $ :name user
+                maybe-user $ find-user-by-name (:users db) username
                 session $ assert-type
                   match
                     get (:sessions db) sid
