@@ -1561,6 +1561,10 @@
           :require $ [] app.util :refer $ [] get-native-today!
     'app.server $ %{} 'FileEntry
       :defs $ {}
+        'StoredDbFormat $ %{} 'CodeEntry (:doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path.")
+          :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
+          :examples $ []
+          :schema $ :: 'EnumDef
         '*client-caches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *client-caches ({})
           :examples $ []
@@ -1570,7 +1574,7 @@
             if
               path-exists? $ w-log storage-file
               do (println "|Found local EDN data")
-                parse-stored-db $ read-file storage-file
+                load-stored-db! storage-file
               do (println "|Found no data") schema/database
           :examples $ []
           :schema $ :: 'Ref 'app.schema/Database
@@ -1622,6 +1626,25 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
+        'format-stored-db $ %{} 'CodeEntry (:doc "|Serialize the typed database without transient sessions.")
+          :code $ quote $ defn format-stored-db (db)
+            format-cirru-edn $ struct-with db $ :sessions $ {}
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'app.schema/Database
+        'load-stored-db! $ %{} 'CodeEntry (:doc "|Load storage and rewrite legacy map data into the current typed schema before serving clients.")
+          :code $ quote $ defn load-stored-db! (path)
+            let
+                text $ read-file path
+              match (parse-stored-db-with-format text)
+                (:typed db) db
+                (:legacy db)
+                  do
+                    migrate-storage! path text db
+                    , db
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
+            :args $ [] 'String
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println |Running\smode: $ if config/dev? |dev |release
@@ -1641,16 +1664,26 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+        'normalize-stored-struct $ %{} 'CodeEntry (:doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots.")
+          :code $ quote $ defn normalize-stored-struct (raw)
+            assert-type
+              if (struct? raw) (&struct:to-map raw) raw
+              :: 'Map 'Tag 'Dynamic
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
         'normalize-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-stored-db (raw)
             let
-                db $ assert-type raw $ :: 'Map 'Tag 'Dynamic
+                db $ normalize-stored-struct raw
+                today $ normalize-stored-struct $ &map:get db :today
                 users $ assert-type (&map:get db :users) (:: 'Map 'String 'Dynamic)
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
                   if (= nil raw-user)
                     %:: MapEntryDecision :drop
                     let
-                        user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
+                        user $ normalize-stored-struct raw-user
                         raw-diaries $ &map:get user :diaries
                         diaries $ assert-type
                           if (= nil raw-diaries) ({}) raw-diaries
@@ -1659,10 +1692,14 @@
                           if (= nil raw-diary)
                             %:: MapEntryDecision :drop
                             let
-                                diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
+                                diary $ normalize-stored-struct raw-diary
                               %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
                       %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
-              &map:assoc db :users normalized-users
+              &map:assoc
+                &map:assoc
+                  &map:assoc db :sessions $ {}
+                  , :today today
+                , :users normalized-users
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Dynamic
@@ -1701,15 +1738,60 @@
             :args $ []
         'parse-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-stored-db (text)
-            match (try-parse-cirru-edn-as text app.schema/Database)
-              (:ok data) data
-              (:err _)
-                decode-map-as
-                  normalize-stored-db $ parse-cirru-edn text
-                  , app.schema/Database
+            match (parse-stored-db-with-format text)
+              (:typed db) db
+              (:legacy db) db
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+        'parse-stored-db-with-format $ %{} 'CodeEntry (:doc "|Decode typed storage directly and mark data that required legacy normalization.")
+          :code $ quote $ defn parse-stored-db-with-format (text)
+            match (try-parse-cirru-edn-as text app.schema/Database)
+              (:ok data) (%:: StoredDbFormat :typed data)
+              (:err _)
+                %:: StoredDbFormat :legacy $ decode-map-as
+                  normalize-stored-db $ parse-cirru-edn text
+                  , app.schema/Database
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.server/StoredDbFormat)
+            :args $ [] 'String
+          :tests $ [] $ %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
+            :code $ quote $ let
+                legacy-text $ format-cirru-edn $ {} (:sessions $ {}) (:users $ {})
+                  :today $ {} (:year 2026) (:month 9) (:day 30)
+              match (parse-stored-db-with-format legacy-text)
+                (:legacy db)
+                  match
+                    parse-stored-db-with-format $ format-stored-db db
+                    (:typed typed-db)
+                      do
+                        assert= 2026 $ :year $ :today typed-db
+                        assert= 0 $ count $ :sessions typed-db
+                    _ $ raise |Expected-typed-storage
+                _ $ raise |Expected-legacy-storage
+            :tags $ #{} :regression
+        'migrate-storage! $ %{} 'CodeEntry (:doc "|Back up legacy text, validate a typed temporary file, then atomically replace storage.")
+          :code $ quote $ defn migrate-storage! (path legacy-text db)
+            let
+                backup-file $ str path |.legacy-backup.cirru
+                migration-file $ str path |.migrating
+                typed-content $ format-stored-db db
+              do
+                when
+                  not $ path-exists? backup-file
+                  check-write-file! backup-file legacy-text
+                check-write-file! migration-file typed-content
+                match
+                  try-parse-cirru-edn-as (read-file migration-file) app.schema/Database
+                  (:ok _)
+                    do
+                      rename! migration-file path
+                      println $ str |Migrated\sstorage\sto\styped\sdata;\slegacy\sbackup:\s backup-file
+                  (:err reason)
+                    raise $ str |Typed\sstorage\smigration\svalidation\sfailed:\s reason
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String 'String 'app.schema/Database
         'normalize-client-payload $ %{} 'CodeEntry (:doc "|Convert a nominal legacy operation payload to a map without unbounded recursion.")
           :code $ quote $ defn normalize-client-payload (value)
             if (struct? value) (&struct:to-map value) value
@@ -1892,8 +1974,7 @@
           :code $ quote $ defn persist-db! ()
             let
                 db $ assert-type (:db @*reel) 'app.schema/Database
-                file-content $ format-cirru-edn $ struct-with db
-                  :sessions $ {}
+                file-content $ format-stored-db db
                 storage-path storage-file
                 backup-path $ get-backup-path!
               check-write-file! storage-path file-content
@@ -1989,7 +2070,7 @@
             recollect.twig :refer $ new-twig-loop! clear-twig-caches!
             app.util :refer $ get-native-today!
             app.$meta :refer $ calcit-dirname
-            calcit.std.fs :refer $ path-exists? check-write-file!
+            calcit.std.fs :refer $ path-exists? check-write-file! rename!
             calcit.std.time :refer $ set-interval
             calcit.std.date :refer $ [] get-time! extract-time get-timestamp
             calcit.std.path :refer $ join-path
