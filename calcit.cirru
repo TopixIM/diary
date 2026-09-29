@@ -2237,17 +2237,36 @@
           :require $ [] app.schema :as schema
     'app.updater.user $ %{} 'FileEntry
       :defs $ {}
+        'find-user-by-name $ %{} 'CodeEntry (:doc "|Find a typed user by account name without erasing struct field types.")
+          :code $ quote $ defn find-user-by-name (users username)
+            let
+                matching-users $ filter-map-kv users $ fn (id user)
+                  let
+                      typed-user $ assert-type user 'app.schema/User
+                    if (= username $ :name typed-user)
+                      %:: MapEntryDecision :keep id typed-user
+                      %:: MapEntryDecision :drop
+              first $ &set:to-list $ vals matching-users
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'String 'app.schema/User) 'String
+            :return $ :: 'Option 'app.schema/User
+          :tests $ [] $ %{} 'TestEntry (:name |finds-typed-user-by-name)
+            :code $ quote $ let
+                user $ %{} schema/User (:name |chen) (:id |user-1) (:nickname |chen) (:password |unused-hash) (:diaries $ {}) (:avatar nil)
+                users $ {} (|user-1 user)
+              do
+                match (find-user-by-name users |chen)
+                  (:some found) (assert= |user-1 $ :id found)
+                  (:none) (raise |expected-existing-user)
+                match (find-user-by-name users |missing)
+                  (:none) &unit
+                  (:some _) (raise |unexpected-user)
+            :tags $ #{} :regression
         'log-in $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-in (db username password sid op-id op-time)
             let
-                maybe-user $ find
-                  &set:to-list $ vals $ :users db
-                  fn (user)
-                    hint-fn
-                      {}
-                        :args $ [] 'app.schema/User
-                        :return 'Bool
-                      = username $ :name user
+                maybe-user $ find-user-by-name (:users db) username
                 session $ assert-type
                   match
                     get (:sessions db) sid
@@ -2287,14 +2306,7 @@
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
-                maybe-user $ find
-                  &set:to-list $ vals $ :users db
-                  fn (user)
-                    hint-fn
-                      {}
-                        :args $ [] 'app.schema/User
-                        :return 'Bool
-                      = username $ :name user
+                maybe-user $ find-user-by-name (:users db) username
                 session $ assert-type
                   match
                     get (:sessions db) sid
