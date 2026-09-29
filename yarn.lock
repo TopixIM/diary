@@ -5,7 +5,7 @@ __metadata:
   version: 8
   cacheKey: 10c0
 
-"@calcit/procs@npm:^0.27.0":
+"@calcit/procs@npm:0.27.0":
   version: 0.27.0
   resolution: "@calcit/procs@npm:0.27.0"
   dependencies:
@@ -41,7 +41,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@comulo/diary@workspace:."
   dependencies:
-    "@calcit/procs": "npm:^0.27.0"
+    "@calcit/procs": "npm:0.27.0"
     bottom-tip: "npm:^0.1.5"
     copy-to-clipboard: "npm:^3.3.3"
     feather-icons: "npm:^4.29.2"
