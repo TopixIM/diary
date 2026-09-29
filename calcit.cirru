@@ -1710,19 +1710,9 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
-        'normalize-client-payload $ %{} 'CodeEntry (:doc "|Convert nominal structs in legacy client operations back to maps before schema decoding.")
+        'normalize-client-payload $ %{} 'CodeEntry (:doc "|Convert a nominal legacy operation payload to a map without unbounded recursion.")
           :code $ quote $ defn normalize-client-payload (value)
-            cond
-                struct? value
-                normalize-client-payload $ &struct:to-map value
-              (map? value)
-                &map:map
-                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
-                  fn (pair)
-                    [] (&list:first pair)
-                      normalize-client-payload $ &list:last pair
-              (list? value) (map value normalize-client-payload)
-              true value
+            if (struct? value) (&struct:to-map value) value
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'Dynamic
@@ -1758,7 +1748,11 @@
                   (:diary/change payload)
                     %:: schema/Op :diary/change $ decode-map-as (normalize-client-payload payload) app.schema/DiaryChange
                   (:diary/copy-yesterday payload)
-                    %:: schema/Op :diary/copy-yesterday $ decode-map-as (normalize-client-payload payload) app.schema/CopyYesterday
+                    let
+                        payload-map $ assert-type (normalize-client-payload payload) $ :: 'Map 'Tag 'Dynamic
+                        normalized $ &map:assoc payload-map :date-info
+                          normalize-client-payload $ &map:get payload-map :date-info
+                      %:: schema/Op :diary/copy-yesterday $ decode-map-as normalized app.schema/CopyYesterday
                   (:today payload)
                     %:: schema/Op :today $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
                   (:effect/persist) (%:: schema/Op :effect/persist)
