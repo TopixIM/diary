@@ -2035,7 +2035,7 @@
                       (:some user)
                         let
                             route-data $ case-default (:name router) nil
-                              :home $ twig-overview $ :diaries user
+                              :home $ twig-overview (:diaries user) $ :cursor session
                               :diary nil
                               :profile $ twig-members (:sessions db) (:users db)
                               :data $ twig-personal-data $ :diaries user
@@ -2084,11 +2084,26 @@
             :args $ [] (:: 'Map 'Number 'app.schema/Session) (:: 'Map 'String 'app.schema/User)
             :return $ :: 'Map 'Number 'String
         'twig-overview $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn twig-overview (diaries) (filter-map-kv diaries twig-overview-entry)
+          :code $ quote $ defn twig-overview (diaries cursor)
+            let
+                month-prefix $ slice (format-to-date cursor) 0 8
+              filter-map-kv diaries $ fn (date diary)
+                if (starts-with? date month-prefix) (twig-overview-entry date diary) (%:: MapEntryDecision :drop)
           :examples $ []
           :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'String 'app.schema/Diary
+            :args $ [] (:: 'Map 'String 'app.schema/Diary) 'app.util/DateInfo
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'String
+          :tests $ [] $ %{} 'TestEntry (:name |only-builds-selected-month)
+            :code $ quote $ let
+                diaries $ {} (|2026-09-01 schema/diary) (|2026-09-30 schema/diary) (|2026-10-01 schema/diary) (|2025-09-01 schema/diary)
+                cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 15)
+                overview $ twig-overview diaries cursor
+              do
+                assert= 2 $ count overview
+                assert= true $ contains? overview |2026-09-01
+                assert= false $ contains? overview |2026-10-01
+                assert= false $ contains? overview |2025-09-01
+            :tags $ #{} :regression
         'twig-overview-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview-entry (date diary)
             %:: MapEntryDecision :keep date $ {}
