@@ -1793,6 +1793,35 @@
                   op $ parse-client-op $ format-cirru-edn original
                 assert= original op
               :tags $ #{} :regression
+            %{} 'TestEntry (:name |saves-diary-from-client-map-payload)
+              :code $ quote $ let
+                  user $ struct-with schema/user (:id |user-1) (:name |tester)
+                  session $ %{} schema/Session (:id 1) (:nickname |) (:router schema/router) (:messages $ {}) (:user-id |user-1)
+                    :cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  db $ %{} schema/Database
+                    :users $ {} (|user-1 user)
+                    :sessions $ {} (1 session)
+                    :today $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
+                  raw $ &merge (&struct:to-map schema/diary) $ {} (:date |2026-09-29) (:text |saved-entry)
+                  op $ parse-client-op $ format-cirru-edn $ :: :diary/add-one raw
+                  updated $ match op
+                    (:diary/add-one payload) (diary-updater/add-one db payload 1 |op-1 123)
+                    _ $ raise |Expected-diary-add-operation
+                  updated-user $ assert-type (&map:get (:users updated) |user-1) 'app.schema/User
+                  saved $ assert-type (&map:get (:diaries updated-user) |2026-09-29) 'app.schema/Diary
+                do
+                  assert= |saved-entry $ :text saved
+                  assert= 123 $ :time saved
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |updates-cursor-from-partial-map-payload)
+              :code $ quote $ let
+                  cursor $ %{} app.util/DateInfo (:year 2026) (:month 8) (:day 29)
+                  op $ parse-client-op $ format-cirru-edn $ :: :session/merge-cursor $ {} $ :month 9
+                  updated-cursor $ match op
+                    (:session/merge-cursor payload) (session-updater/merge-cursor-value cursor payload)
+                    _ $ raise |Expected-cursor-patch-operation
+                assert= 9 $ :month updated-cursor
+              :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -1884,6 +1913,8 @@
         :code $ quote $ ns app.server
           :require (app.schema :as schema)
             app.updater :refer $ updater
+            app.updater.diary :as diary-updater
+            app.updater.session :as session-updater
             cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
             app.config :as config
             app.twig.container :refer $ twig-container
@@ -2099,7 +2130,7 @@
                         match
                           get (:users db) uid
                           (:some user)
-                            match (:date diary-data)
+                            match (optionally $ :date diary-data)
                               (:some date)
                                 let
                                     next-diary $ struct-with diary-data $ :time op-time
@@ -2261,6 +2292,23 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'app.schema/Database 'Number 'String 'Number
+        'merge-cursor-value $ %{} 'CodeEntry (:doc "|Apply a nullable cursor patch to a date.")
+          :code $ quote $ defn merge-cursor-value (cursor patch)
+            match (optionally $ :year patch)
+              (:some value)
+                struct-with cursor $ :year value
+              (:none)
+                match (optionally $ :month patch)
+                  (:some value)
+                    struct-with cursor $ :month value
+                  (:none)
+                    match (optionally $ :day patch)
+                      (:some value)
+                        struct-with cursor $ :day value
+                      (:none) cursor
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
+            :args $ [] 'app.util/DateInfo 'app.schema/CursorPatch
         'merge-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
@@ -2271,18 +2319,7 @@
                     (:none) schema/session
                   , 'app.schema/Session
                 cursor $ :cursor session
-                next-cursor $ match (:year patch)
-                  (:some value)
-                    struct-with cursor $ :year value
-                  (:none)
-                    match (:month patch)
-                      (:some value)
-                        struct-with cursor $ :month value
-                      (:none)
-                        match (:day patch)
-                          (:some value)
-                            struct-with cursor $ :day value
-                          (:none) cursor
+                next-cursor $ merge-cursor-value cursor patch
                 next-session $ struct-with session $ :cursor next-cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
