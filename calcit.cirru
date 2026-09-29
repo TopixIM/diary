@@ -1625,19 +1625,53 @@
                 db $ assert-type raw $ :: 'Map 'Tag 'Dynamic
                 users $ assert-type (&map:get db :users) (:: 'Map 'String 'Dynamic)
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
-                  let
-                      user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
-                      diaries $ assert-type (&map:get user :diaries) (:: 'Map 'String 'Dynamic)
-                      normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
-                        let
-                            diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
-                          %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
-                    %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
+                  if (= nil raw-user)
+                    %:: MapEntryDecision :drop
+                    let
+                        user $ assert-type raw-user $ :: 'Map 'Tag 'Dynamic
+                        raw-diaries $ &map:get user :diaries
+                        diaries $ assert-type
+                          if (= nil raw-diaries) ({}) raw-diaries
+                          :: 'Map 'String 'Dynamic
+                        normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
+                          if (= nil raw-diary)
+                            %:: MapEntryDecision :drop
+                            let
+                                diary $ assert-type raw-diary $ :: 'Map 'Tag 'Dynamic
+                              %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
+                      %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
               &map:assoc db :users normalized-users
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'Dynamic
             :return $ :: 'Map 'Tag 'Dynamic
+          :tests $ []
+            %{} 'TestEntry (:name |normalizes-empty-legacy-records)
+              :code $ quote $ let
+                  raw $ {} (:sessions $ {})
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :users $ {} (|empty-user nil)
+                      |user-1 $ {}
+                        :name |user-1
+                        :id |user-1
+                        :nickname |User
+                        :password |secret
+                        :avatar nil
+                        :diaries $ {} (|2026-09-28 nil)
+                          |2026-09-29 $ {} (:text |legacy-entry)
+                      |user-2 $ {} (:name |user-2) (:id |user-2) (:nickname |User) (:password |secret) (:avatar nil) (:diaries nil)
+                  db $ parse-stored-db $ format-cirru-edn raw
+                  user $ &map:get (:users db) |user-1
+                  diaries $ :diaries user
+                  diary $ &map:get diaries |2026-09-29
+                do
+                  assert= 2 $ count $ :users db
+                  assert= 1 $ count diaries
+                  assert= false $ contains? diaries |2026-09-28
+                  assert= |legacy-entry $ :text diary
+                  assert= | $ :sleep diary
+                  assert= 0 $ count $ :diaries $ &map:get (:users db) |user-2
+              :tags $ #{} :regression
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
