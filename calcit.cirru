@@ -1601,7 +1601,7 @@
                   db $ assert-type (:db reel) 'app.schema/Database
                 when
                   not= today $ :today db
-                  println |A\snew\sday: today
+                  println "|A new day:" today
                   dispatch! (:: :today today) -1
               , &unit
           :examples $ []
@@ -1652,15 +1652,15 @@
             :args $ [] 'String
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
-            println |Running\smode: $ if config/dev? |dev |release
+            println "|Running mode:" $ if config/dev? |dev |release
             let
                 maybe-port $ get-env |port
                 port $ match maybe-port
                   (:some value) (parse-float value)
                   (:none) (:port config/site)
               run-server! port
-              println $ str |Server\sstarted\son\sport: port
-            do (; |init\sit\sbefore\sdoing\smulti-threading) (identity @*reader-reel)
+              println $ str "|Server started on port:" port
+            do (; "|init it before doing multi-threading") (identity @*reader-reel)
             set-interval 200 $ fn () $ render-loop!
             set-interval 600000 $ fn () $ persist-db!
             on-control-c on-exit!
@@ -1785,9 +1785,9 @@
                   (:ok _)
                     do
                       rename! migration-file path
-                      println $ str |Migrated\sstorage\sto\styped\sdata;\slegacy\sbackup:\s backup-file
+                      println $ str "|Migrated storage to typed data; legacy backup: " backup-file
                   (:err reason)
-                    raise $ str |Typed\sstorage\smigration\svalidation\sfailed:\s reason
+                    raise $ str "|Typed storage migration validation failed: " reason
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'String 'String 'app.schema/Database
@@ -2042,15 +2042,15 @@
                     (:connect sid)
                       do (swap! *client-caches &map:dissoc sid)
                         dispatch! (:: :session/connect) sid
-                        println |New\sclient.
+                        println "|New client."
                     (:message sid msg)
                       let
                           action $ parse-client-op msg
                         dispatch! action sid
                     (:disconnect sid)
-                      do (println |Client\sclosed!) (swap! *client-caches &map:dissoc sid)
+                      do (println "|Client closed!") (swap! *client-caches &map:dissoc sid)
                         dispatch! (:: :session/disconnect) sid
-                    _ $ eprintln |unknown\sdata: data
+                    _ $ eprintln "|unknown data:" data
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -2605,11 +2605,11 @@
                       struct-with session $ :user-id $ :id user
                       struct-with session $ :messages $ assoc (:messages session) op-id
                         %{} schema/Message (:id op-id)
-                          :text $ str |Wrong\spassword\sfor\s username
+                          :text $ str "|Wrong password for " username
                   (:none)
                     struct-with session $ :messages $ assoc (:messages session) op-id
                       %{} schema/Message (:id op-id)
-                        :text $ str |No\suser\snamed:\s username
+                        :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
@@ -2642,7 +2642,7 @@
                 let
                     next-session $ struct-with session $ :messages
                       assoc (:messages session) op-id $ %{} schema/Message (:id op-id)
-                        :text $ str |Name\sis\staken:\s username
+                        :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ assoc (:sessions db) sid next-session
                 let
                     next-session $ struct-with session $ :user-id op-id
