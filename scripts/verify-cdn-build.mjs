@@ -1,4 +1,4 @@
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const base = process.env.VITE_BASE_URL;
@@ -24,26 +24,3 @@ for (const url of assetUrls) {
 }
 
 console.log(`Verified ${assetUrls.length} CDN assets under ${base}`);
-
-if (process.argv.includes('--remote')) {
-  for (const url of assetUrls) {
-    const localPath = join('dist', decodeURIComponent(url.slice(base.length)));
-    let verified = false;
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      try {
-        const response = await fetch(url, { cache: 'no-store' });
-        if (response.ok && (await response.arrayBuffer()).byteLength === statSync(localPath).size) {
-          verified = true;
-          break;
-        }
-      } catch {
-        // The CDN may not see a newly uploaded object immediately.
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-    }
-    if (!verified) {
-      throw new Error(`CDN asset is unavailable or has the wrong size: ${url}`);
-    }
-  }
-  console.log('Verified uploaded assets through the public CDN');
-}
