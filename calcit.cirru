@@ -3,11 +3,11 @@
   :about "|Machine-generated snapshot. Do not edit directly — changes will be overwritten. Use `calcit query` to inspect and `calcit edit`/`calcit tree` to modify. Run `calcit docs agents --contract` before mutations; use `--full` for first orientation or changed contract digest. Manual edits must follow format and schema conventions, then run `calcit edit format`."
   :package |app
   :entries $ {}
-    :default $ {} (:description |) (:init-fn 'app.client/main!) (:mode :native) (:reload-fn 'app.client/reload!)
+    :default $ {} (:description |) (:init-fn 'app.client/main!) (:mode :js) (:reload-fn 'app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |cumulo-reel.calcit/ |respo-feather.calcit/ |alerts.calcit/
       :type-slots $ {}
-    :server $ {} (:description |) (:init-fn 'app.server/main!) (:mode :native) (:reload-fn 'app.server/reload!)
+    :server $ {} (:description |) (:init-fn 'app.server/main!) (:mode :native) (:reload-fn 'app.server/reload!) (:target :native)
       :feature-policy $ {}
       :modules $ [] |recollect/ |memof/ |cumulo-util.calcit/ |cumulo-reel.calcit/ |calcit.std/ |calcit-wss/
       :type-slots $ {}
@@ -20,14 +20,12 @@
           :schema $ :: 'Ref 'Bool
         '*states $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *states
-            unsafe-coerce
-              {} $ :states $ {}
-                :cursor $ []
-              , 'app.client/ClientStatesPayload
+            {} $ :states $ {}
+              :cursor $ []
           :examples $ []
-          :schema $ :: 'Ref 'app.client/ClientStatesPayload
+          :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *store (%:: StorePayload :initial)
+          :code $ quote $ defatom *store (StorePayload :initial)
           :examples $ []
           :schema $ :: 'Ref 'app.client/StorePayload
         'BrowserDate $ %{} 'CodeEntry (:doc |)
@@ -40,11 +38,6 @@
             :names $ {} $ :get-hours |getHours
           :schema $ :: 'Trait
           :tags $ #{} :ffi :js-host
-        'ClientStatesPayload $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ deftrait ClientStatesPayload
-          :examples $ []
-          :schema $ :: 'Trait
-          :tags $ #{} :type-boundary
         'StorePayload $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum StorePayload (:initial) (:offline)
             :online $ :: 'Map 'Tag 'Dynamic
@@ -55,16 +48,15 @@
             let
                 host $ unsafe-coerce js/location.hostname 'String
                 port $ config/site :port
-              do
-                ws-connect!
-                  if config/dev? (str |ws:// host |: port) |wss://diary.chenyong.life/ws
-                  {}
-                    :on-open $ fn (event) (simulate-login!)
-                    :on-close $ fn (event)
-                      reset! *store $ %:: StorePayload :offline
-                      js/console.error "|Lost connection!"
-                    :on-data on-server-data
-                , &unit
+              ws-connect!
+                if config/dev? (str |ws:// host |: port) |wss://diary.chenyong.life/ws
+                {}
+                  :on-open $ fn (event) (simulate-login!)
+                  :on-close $ fn (event)
+                    reset! *store $ StorePayload :offline
+                    js/console.error "|Lost connection!"
+                  :on-data on-server-data
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -84,11 +76,9 @@
             when config/dev? $ println |Dispatch op
             match op
               (:states cursor s)
-                reset! *states $ unsafe-coerce
-                  update-states
-                    unsafe-coerce (deref *states) 'Dynamic
-                    , cursor s
-                  , 'app.client/ClientStatesPayload
+                reset! *states $ assert-type
+                  update-states (deref *states) cursor s
+                  :: 'Map 'Tag 'Dynamic
               (:effect/connect) (connect!)
               _ $ ws-send! $ to-server-op op
           :examples $ []
@@ -114,7 +104,7 @@
               fn ()
                 when
                   not $ enum? @*store
-                  ws-send! $ %:: schema/Op :effect/ping
+                  ws-send! $ schema/Op :effect/ping
                 , &unit
               , nil
             println "|App started!"
@@ -168,12 +158,12 @@
                   match (schema/try-decode-client-store next-store)
                     (:ok _)
                       do (reset! *resync-attempted? false)
-                        reset! *store $ %:: StorePayload :online next-store
+                        reset! *store $ StorePayload :online next-store
                     (:err reason)
                       do (js/console.warn |Incomplete-client-store-patch reason)
                         if (not @*resync-attempted?)
                           do (reset! *resync-attempted? true) (connect!)
-                          reset! *store $ %:: StorePayload :initial
+                          reset! *store $ StorePayload :initial
               (:effect/pong) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -196,8 +186,8 @@
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             let
-                raw-states $ unsafe-coerce (deref *states) (:: 'Map 'Tag 'Dynamic)
-                states $ unsafe-coerce (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
+                raw-states $ deref *states
+                states $ assert-type (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
                 store $ deref *store
               render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
@@ -226,25 +216,25 @@
           :code $ quote $ defn to-server-op (op)
             match op
               (:states _ _) (raise |local-state-op-cannot-be-sent)
-              (:session/connect) (%:: schema/Op :session/connect)
-              (:session/disconnect) (%:: schema/Op :session/disconnect)
-              (:session/remove-message message) (%:: schema/Op :session/remove-message message)
-              (:session/set-cursor cursor) (%:: schema/Op :session/set-cursor cursor)
-              (:session/merge-cursor patch) (%:: schema/Op :session/merge-cursor patch)
-              (:user/log-in credentials) (%:: schema/Op :user/log-in credentials)
-              (:user/sign-up credentials) (%:: schema/Op :user/sign-up credentials)
-              (:user/log-out) (%:: schema/Op :user/log-out)
-              (:router/change router) (%:: schema/Op :router/change router)
-              (:diary/add-one diary) (%:: schema/Op :diary/add-one diary)
-              (:diary/change change) (%:: schema/Op :diary/change change)
-              (:diary/copy-yesterday payload) (%:: schema/Op :diary/copy-yesterday payload)
-              (:today today) (%:: schema/Op :today today)
-              (:effect/persist) (%:: schema/Op :effect/persist)
-              (:effect/ping) (%:: schema/Op :effect/ping)
-              (:effect/pong) (%:: schema/Op :effect/pong)
-              (:effect/connect) (%:: schema/Op :effect/connect)
-              (:reel/reset) (%:: schema/Op :reel/reset)
-              (:reel/merge) (%:: schema/Op :reel/merge)
+              (:session/connect) (schema/Op :session/connect)
+              (:session/disconnect) (schema/Op :session/disconnect)
+              (:session/remove-message message) (schema/Op :session/remove-message message)
+              (:session/set-cursor cursor) (schema/Op :session/set-cursor cursor)
+              (:session/merge-cursor patch) (schema/Op :session/merge-cursor patch)
+              (:user/log-in credentials) (schema/Op :user/log-in credentials)
+              (:user/sign-up credentials) (schema/Op :user/sign-up credentials)
+              (:user/log-out) (schema/Op :user/log-out)
+              (:router/change router) (schema/Op :router/change router)
+              (:diary/add-one diary) (schema/Op :diary/add-one diary)
+              (:diary/change change) (schema/Op :diary/change change)
+              (:diary/copy-yesterday payload) (schema/Op :diary/copy-yesterday payload)
+              (:today today) (schema/Op :today today)
+              (:effect/persist) (schema/Op :effect/persist)
+              (:effect/ping) (schema/Op :effect/ping)
+              (:effect/pong) (schema/Op :effect/pong)
+              (:effect/connect) (schema/Op :effect/connect)
+              (:reel/reset) (schema/Op :reel/reset)
+              (:reel/merge) (schema/Op :reel/merge)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
             :args $ [] 'app.schema/ClientOp
@@ -289,12 +279,11 @@
                   let
                       store-typed $ schema/decode-client-store store-map
                       session $ :session store-typed
-                      router $ either (:router store-typed)
-                        %{} schema/ClientRouter (:name :home) (:data nil)
+                      router $ either (:router store-typed) (schema/ClientRouter :name :home :data nil)
                       router-data $ either (:data router) ({})
                       diary $ either (:diary store-typed) schema/diary
                       user $ either (:user store-typed)
-                        %{} schema/ClientUser (:name |) (:id |) (:nickname |) (:avatar nil)
+                        schema/ClientUser :name | :id | :nickname | :avatar nil
                     div
                       {} $ :class-name $ str-spaced css/preset css/global css/fullscreen css/row
                       comp-navigation (:logged-in? store-typed) (:count store-typed)
@@ -447,7 +436,7 @@
                 original-state $ &map:get states :data
                 cursor $ unsafe-coerce (&map:get states :cursor) 'Dynamic
                 state $ assert-type
-                  or original-state $ %{} DiaryEditorState $ :text (:text diary)
+                  or original-state $ DiaryEditorState :text $ :text diary
                   , 'app.comp.diary/DiaryEditorState
               div
                 {}
@@ -753,8 +742,7 @@
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] $ :: 'Map 'Tag 'Dynamic
         'initial-state $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def initial-state
-            %{} LoginState (:username |) (:password |)
+          :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
           :schema $ :: 'Map 'Tag 'String
         'on-submit $ %{} 'CodeEntry (:doc |)
@@ -1123,7 +1111,7 @@
           :code $ quote $ defn luxon-from-map (date-info)
             unsafe-coerce
               .!fromObject DateTime $ to-js-data date-info
-              , LuxonDateTime
+              , 'app.comp.month/LuxonDateTime
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
             :args $ [] 'app.util/DateInfo
@@ -1371,7 +1359,7 @@
           :schema $ :: 'Bool
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
-            %{} SiteConfig (:port 11008) (:title |Diary) (:icon |http://cdn.tiye.me/logo/topix.png) (:dev-ui |http://localhost:8100/main.css) (:release-ui |http://cdn.tiye.me/favored-fonts/main.css) (:cdn-url |http://cdn.tiye.me/diary/) (:cdn-folder |tiye.me:cdn/diary) (:theme |#eeeeff) (:storage-key |diary) (:storage-file |storage.cirru)
+            SiteConfig :port 11008 :title |Diary :icon |http://cdn.tiye.me/logo/topix.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/diary/ :cdn-folder |tiye.me:cdn/diary :theme |#eeeeff :storage-key |diary :storage-file |storage.cirru
           :examples $ []
           :schema $ :: 'app.config/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
@@ -1490,10 +1478,7 @@
           :schema $ :: 'StructDef
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
-            %{} Database
-              :sessions $ {}
-              :users $ {}
-              :today $ %{} app.util/DateInfo (:year 2018) (:month 6) (:day 18)
+            Database :sessions ({}) :users ({}) :today $ app.util/DateInfo :year 2018 :month 6 :day 18
           :examples $ []
           :schema $ :: 'app.schema/Database
         'decode-client-store $ %{} 'CodeEntry (:doc |)
@@ -1517,30 +1502,25 @@
                 assert= 9 $ :id $ :session decoded
         'diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def diary
-            %{} Diary (:date nil) (:food |) (:sleep |) (:mood |) (:place |) (:highlight |) (:met |) (:exercise |) (:pains |) (:text |) (:time nil)
+            Diary :date nil :food | :sleep | :mood | :place | :highlight | :met | :exercise | :pains | :text | :time nil
           :examples $ []
           :schema $ :: 'app.schema/Diary
         'notification $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def notification
-            %{} Notification (:id |) (:kind :info) (:text |)
+          :code $ quote $ def notification (Notification :id | :kind :info :text |)
           :examples $ []
           :schema $ :: 'app.schema/Notification
         'page $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def page
-            %{} Page (:id |) (:title |) (:time nil)
+          :code $ quote $ def page (Page :id | :title | :time nil)
           :examples $ []
           :schema $ :: 'app.schema/Page
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
-            %{} Router (:name :home)
-              :data $ {}
+            Router :name :home :data $ {}
           :examples $ []
           :schema $ :: 'app.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            %{} Session (:user-id nil) (:id 0) (:nickname |) (:router router)
-              :messages $ {}
-              :cursor $ get-native-today!
+            Session :user-id nil :id 0 :nickname | :router router :messages ({}) :cursor $ get-native-today!
           :examples $ []
           :schema $ :: 'app.schema/Session
         'try-decode-client-store $ %{} 'CodeEntry (:doc |)
@@ -1557,8 +1537,7 @@
                 assert |reports-missing-color-or-session $ string? reason
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
-            %{} User (:name |) (:id |) (:nickname |) (:avatar nil) (:password |)
-              :diaries $ {}
+            User :name | :id | :nickname | :avatar nil :password | :diaries $ {}
           :examples $ []
           :schema $ :: 'app.schema/User
       :ns $ %{} 'NsEntry (:doc |)
@@ -1566,10 +1545,6 @@
           :require $ [] app.util :refer $ [] get-native-today!
     'app.server $ %{} 'FileEntry
       :defs $ {}
-        'StoredDbFormat $ %{} 'CodeEntry (:doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path.")
-          :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
-          :examples $ []
-          :schema $ :: 'EnumDef
         '*client-caches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *client-caches ({})
           :examples $ []
@@ -1578,8 +1553,7 @@
           :code $ quote $ defatom *initial-db
             if
               path-exists? $ w-log storage-file
-              do (println "|Found local EDN data")
-                load-stored-db! storage-file
+              do (println "|Found local EDN data") (load-stored-db! storage-file)
               do (println "|Found no data") schema/database
           :examples $ []
           :schema $ :: 'Ref 'app.schema/Database
@@ -1592,18 +1566,22 @@
             struct-with reel-schema (:base @*initial-db) (:db @*initial-db)
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.core/ReelState
+        'StoredDbFormat $ %{} 'CodeEntry
+          :doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path."
+          :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
+          :examples $ []
+          :schema $ :: 'EnumDef
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
-            do
-              let
-                  today $ get-native-today!
-                  reel @*reel
-                  db $ assert-type (:db reel) 'app.schema/Database
-                when
-                  not= today $ :today db
-                  println "|A new day:" today
-                  dispatch! (:: :today today) -1
-              , &unit
+            let
+                today $ get-native-today!
+                reel @*reel
+                db $ assert-type (:db reel) 'app.schema/Database
+              when
+                not= today $ :today db
+                println "|A new day:" today
+                dispatch! (:: :today today) -1
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -1621,6 +1599,13 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'app.schema/Op 'Number
+        'format-stored-db $ %{} 'CodeEntry
+          :doc "|Serialize the typed database without transient sessions."
+          :code $ quote $ defn format-stored-db (db)
+            format-cirru-edn $ struct-with db $ :sessions ({})
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'app.schema/Database
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -1631,22 +1616,15 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
             :args $ []
-        'format-stored-db $ %{} 'CodeEntry (:doc "|Serialize the typed database without transient sessions.")
-          :code $ quote $ defn format-stored-db (db)
-            format-cirru-edn $ struct-with db $ :sessions $ {}
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/Database
-        'load-stored-db! $ %{} 'CodeEntry (:doc "|Load storage and rewrite legacy map data into the current typed schema before serving clients.")
+        'load-stored-db! $ %{} 'CodeEntry
+          :doc "|Load storage and rewrite legacy map data into the current typed schema before serving clients."
           :code $ quote $ defn load-stored-db! (path)
             let
                 text $ read-file path
               match (parse-stored-db-with-format text)
                 (:typed db) db
                 (:legacy db)
-                  do
-                    migrate-storage! path text db
-                    , db
+                  do (migrate-storage! path text db) db
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
@@ -1660,7 +1638,8 @@
                   (:none) (:port config/site)
               run-server! port
               println $ str "|Server started on port:" port
-            do (; "|init it before doing multi-threading") (identity @*reader-reel)
+            ; "|init it before doing multi-threading"
+            identity @*reader-reel
             set-interval 200 $ fn () $ render-loop!
             set-interval 600000 $ fn () $ persist-db!
             on-control-c on-exit!
@@ -1669,15 +1648,34 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
-        'normalize-stored-struct $ %{} 'CodeEntry (:doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots.")
-          :code $ quote $ defn normalize-stored-struct (raw)
-            assert-type
-              if (struct? raw) (&struct:to-map raw) raw
-              :: 'Map 'Tag 'Dynamic
+        'migrate-storage! $ %{} 'CodeEntry
+          :doc "|Back up legacy text, validate a typed temporary file, then atomically replace storage."
+          :code $ quote $ defn migrate-storage! (path legacy-text db)
+            let
+                backup-file $ str path |.legacy-backup.cirru
+                migration-file $ str path |.migrating
+                typed-content $ format-stored-db db
+              when
+                not $ path-exists? backup-file
+                check-write-file! backup-file legacy-text
+              check-write-file! migration-file typed-content
+              match
+                try-parse-cirru-edn-as (read-file migration-file) app.schema/Database
+                (:ok _)
+                  do (rename! migration-file path)
+                    println $ str "|Migrated storage to typed data; legacy backup: " backup-file
+                (:err reason)
+                  raise $ str "|Typed storage migration validation failed: " reason
           :examples $ []
-          :schema $ :: 'Fn $ {}
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String 'String 'app.schema/Database
+        'normalize-client-payload $ %{} 'CodeEntry
+          :doc "|Convert a nominal legacy operation payload to a map without unbounded recursion."
+          :code $ quote $ defn normalize-client-payload (value)
+            if (struct? value) (&struct:to-map value) value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
         'normalize-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-stored-db (raw)
             let
@@ -1730,73 +1728,21 @@
                 assert= 0 $ count $ :diaries
                   &map:get (:users db) |user-2
             :tags $ #{} :regression
+        'normalize-stored-struct $ %{} 'CodeEntry
+          :doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots."
+          :code $ quote $ defn normalize-stored-struct (raw)
+            assert-type
+              if (struct? raw) (&struct:to-map raw) raw
+              :: 'Map 'Tag 'Dynamic
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
-        'parse-stored-db $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn parse-stored-db (text)
-            match (parse-stored-db-with-format text)
-              (:typed db) db
-              (:legacy db) db
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'String
-        'parse-stored-db-with-format $ %{} 'CodeEntry (:doc "|Decode typed storage directly and mark data that required legacy normalization.")
-          :code $ quote $ defn parse-stored-db-with-format (text)
-            match (try-parse-cirru-edn-as text app.schema/Database)
-              (:ok data) (%:: StoredDbFormat :typed data)
-              (:err _)
-                %:: StoredDbFormat :legacy $ decode-map-as
-                  normalize-stored-db $ parse-cirru-edn text
-                  , app.schema/Database
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.server/StoredDbFormat)
-            :args $ [] 'String
-          :tests $ [] $ %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
-            :code $ quote $ let
-                legacy-text $ format-cirru-edn $ {} (:sessions $ {}) (:users $ {})
-                  :today $ {} (:year 2026) (:month 9) (:day 30)
-              match (parse-stored-db-with-format legacy-text)
-                (:legacy db)
-                  match
-                    parse-stored-db-with-format $ format-stored-db db
-                    (:typed typed-db)
-                      do
-                        assert= 2026 $ :year $ :today typed-db
-                        assert= 0 $ count $ :sessions typed-db
-                    _ $ raise |Expected-typed-storage
-                _ $ raise |Expected-legacy-storage
-            :tags $ #{} :regression
-        'migrate-storage! $ %{} 'CodeEntry (:doc "|Back up legacy text, validate a typed temporary file, then atomically replace storage.")
-          :code $ quote $ defn migrate-storage! (path legacy-text db)
-            let
-                backup-file $ str path |.legacy-backup.cirru
-                migration-file $ str path |.migrating
-                typed-content $ format-stored-db db
-              do
-                when
-                  not $ path-exists? backup-file
-                  check-write-file! backup-file legacy-text
-                check-write-file! migration-file typed-content
-                match
-                  try-parse-cirru-edn-as (read-file migration-file) app.schema/Database
-                  (:ok _)
-                    do
-                      rename! migration-file path
-                      println $ str "|Migrated storage to typed data; legacy backup: " backup-file
-                  (:err reason)
-                    raise $ str "|Typed storage migration validation failed: " reason
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String 'String 'app.schema/Database
-        'normalize-client-payload $ %{} 'CodeEntry (:doc "|Convert a nominal legacy operation payload to a map without unbounded recursion.")
-          :code $ quote $ defn normalize-client-payload (value)
-            if (struct? value) (&struct:to-map value) value
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] 'Dynamic
         'parse-client-op $ %{} 'CodeEntry
           :doc "|Accept nominal operations and legacy map payloads from JS clients."
           :code $ quote $ defn parse-client-op (text)
@@ -1805,46 +1751,46 @@
               (:err _)
                 match (parse-cirru-edn text)
                   (:session/set-cursor payload)
-                    %:: schema/Op :session/set-cursor $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
+                    schema/Op :session/set-cursor $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
                   (:session/merge-cursor payload)
-                    %:: schema/Op :session/merge-cursor $ decode-map-as
+                    schema/Op :session/merge-cursor $ decode-map-as
                       &merge
                         {} (:year nil) (:month nil) (:day nil)
                         assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
                       , app.schema/CursorPatch
                   (:session/remove-message payload)
-                    %:: schema/Op :session/remove-message $ decode-map-as (normalize-client-payload payload) app.schema/Message
-                  (:session/connect) (%:: schema/Op :session/connect)
-                  (:session/disconnect) (%:: schema/Op :session/disconnect)
-                  (:user/log-in credentials) (%:: schema/Op :user/log-in credentials)
+                    schema/Op :session/remove-message $ decode-map-as (normalize-client-payload payload) app.schema/Message
+                  (:session/connect) (schema/Op :session/connect)
+                  (:session/disconnect) (schema/Op :session/disconnect)
+                  (:user/log-in credentials) (schema/Op :user/log-in credentials)
                   (:user/log-in username password)
-                    %:: schema/Op :user/log-in $ [] username password
-                  (:user/sign-up credentials) (%:: schema/Op :user/sign-up credentials)
+                    schema/Op :user/log-in $ [] username password
+                  (:user/sign-up credentials) (schema/Op :user/sign-up credentials)
                   (:user/sign-up username password)
-                    %:: schema/Op :user/sign-up $ [] username password
-                  (:user/log-out) (%:: schema/Op :user/log-out)
+                    schema/Op :user/sign-up $ [] username password
+                  (:user/log-out) (schema/Op :user/log-out)
                   (:router/change payload)
-                    %:: schema/Op :router/change $ decode-map-as
+                    schema/Op :router/change $ decode-map-as
                       &merge (&struct:to-map schema/router)
                         assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
                       , app.schema/Router
                   (:diary/add-one payload)
-                    %:: schema/Op :diary/add-one $ decode-map-as (normalize-client-payload payload) app.schema/Diary
+                    schema/Op :diary/add-one $ decode-map-as (normalize-client-payload payload) app.schema/Diary
                   (:diary/change payload)
-                    %:: schema/Op :diary/change $ decode-map-as (normalize-client-payload payload) app.schema/DiaryChange
+                    schema/Op :diary/change $ decode-map-as (normalize-client-payload payload) app.schema/DiaryChange
                   (:diary/copy-yesterday payload)
                     let
                         payload-map $ assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
                         normalized $ &map:assoc payload-map :date-info $ normalize-client-payload (&map:get payload-map :date-info)
-                      %:: schema/Op :diary/copy-yesterday $ decode-map-as normalized app.schema/CopyYesterday
+                      schema/Op :diary/copy-yesterday $ decode-map-as normalized app.schema/CopyYesterday
                   (:today payload)
-                    %:: schema/Op :today $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
-                  (:effect/persist) (%:: schema/Op :effect/persist)
-                  (:effect/ping) (%:: schema/Op :effect/ping)
-                  (:effect/pong) (%:: schema/Op :effect/pong)
-                  (:effect/connect) (%:: schema/Op :effect/connect)
-                  (:reel/reset) (%:: schema/Op :reel/reset)
-                  (:reel/merge) (%:: schema/Op :reel/merge)
+                    schema/Op :today $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
+                  (:effect/persist) (schema/Op :effect/persist)
+                  (:effect/ping) (schema/Op :effect/ping)
+                  (:effect/pong) (schema/Op :effect/pong)
+                  (:effect/connect) (schema/Op :effect/connect)
+                  (:reel/reset) (schema/Op :reel/reset)
+                  (:reel/merge) (schema/Op :reel/merge)
                   _ $ raise |Unsupported-client-operation
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
@@ -2001,6 +1947,35 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+        'parse-stored-db-with-format $ %{} 'CodeEntry
+          :doc "|Decode typed storage directly and mark data that required legacy normalization."
+          :code $ quote $ defn parse-stored-db-with-format (text)
+            match (try-parse-cirru-edn-as text app.schema/Database)
+              (:ok data) (StoredDbFormat :typed data)
+              (:err _)
+                StoredDbFormat :legacy $ decode-map-as
+                  normalize-stored-db $ parse-cirru-edn text
+                  , app.schema/Database
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.server/StoredDbFormat)
+            :args $ [] 'String
+          :tests $ [] $ %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
+            :code $ quote $ let
+                legacy-text $ format-cirru-edn $ {}
+                  :sessions $ {}
+                  :users $ {}
+                  :today $ {} (:year 2026) (:month 9) (:day 30)
+              match (parse-stored-db-with-format legacy-text)
+                (:legacy db)
+                  match
+                    parse-stored-db-with-format $ format-stored-db db
+                    (:typed typed-db)
+                      do
+                        assert= 2026 $ :year $ :today typed-db
+                        assert= 0 $ count $ :sessions typed-db
+                    _ $ raise |Expected-typed-storage
+                _ $ raise |Expected-legacy-storage
+            :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -2024,34 +1999,32 @@
             :args $ []
         'render-loop! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-loop! ()
-            do
-              when
-                not $ identical? @*reader-reel @*reel
-                reset! *reader-reel @*reel
-                sync-clients! @*reader-reel
-              , &unit
+            when
+              not $ identical? @*reader-reel @*reel
+              reset! *reader-reel @*reel
+              sync-clients! @*reader-reel
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
         'run-server! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn run-server! (port)
-            do
-              wss-serve! (&{} :port port)
-                fn (data)
-                  match data
-                    (:connect sid)
-                      do (swap! *client-caches &map:dissoc sid)
-                        dispatch! (:: :session/connect) sid
-                        println "|New client."
-                    (:message sid msg)
-                      let
-                          action $ parse-client-op msg
-                        dispatch! action sid
-                    (:disconnect sid)
-                      do (println "|Client closed!") (swap! *client-caches &map:dissoc sid)
-                        dispatch! (:: :session/disconnect) sid
-                    _ $ eprintln "|unknown data:" data
-              , &unit
+            wss-serve! (&{} :port port)
+              fn (data)
+                match data
+                  (:connect sid)
+                    do (swap! *client-caches &map:dissoc sid)
+                      dispatch! (:: :session/connect) sid
+                      println "|New client."
+                  (:message sid msg)
+                    let
+                        action $ parse-client-op msg
+                      dispatch! action sid
+                  (:disconnect sid)
+                    do (println "|Client closed!") (swap! *client-caches &map:dissoc sid)
+                      dispatch! (:: :session/disconnect) sid
+                  _ $ eprintln "|unknown data:" data
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'Number
@@ -2128,15 +2101,9 @@
                 reel-length $ count records
                 session-count $ count $ :sessions db
                 color $ rand-hex-color!
-                logged-out $ %{} schema/ClientStore (:logged-in? false) (:session session) (:reel-length reel-length)
-                  :router $ %{} schema/ClientRouter
-                    :name $ :name router
-                    :data nil
-                  :today $ :today db
-                  :count session-count
-                  :color color
-                  :user nil
-                  :diary nil
+                logged-out $ schema/ClientStore :logged-in? false :session session :reel-length reel-length :router
+                  schema/ClientRouter :name (:name router) :data nil
+                  , :today (:today db) :count session-count :color color :user nil :diary nil
               match
                 optionally $ :user-id session
                 (:some user-id-value)
@@ -2151,20 +2118,13 @@
                               :diary nil
                               :profile $ twig-members (:sessions db) (:users db)
                               :data $ twig-personal-data $ :diaries user
-                            client-router $ %{} schema/ClientRouter
-                              :name $ :name router
-                              :data route-data
+                            client-router $ schema/ClientRouter :name (:name router) :data route-data
                             current-diary $ match
                               get (:diaries user)
                                 format-to-date $ :cursor session
                               (:some diary) diary
                               (:none) nil
-                          %{} schema/ClientStore (:logged-in? true) (:session session) (:reel-length reel-length) (:router client-router)
-                            :today $ :today db
-                            :count session-count
-                            :color color
-                            :user $ twig-user user
-                            :diary current-diary
+                          schema/ClientStore :logged-in? true :session session :reel-length reel-length :router client-router :today (:today db) :count session-count :color color :user (twig-user user) :diary current-diary
                       (:none) logged-out
                 (:none) logged-out
           :examples $ []
@@ -2259,11 +2219,7 @@
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-user (user)
-            %{} schema/ClientUser
-              :name $ :name user
-              :id $ :id user
-              :nickname $ :nickname user
-              :avatar $ :avatar user
+            schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/ClientUser)
             :args $ [] 'app.schema/User
@@ -2413,10 +2369,7 @@
                           prev-month $ dec month
                           days $ app.util/get-days-by year prev-month
                         struct-with date-info (:month prev-month) (:day days)
-                      %{} app.util/DateInfo
-                        :year $ dec year
-                        :month 12
-                        :day 31
+                      app.util/DateInfo :year (dec year) :month 12 :day 31
                 yesterday $ format-to-date yesterday-info
               match session
                 (:some session-data)
@@ -2604,12 +2557,10 @@
                       = (md5 password) (:password user)
                       struct-with session $ :user-id $ :id user
                       struct-with session $ :messages $ assoc (:messages session) op-id
-                        %{} schema/Message (:id op-id)
-                          :text $ str "|Wrong password for " username
+                        schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
                     struct-with session $ :messages $ assoc (:messages session) op-id
-                      %{} schema/Message (:id op-id)
-                        :text $ str "|No user named: " username
+                      schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
@@ -2641,8 +2592,7 @@
               if (option:some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
-                      assoc (:messages session) op-id $ %{} schema/Message (:id op-id)
-                        :text $ str "|Name is taken: " username
+                      assoc (:messages session) op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ assoc (:sessions db) sid next-session
                 let
                     next-session $ struct-with session $ :user-id op-id
@@ -2713,7 +2663,7 @@
           :code $ quote $ defn get-native-today! ()
             let
                 now $ extract-time $ get-time!
-              %{} DateInfo (:year now.:year) (:month now.:month) (:day now.:day)
+              DateInfo :year now.:year :month now.:month :day now.:day
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
@@ -2721,10 +2671,9 @@
           :code $ quote $ defn get-today! ()
             let
                 now $ unsafe-coerce (new js/Date) 'app.util/BrowserDate
-              %{} DateInfo
-                :year $ now .get-full-year
-                :month $ inc $ now .get-month
-                :day $ now .get-date
+              DateInfo :year (now .get-full-year) :month
+                inc $ now .get-month
+                , :day $ now .get-date
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
@@ -2738,17 +2687,12 @@
                 month $ :month today
                 day $ :day today
               if (> day 1)
-                %{} DateInfo (:year year) (:month month)
-                  :day $ dec day
+                DateInfo :year year :month month :day $ dec day
                 if (> month 1)
                   let
                       previous-month $ dec month
-                    %{} DateInfo (:year year) (:month previous-month)
-                      :day $ get-days-by year previous-month
-                  %{} DateInfo
-                    :year $ dec year
-                    :month 12
-                    :day 31
+                    DateInfo :year year :month previous-month :day $ get-days-by year previous-month
+                  DateInfo :year (dec year) :month 12 :day 31
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
             :args $ []
