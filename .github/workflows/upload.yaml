@@ -10,20 +10,21 @@ permissions:
   contents: read
 
 concurrency:
-  group: diary-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: diary-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || 'production' }}
+  cancel-in-progress: false
+  queue: max
 
 jobs:
   check:
     runs-on: ubuntu-24.04
     steps:
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        uses: actions/setup-node@v6.5.0
         with:
           node-version: 24
           package-manager-cache: false
@@ -35,8 +36,9 @@ jobs:
           yarn --version
 
       - name: Set up Calcit and Caps
-        uses: calcit-lang/setup-calcit@ca701be5a471759e442aa053cd100720bbe1f09f # v1.5.0
+        uses: calcit-lang/setup-calcit@v1.5.0
         with:
+          version: "0.27.0"
           tools: calcit,caps
           caps-version: "0.1.1"
 
@@ -48,22 +50,24 @@ jobs:
 
       - name: Check Calcit entries
         run: |
-          set -o pipefail
+          set -euo pipefail
+          calcit fix --workflow strict --verify --format edn
+          calcit edit format
+          git diff --exit-code -- calcit.cirru
           calcit calcit.cirru --check-only
           calcit calcit.cirru --entry server --check-only
-          calcit calcit.cirru analyze dynamic-methods --summary-only --format json | tail -n 1 | jq -e '.data.summary.findings == 0'
-          calcit calcit.cirru --entry server analyze dynamic-methods --summary-only --format json | tail -n 1 | jq -e '.data.summary.findings == 0'
-          calcit calcit.cirru analyze deprecated --summary-only --format json
-          calcit calcit.cirru --entry server analyze deprecated --summary-only --format json
+          calcit analyze check-public --ns app.client --ns app.comp.container --ns app.comp.data-gather --ns app.comp.diary --ns app.comp.empty --ns app.comp.login --ns app.comp.month --ns app.comp.navigation --ns app.comp.profile --ns app.config --ns app.style
+          calcit --entry server analyze check-public --ns 'app.$meta' --ns app.config --ns app.schema --ns app.server --ns app.twig.container --ns app.twig.user --ns app.updater --ns app.updater.diary --ns app.updater.router --ns app.updater.session --ns app.updater.user
           calcit test --summary-only
 
       - name: Build client
         id: asset-path
         env:
           CDN_ORIGIN: https://cos-sh.tiye.me
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
-            asset_prefix="${GITHUB_REPOSITORY}/pr/"
+            asset_prefix="${GITHUB_REPOSITORY}/pr/${PR_NUMBER}/${GITHUB_RUN_ID}/${GITHUB_RUN_ATTEMPT}/"
           else
             asset_prefix="${GITHUB_REPOSITORY}/"
           fi
@@ -75,13 +79,24 @@ jobs:
           yarn compile-page
           yarn release-page
 
-      - name: Verify CDN asset references
+      - name: Check current production revision
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: production
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          node scripts/verify-cdn-build.mjs
+          current_sha="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq '.sha')"
+          if [[ "$GITHUB_SHA" == "$current_sha" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "current=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skip stale production revision ${GITHUB_SHA}; current main is ${current_sha}."
+          fi
 
       - name: Upload and verify static assets on COS
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: worktools/cos-upload-action@17e6d213fe9f6772a6090a13c8ba044cd6cbcb09 # v1.1.1
+        if: steps.production.outputs.current == 'true' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        timeout-minutes: 10
+        uses: worktools/cos-upload-action@v1.2.0
         with:
           source-dir: dist
           bucket: ${{ secrets.COS_BUCKET }}
@@ -92,13 +107,13 @@ jobs:
           secret-key: ${{ secrets.COS_SECRET_KEY }}
 
       - name: Prepare server sources
-        if: github.event_name == 'push'
+        if: steps.production.outputs.current == 'true'
         run: |
           mkdir -p dist-server
           cp deps.cirru calcit.cirru package.json yarn.lock dist-server/
 
       - name: Configure deploy key
-        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        if: steps.production.outputs.current == 'true' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
         env:
           DEPLOY_KEY: ${{ secrets.rsync_private_key_tc }}
         run: |
@@ -115,7 +130,7 @@ jobs:
           rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}/pr/
 
       - name: Upload production web assets
-        if: github.event_name == 'push'
+        if: steps.production.outputs.current == 'true'
         run: >-
           rsync -avzr --progress
           -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"
@@ -123,7 +138,7 @@ jobs:
           rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}/
 
       - name: Upload server sources
-        if: github.event_name == 'push'
+        if: steps.production.outputs.current == 'true'
         run: >-
           rsync -avzr --progress
           -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"

@@ -6,6 +6,10 @@
 js-out/
 node_modules/
 dist/
+dist-server/
+server-out/
+compact.cirru
+package.cirru
 
 yarn-error.log
 
