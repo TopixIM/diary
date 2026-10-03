@@ -2147,15 +2147,42 @@
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
             filter-map-kv sessions $ fn (sid session)
-              hint-fn
-                {}
-                  :args $ [] 'Number 'app.schema/Session
-                  :return $ :: 'MapEntryDecision 'Number 'String
-                twig-member-entry users sid session
+              hint-fn $ {}
+                :args $ [] 'Number 'app.schema/Session
+                :return $ :: 'MapEntryDecision 'Number 'String
+              twig-member-entry users sid session
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'Map 'Number 'app.schema/Session) (:: 'Map 'String 'app.schema/User)
             :return $ :: 'Map 'Number 'String
+          :tests $ [] $ %{} 'TestEntry (:name |keeps-number-keys-and-drops-unresolved-users)
+            :code $ quote $ let
+                make-session $ fn (id user-id)
+                  hint-fn $ {}
+                    :args $ [] 'Number $ :: 'Optional 'String
+                    :return 'app.schema/Session
+                  schema/Session :id id :user-id user-id :nickname | :messages ({}) :router
+                    schema/Router :name :home :data $ {}
+                    , :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
+                users $ assert-type
+                  {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar nil :diaries ({})
+                  :: 'Map 'String 'app.schema/User
+                sessions $ assert-type
+                  {}
+                    7 $ make-session 7 |u
+                    8 $ make-session 8 nil
+                    9 $ make-session 9 |missing
+                  :: 'Map 'Number 'app.schema/Session
+              assert=
+                {} $ 7 |Ada
+                twig-members sessions users
+              assert= ({})
+                twig-members
+                  assert-type ({}) (:: 'Map 'Number 'app.schema/Session)
+                  , users
+              assert= ({})
+                twig-members sessions $ assert-type ({}) (:: 'Map 'String 'app.schema/User)
+            :tags $ #{} :regression
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
             let
