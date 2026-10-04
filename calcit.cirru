@@ -744,7 +744,13 @@
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ :: 'app.comp.login/LoginState
+          :tests $ [] $ %{} 'TestEntry (:name |keeps-nominal-empty-credentials)
+            :code $ quote $ do (assert-type initial-state 'app.comp.login/LoginState)
+              assert= | $ :username initial-state
+              assert= | $ :password initial-state
+              assert= initial-state $ LoginState :username | :password |
+            :tags $ #{} :component-state :unit
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
