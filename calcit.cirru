@@ -1621,11 +1621,6 @@
             struct-with reel-schema (:base @*initial-db) (:db @*initial-db)
           :examples $ []
           :schema $ :: 'Ref 'cumulo-reel.core/ReelState
-        'StoredDbFormat $ %{} 'CodeEntry
-          :doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path."
-          :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
-          :examples $ []
-          :schema $ :: 'EnumDef
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
             let
@@ -1663,13 +1658,6 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'app.schema/Op 'Number
-        'format-stored-db $ %{} 'CodeEntry
-          :doc "|Serialize the typed database without transient sessions."
-          :code $ quote $ defn format-stored-db (db)
-            format-cirru-edn $ struct-with db $ :sessions ({})
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/Database
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -1685,13 +1673,71 @@
           :code $ quote $ defn load-stored-db! (path)
             let
                 text $ read-file path
-              match (parse-stored-db-with-format text)
-                (:typed db) db
-                (:legacy db)
-                  do (migrate-storage! path text db) db
+              match (try-parse-stored-db-with-format text)
+                (:ok format)
+                  match format
+                    (:typed db) db
+                    (:legacy db)
+                      do (migrate-storage! path text db) db
+                (:err reason)
+                  raise $ str |Invalid-stored-database:- reason
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
             :args $ [] 'String
+          :tests $ []
+            %{} 'TestEntry
+              :name |invalid-input-preserves-storage-and-existing-backup
+              :code $ quote $ let
+                  root $ match (get-env |DIARY_STORAGE_TEST_DIR)
+                    (:some value) value
+                    (:none)
+                      raise |Run-yarn-test-boundaries-for-filesystem-fixtures
+                  path $ str root |/invalid-storage.cirru
+                  backup $ str path |.legacy-backup.cirru
+                  backup-text |existing-backup-fixture
+                  invalid $ format-cirru-edn $ {} (:sessions |invalid)
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                each ([] |{ invalid)
+                  fn (text) (write-file path text) (write-file backup backup-text)
+                    assert= true $ try
+                      do (load-stored-db! path) false
+                      fn (message)
+                        hint-fn $ {}
+                          :args $ [] 'String
+                          :return 'Bool
+                        , true
+                    assert= text $ read-file path
+                    assert= backup-text $ read-file backup
+                    assert= false $ path-exists? $ str path |.migrating
+              :tags $ #{} :filesystem :regression
+            %{} 'TestEntry
+              :name |valid-legacy-migration-preserves-existing-backup
+              :code $ quote $ let
+                  root $ match (get-env |DIARY_STORAGE_TEST_DIR)
+                    (:some value) value
+                    (:none)
+                      raise |Run-yarn-test-boundaries-for-filesystem-fixtures
+                  path $ str root |/valid-storage.cirru
+                  backup $ str path |.legacy-backup.cirru
+                  backup-text |existing-backup-fixture
+                  legacy-text $ format-cirru-edn $ {}
+                    :sessions $ {}
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                write-file path legacy-text
+                write-file backup backup-text
+                assert= 2026 $ :year $ :today (load-stored-db! path)
+                assert= backup-text $ read-file backup
+                assert= false $ path-exists? $ str path |.migrating
+                match
+                  try-parse-stored-db-with-format $ read-file path
+                  (:ok format)
+                    match format
+                      (:typed _) &unit
+                      _ $ raise |Migrated-file-is-not-typed
+                  (:err _) (raise |Migrated-file-is-invalid)
+              :tags $ #{} :filesystem :regression
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -1723,13 +1769,9 @@
                 not $ path-exists? backup-file
                 check-write-file! backup-file legacy-text
               check-write-file! migration-file typed-content
-              match
-                try-parse-cirru-edn-as (read-file migration-file) app.schema/Database
-                (:ok _)
-                  do (rename! migration-file path)
-                    println $ str "|Migrated storage to typed data; legacy backup: " backup-file
-                (:err reason)
-                  raise $ str "|Typed storage migration validation failed: " reason
+              validate-storage-migration migration-file
+              rename! migration-file path
+              println $ str "|Migrated storage to typed data; legacy backup: " backup-file
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'String 'String 'app.schema/Database
@@ -1740,68 +1782,6 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Dynamic)
             :args $ [] 'Dynamic
-        'normalize-stored-db $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn normalize-stored-db (raw)
-            let
-                db $ normalize-stored-struct raw
-                today $ normalize-stored-struct $ &map:get db :today
-                users $ assert-type (&map:get db :users) (:: 'Map 'String 'Dynamic)
-                normalized-users $ filter-map-kv users $ fn (id raw-user)
-                  if (= nil raw-user) (%:: MapEntryDecision :drop)
-                    let
-                        user $ normalize-stored-struct raw-user
-                        raw-diaries $ &map:get user :diaries
-                        diaries $ assert-type
-                          if (= nil raw-diaries) ({}) raw-diaries
-                          :: 'Map 'String 'Dynamic
-                        normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
-                          if (= nil raw-diary) (%:: MapEntryDecision :drop)
-                            let
-                                diary $ normalize-stored-struct raw-diary
-                              %:: MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
-                      %:: MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
-              &map:assoc
-                &map:assoc
-                  &map:assoc db :sessions $ {}
-                  , :today today
-                , :users normalized-users
-          :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
-          :tests $ [] $ %{} 'TestEntry (:name |normalizes-empty-legacy-records)
-            :code $ quote $ let
-                raw $ {}
-                  :sessions $ {}
-                  :today $ {} (:year 2026) (:month 9) (:day 29)
-                  :users $ {} (|empty-user nil)
-                    |user-1 $ {} (:name |user-1) (:id |user-1) (:nickname |User) (:password |secret) (:avatar nil)
-                      :diaries $ {} (|2026-09-28 nil)
-                        |2026-09-29 $ {} $ :text |legacy-entry
-                    |user-2 $ {} (:name |user-2) (:id |user-2) (:nickname |User) (:password |secret) (:avatar nil) (:diaries nil)
-                db $ parse-stored-db $ format-cirru-edn raw
-                user $ &map:get (:users db) |user-1
-                diaries $ :diaries user
-                diary $ &map:get diaries |2026-09-29
-              do
-                assert= 2 $ count $ :users db
-                assert= 1 $ count diaries
-                assert= false $ contains? diaries |2026-09-28
-                assert= |legacy-entry $ :text diary
-                assert= | $ :sleep diary
-                assert= 0 $ count $ :diaries
-                  &map:get (:users db) |user-2
-            :tags $ #{} :regression
-        'normalize-stored-struct $ %{} 'CodeEntry
-          :doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots."
-          :code $ quote $ defn normalize-stored-struct (raw)
-            assert-type
-              if (struct? raw) (&struct:to-map raw) raw
-              :: 'Map 'Tag 'Dynamic
-          :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
@@ -2045,46 +2025,6 @@
                         :return 'Bool
                       , true
               :tags $ #{} :regression
-        'parse-stored-db $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn parse-stored-db (text)
-            match (try-parse-cirru-edn-as text app.schema/Database)
-              (:ok data) data
-              (:err _)
-                decode-map-as
-                  normalize-stored-db $ parse-cirru-edn text
-                  , app.schema/Database
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'String
-        'parse-stored-db-with-format $ %{} 'CodeEntry
-          :doc "|Decode typed storage directly and mark data that required legacy normalization."
-          :code $ quote $ defn parse-stored-db-with-format (text)
-            match (try-parse-cirru-edn-as text app.schema/Database)
-              (:ok data) (StoredDbFormat :typed data)
-              (:err _)
-                StoredDbFormat :legacy $ decode-map-as
-                  normalize-stored-db $ parse-cirru-edn text
-                  , app.schema/Database
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.server/StoredDbFormat)
-            :args $ [] 'String
-          :tests $ [] $ %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
-            :code $ quote $ let
-                legacy-text $ format-cirru-edn $ {}
-                  :sessions $ {}
-                  :users $ {}
-                  :today $ {} (:year 2026) (:month 9) (:day 30)
-              match (parse-stored-db-with-format legacy-text)
-                (:legacy db)
-                  match
-                    parse-stored-db-with-format $ format-stored-db db
-                    (:typed typed-db)
-                      do
-                        assert= 2026 $ :year $ :today typed-db
-                        assert= 0 $ count $ :sessions typed-db
-                    _ $ raise |Expected-typed-storage
-                _ $ raise |Expected-legacy-storage
-            :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
@@ -2169,6 +2109,44 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'cumulo-reel.core/ReelState
+        'validate-storage-migration $ %{} 'CodeEntry
+          :doc "|Check the typed temporary file without changing storage, backups or the candidate."
+          :code $ quote $ defn validate-storage-migration (path)
+            match
+              try-parse-cirru-edn-as (read-file path) app.schema/Database
+              (:ok _) &unit
+              (:err reason)
+                raise $ str "|Typed storage migration validation failed: " reason
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'String
+          :tests $ [] $ %{} 'TestEntry
+            :name |invalid-candidate-is-retained-with-original-and-backup
+            :code $ quote $ let
+                root $ match (get-env |DIARY_STORAGE_TEST_DIR)
+                  (:some value) value
+                  (:none)
+                    raise |Run-yarn-test-boundaries-for-filesystem-fixtures
+                path $ str root |/candidate-storage.cirru
+                backup $ str path |.legacy-backup.cirru
+                candidate $ str path |.migrating
+                original |original-storage-fixture
+                saved-backup |existing-backup-fixture
+                invalid |invalid-candidate-fixture
+              write-file path original
+              write-file backup saved-backup
+              write-file candidate invalid
+              assert= true $ try
+                do (validate-storage-migration candidate) false
+                fn (message)
+                  hint-fn $ {}
+                    :args $ [] 'String
+                    :return 'Bool
+                  , true
+              assert= original $ read-file path
+              assert= saved-backup $ read-file backup
+              assert= invalid $ read-file candidate
+            :tags $ #{} :filesystem :regression
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.server
           :require (app.schema :as schema)
@@ -2187,6 +2165,254 @@
             calcit.std.time :refer $ set-interval
             calcit.std.date :refer $ [] get-time! extract-time get-timestamp
             calcit.std.path :refer $ join-path
+            app.storage :refer $ [] format-stored-db parse-stored-db-with-format try-parse-stored-db-with-format
+    'app.storage $ %{} 'FileEntry
+      :defs $ {}
+        'StoredDbFormat $ %{} 'CodeEntry
+          :doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path."
+          :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
+          :examples $ []
+          :schema $ :: 'EnumDef
+        'decode-stored-string-map $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-stored-string-map (raw path)
+            match
+              try-decode-map-as raw $ :: 'Map 'String 'Dynamic
+              (:ok data) data
+              (:err reason)
+                raise $ str path "|: " reason
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic 'String
+            :return $ :: 'Map 'String 'Dynamic
+        'format-stored-db $ %{} 'CodeEntry
+          :doc "|Serialize the typed database without transient sessions."
+          :code $ quote $ defn format-stored-db (db)
+            format-cirru-edn $ struct-with db $ :sessions ({})
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'app.schema/Database
+        'normalize-stored-db $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-stored-db (raw)
+            let
+                db $ normalize-stored-struct raw |$
+                today $ normalize-stored-struct (&map:get db :today) |$.today
+                users $ decode-stored-string-map (&map:get db :users) |$.users
+                normalized-users $ filter-map-kv users $ fn (id raw-user)
+                  if (= nil raw-user) (MapEntryDecision :drop)
+                    let
+                        user $ normalize-stored-struct raw-user |$.users.*
+                        raw-diaries $ &map:get user :diaries
+                        diaries $ decode-stored-string-map
+                          if (= nil raw-diaries) ({}) raw-diaries
+                          , |$.users.*.diaries
+                        normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
+                          if (= nil raw-diary) (MapEntryDecision :drop)
+                            let
+                                diary $ normalize-stored-struct raw-diary |$.users.*.diaries.*
+                              MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
+                      MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
+              match
+                try-decode-map-as (&map:get db :sessions) (:: 'Map 'Number 'Dynamic)
+                (:ok _) &unit
+                (:err reason)
+                  raise $ str "|$.sessions: " reason
+              &map:assoc
+                &map:assoc
+                  &map:assoc db :sessions $ {}
+                  , :today today
+                , :users normalized-users
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |normalizes-empty-legacy-records)
+            :code $ quote $ let
+                raw $ {}
+                  :sessions $ {}
+                  :today $ {} (:year 2026) (:month 9) (:day 29)
+                  :users $ {} (|empty-user nil)
+                    |user-1 $ {} (:name |user-1) (:id |user-1) (:nickname |User) (:password |secret) (:avatar nil)
+                      :diaries $ {} (|2026-09-28 nil)
+                        |2026-09-29 $ {} $ :text |legacy-entry
+                    |user-2 $ {} (:name |user-2) (:id |user-2) (:nickname |User) (:password |secret) (:avatar nil) (:diaries nil)
+                db $ parse-stored-db $ format-cirru-edn raw
+                user $ &map:get (:users db) |user-1
+                diaries $ :diaries user
+                diary $ &map:get diaries |2026-09-29
+              do
+                assert= 2 $ count $ :users db
+                assert= 1 $ count diaries
+                assert= false $ contains? diaries |2026-09-28
+                assert= |legacy-entry $ :text diary
+                assert= | $ :sleep diary
+                assert= 0 $ count $ :diaries
+                  &map:get (:users db) |user-2
+            :tags $ #{} :regression
+        'normalize-stored-struct $ %{} 'CodeEntry
+          :doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots."
+          :code $ quote $ defn normalize-stored-struct (raw path)
+            match
+              try-decode-map-as
+                if (struct? raw) (&struct:to-map raw) raw
+                :: 'Map 'Tag 'Dynamic
+              (:ok data) data
+              (:err reason)
+                raise $ str path "|: " reason
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic 'String
+            :return $ :: 'Map 'Tag 'Dynamic
+        'parse-stored-db $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn parse-stored-db (text)
+            match (parse-stored-db-with-format text)
+              (:typed db) db
+              (:legacy db) db
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
+            :args $ [] 'String
+        'parse-stored-db-with-format $ %{} 'CodeEntry
+          :doc "|Decode typed storage directly and mark data that required legacy normalization."
+          :code $ quote $ defn parse-stored-db-with-format (text)
+            match (try-parse-cirru-edn-as text app.schema/Database)
+              (:ok data) (StoredDbFormat :typed data)
+              (:err _)
+                StoredDbFormat :legacy $ decode-map-as
+                  normalize-stored-db $ parse-cirru-edn text
+                  , app.schema/Database
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.storage/StoredDbFormat)
+            :args $ [] 'String
+          :tests $ []
+            %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
+              :code $ quote $ let
+                  legacy-text $ format-cirru-edn $ {}
+                    :sessions $ {}
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                match (parse-stored-db-with-format legacy-text)
+                  (:legacy db)
+                    match
+                      parse-stored-db-with-format $ format-stored-db db
+                      (:typed typed-db)
+                        do
+                          assert= 2026 $ :year $ :today typed-db
+                          assert= 0 $ count $ :sessions typed-db
+                      _ $ raise |Expected-typed-storage
+                  _ $ raise |Expected-legacy-storage
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |rejects-invalid-legacy-session-container)
+              :code $ quote $ let
+                  text $ format-cirru-edn $ {} (:sessions |invalid-sessions)
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                assert= true $ try
+                  do (parse-stored-db-with-format text) false
+                  fn (message)
+                    hint-fn $ {}
+                      :args $ [] 'String
+                      :return 'Bool
+                    , true
+              :tags $ #{} :regression
+        'try-parse-stored-db-with-format $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-parse-stored-db-with-format (text)
+            try
+              Result :ok $ parse-stored-db-with-format text
+              fn (message)
+                hint-fn $ {}
+                  :args $ [] 'String
+                  :return $ :: 'Result 'app.storage/StoredDbFormat 'String
+                Result :err message
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'Result 'app.storage/StoredDbFormat 'String
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-typed-and-legacy-result-variants)
+              :code $ quote $ let
+                  legacy-text $ format-cirru-edn $ {}
+                    :sessions $ {}
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                match (try-parse-stored-db-with-format legacy-text)
+                  (:ok format)
+                    match format
+                      (:legacy db)
+                        match
+                          try-parse-stored-db-with-format $ format-stored-db db
+                          (:ok typed-format)
+                            match typed-format
+                              (:typed typed-db)
+                                assert= 2026 $ :year $ :today typed-db
+                              _ $ raise |Expected-typed-storage-result
+                          (:err _) (raise |Valid-typed-storage-rejected)
+                      _ $ raise |Expected-legacy-storage-result
+                  (:err _) (raise |Valid-legacy-storage-rejected)
+              :tags $ #{} :regression
+            %{} 'TestEntry
+              :name |rejects-malformed-text-and-open-container-shapes
+              :code $ quote $ let
+                  today $ {} (:year 2026) (:month 9) (:day 30)
+                  texts $ [] |{ (format-cirru-edn 42)
+                    format-cirru-edn $ []
+                    format-cirru-edn $ {}
+                      :users $ {}
+                      :today today
+                    format-cirru-edn $ {} (:sessions |invalid)
+                      :users $ {}
+                      :today today
+                    format-cirru-edn $ {}
+                      :sessions $ []
+                      :users $ {}
+                      :today today
+                    format-cirru-edn $ {}
+                      :sessions $ {}
+                      :users 42
+                      :today today
+                    format-cirru-edn $ {}
+                      :sessions $ {}
+                      :users $ {} $ |bad-user 42
+                      :today today
+                    format-cirru-edn $ {}
+                      :sessions $ {}
+                      :users $ {}
+                      :today $ {} (:year 2026) (:month |invalid) (:day 30)
+                each texts $ fn (text)
+                  match (try-parse-stored-db-with-format text)
+                    (:err reason)
+                      assert |reports-a-decoder-error $ not $ empty? reason
+                    (:ok _) (raise |Malformed-storage-was-accepted)
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |reports-container-and-deep-diary-paths)
+              :code $ quote $ let
+                  today $ {} (:year 2026) (:month 9) (:day 30)
+                  user $ {} (:name |fixture-user) (:id |fixture-user) (:nickname |Fixture) (:password |fixture-password) (:avatar nil)
+                    :diaries $ {} $ |2026-09-30
+                      {} (:food 42) (:text |fixture-text)
+                  cases $ []
+                    [] |sessions $ format-cirru-edn $ {} (:sessions |invalid)
+                      :users $ {}
+                      :today today
+                    [] |users $ format-cirru-edn $ {}
+                      :sessions $ {}
+                      :users 42
+                      :today today
+                    [] |food $ format-cirru-edn $ {}
+                      :sessions $ {}
+                      :users $ {} $ |fixture-user user
+                      :today today
+                each cases $ fn (entry)
+                  let
+                      field $ -> (entry .get 0) (.unwrap)
+                      text $ -> (entry .get 1) (.unwrap)
+                    match (try-parse-stored-db-with-format text)
+                      (:err reason)
+                        assert |reports-the-failed-field $ reason .includes? field
+                      (:ok _) (raise |Invalid-storage-field-was-accepted)
+              :tags $ #{} :regression
+      :ns $ %{} 'NsEntry
+        :doc "|Pure checked storage decoding. Filesystem migration remains in app.server."
+        :code $ quote $ ns app.storage
+          :require $ app.schema :as schema
     'app.style $ %{} 'FileEntry
       :defs $ {} $ 'link
         %{} 'CodeEntry (:doc |)
