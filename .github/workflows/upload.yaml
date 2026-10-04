@@ -60,6 +60,9 @@ jobs:
           calcit --entry server analyze check-public --ns 'app.$meta' --ns app.config --ns app.schema --ns app.server --ns app.twig.container --ns app.twig.user --ns app.updater --ns app.updater.diary --ns app.updater.router --ns app.updater.session --ns app.updater.user
           calcit test --summary-only
 
+      - name: Test stored credentials and legacy login boundaries
+        run: yarn test-credentials
+
       - name: Build client
         id: asset-path
         env:

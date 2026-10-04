@@ -199,14 +199,17 @@
             let
                 raw $ js/localStorage.getItem $ config/site :storage-key
               if (js-present? raw)
-                let
-                    text $ unsafe-coerce raw 'String
-                  println "|Found storage."
-                  dispatch! $ :: :user/log-in $ parse-cirru-edn text
-                  if
-                    < (current-hour!) 4
-                    dispatch! $ :: :session/set-cursor $ util/get-yesterday!
-                    dispatch! $ :: :session/set-cursor $ util/get-today!
+                match
+                  schema/try-parse-credentials $ unsafe-coerce raw 'String
+                  (:ok credentials)
+                    do (println "|Found storage.")
+                      dispatch! $ schema/ClientOp :user/log-in credentials
+                      dispatch! $ schema/ClientOp :session/set-cursor $ if
+                        < (current-hour!) 4
+                        util/get-yesterday!
+                        util/get-today!
+                      , &unit
+                  (:err _) (js/console.warn |Invalid-saved-credentials)
                 println "|Found no storage."
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -1541,6 +1544,52 @@
               (:ok _) (raise |incomplete-store-was-accepted)
               (:err reason)
                 assert |reports-missing-color-or-session $ string? reason
+        'try-decode-credentials $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-decode-credentials (raw)
+            match
+              try-decode-map-as raw $ :: 'List 'String
+              (:ok credentials)
+                if
+                  = 2 $ credentials .len
+                  Result :ok credentials
+                  Result :err |Invalid-credentials
+              (:err _) (Result :err |Invalid-credentials)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'Result (:: 'List 'String) 'String
+          :tests $ []
+            %{} 'TestEntry (:name |accepts-exactly-two-strings)
+              :code $ quote $ assert=
+                Result :ok $ [] |fixture-user |fixture-password
+                try-decode-credentials $ [] |fixture-user |fixture-password
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |rejects-shape-length-and-element-errors)
+              :code $ quote $ each
+                [] nil 42 |fixture-password ({}) ([]) ([] |fixture-user) ([] |fixture-user |fixture-password |extra) ([] 42 |fixture-password) ([] |fixture-user 42)
+                fn (raw)
+                  assert= (Result :err |Invalid-credentials) (try-decode-credentials raw)
+              :tags $ #{} :regression
+        'try-parse-credentials $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-parse-credentials (text)
+            match (try-parse-cirru-edn text)
+              (:ok raw) (try-decode-credentials raw)
+              (:err _) (Result :err |Invalid-credentials)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'String
+            :return $ :: 'Result (:: 'List 'String) 'String
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-valid-saved-credentials)
+              :code $ quote $ assert=
+                Result :ok $ [] |fixture-user |fixture-password
+                try-parse-credentials $ format-cirru-edn $ [] |fixture-user |fixture-password
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |reports-sanitized-errors)
+              :code $ quote $ each ([] |{ "|[] 42 |fixture-password" "|[] |fixture-user" "|{} (:password |fixture-password)")
+                fn (text)
+                  assert= (Result :err |Invalid-credentials) (try-parse-credentials text)
+              :tags $ #{} :regression
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
             User :name | :id | :nickname | :avatar nil :password | :diaries $ {}
@@ -1591,6 +1640,15 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
+        'decode-credentials $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn decode-credentials (raw)
+            match (schema/try-decode-credentials raw)
+              (:ok credentials) credentials
+              (:err _) (raise |Invalid-credentials)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic
+            :return $ :: 'List 'String
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op sid)
             let
@@ -1753,7 +1811,13 @@
           :doc "|Accept nominal operations and legacy map payloads from JS clients."
           :code $ quote $ defn parse-client-op (text)
             match (try-parse-cirru-edn-as text app.schema/Op)
-              (:ok op) op
+              (:ok op)
+                match op
+                  (:user/log-in credentials)
+                    schema/Op :user/log-in $ decode-credentials credentials
+                  (:user/sign-up credentials)
+                    schema/Op :user/sign-up $ decode-credentials credentials
+                  _ op
               (:err _)
                 match (parse-cirru-edn text)
                   (:session/set-cursor payload)
@@ -1768,12 +1832,14 @@
                     schema/Op :session/remove-message $ decode-map-as (normalize-client-payload payload) app.schema/Message
                   (:session/connect) (schema/Op :session/connect)
                   (:session/disconnect) (schema/Op :session/disconnect)
-                  (:user/log-in credentials) (schema/Op :user/log-in credentials)
+                  (:user/log-in credentials)
+                    schema/Op :user/log-in $ decode-credentials credentials
                   (:user/log-in username password)
-                    schema/Op :user/log-in $ [] username password
-                  (:user/sign-up credentials) (schema/Op :user/sign-up credentials)
+                    schema/Op :user/log-in $ decode-credentials $ [] username password
+                  (:user/sign-up credentials)
+                    schema/Op :user/sign-up $ decode-credentials credentials
                   (:user/sign-up username password)
-                    schema/Op :user/sign-up $ [] username password
+                    schema/Op :user/sign-up $ decode-credentials $ [] username password
                   (:user/log-out) (schema/Op :user/log-out)
                   (:router/change payload)
                     schema/Op :router/change $ decode-map-as
@@ -1941,6 +2007,43 @@
                     (:session/merge-cursor payload) (session-updater/merge-cursor-value cursor payload)
                     _ $ raise |Expected-cursor-patch-operation
                 assert= 9 $ :month updated-cursor
+              :tags $ #{} :regression
+            %{} 'TestEntry
+              :name |rejects-malformed-login-and-signup-before-update
+              :code $ quote $ each
+                []
+                  :: :user/log-in $ [] |fixture-user
+                  :: :user/sign-up $ [] |fixture-user |fixture-password |extra
+                  :: :user/log-in $ [] |fixture-user 42
+                  :: :user/sign-up 42 |fixture-password
+                  schema/Op :user/log-in $ [] |fixture-user
+                  schema/Op :user/sign-up $ [] |fixture-user |fixture-password |extra
+                fn (raw)
+                  assert= |Invalid-credentials $ try
+                    do
+                      parse-client-op $ format-cirru-edn raw
+                      , |unexpected-success
+                    fn (message)
+                      hint-fn $ {}
+                        :args $ [] 'String
+                        :return 'String
+                      , message
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |rejects-invalid-protocol-before-update)
+              :code $ quote $ each
+                [] (:: :unknown-operation) (:: :user/log-in) (:: :user/log-in |fixture-user |fixture-password |extra)
+                  :: :user/sign-up $ [] |fixture-user $ [] |fixture-password
+                  :: :session/set-cursor $ {} (:year 2026) (:month |invalid) (:day 4)
+                fn (raw)
+                  assert= true $ try
+                    do
+                      parse-client-op $ format-cirru-edn raw
+                      , false
+                    fn (message)
+                      hint-fn $ {}
+                        :args $ [] 'String
+                        :return 'Bool
+                      , true
               :tags $ #{} :regression
         'parse-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-stored-db (text)
