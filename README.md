@@ -10,7 +10,7 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-使用正式 Calcit / @calcit/procs 0.27.0，默认入口为 browser JS，server 为 native。
+升级候选使用已发布 Calcit / @calcit/procs `0.29.0-alpha.6`，默认入口为 browser JS，server 为 native。
 CI 保留项目测试、严格入口检查和公开定义检查。
 
 前端资源由 `cos-upload-action@v1.2.0` 上传并通过 action 自身的 `public-base-url` / `verify`
@@ -34,8 +34,12 @@ COS 仅上传 `dist/`，原 web rsync 与 `/servers/diary/` 服务源码部署�
 若临时文件验证或替换失败，保留 `.migrating` 供人工核查，不自动用它覆盖原文件；
 检查其 typed 内容和原备份后，再决定重试或删除候选文件。
 
-限制：正式 `@calcit/procs@0.27.0` 在部分 EDN 解析失败时会打印原始输入，且不能格式化 Number 根节点；
-完整边界测试需要包含上游修复的已发布运行时，隔离补丁预览不代表正式兼容验收。
+当前验收范围：已发布 `0.29.0-alpha.6` 的 native 存储/凭证定义附带测试、
+真实文件迁移测试和生成 JS 的同源纯存储测试通过；完整浏览器入口仍被 Feather 的颜色
+`ToString` 约束与 Alerts 的 `placeholder` 类型警告阻塞。因此 `yarn test-boundaries`
+尚未全程通过，localStorage/WebSocket 凭证宿主阶段与浏览器部署尚未验收，不能把候选当作已完成升级。
+问题分别跟踪于 `Respo/respo-feather.calcit#44`、`Respo/alerts.calcit#61`。
+Caps 保留原 CI 安装模式，解析器仍报告共享模块版本选择警告；不宣称严格依赖图已经通过。
 
 ### License
 
