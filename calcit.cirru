@@ -1738,6 +1738,36 @@
                       _ $ raise |Migrated-file-is-not-typed
                   (:err _) (raise |Migrated-file-is-invalid)
               :tags $ #{} :filesystem :regression
+            %{} 'TestEntry
+              :name |valid-legacy-migration-creates-byte-identical-backup
+              :code $ quote $ let
+                  root $ match (get-env |DIARY_STORAGE_TEST_DIR)
+                    (:some value) value
+                    (:none)
+                      raise |Run-yarn-test-boundaries-for-filesystem-fixtures
+                  path $ str root |/first-migration-storage.cirru
+                  backup $ str path |.legacy-backup.cirru
+                  legacy-text $ format-cirru-edn $ {}
+                    :sessions $ {}
+                    :users $ {}
+                    :today $ {} (:year 2026) (:month 9) (:day 30)
+                assert= false $ path-exists? backup
+                write-file path legacy-text
+                let
+                    db $ load-stored-db! path
+                    typed-text $ read-file path
+                  assert= legacy-text $ read-file backup
+                  assert= false $ path-exists? $ str path |.migrating
+                  match (try-parse-stored-db-with-format typed-text)
+                    (:ok format)
+                      match format
+                        (:typed parsed) (assert= db parsed)
+                        _ $ raise |Migrated-file-is-not-typed
+                    (:err _) (raise |Migrated-file-is-invalid)
+                  assert= db $ load-stored-db! path
+                  assert= typed-text $ read-file path
+                  assert= legacy-text $ read-file backup
+              :tags $ #{} :filesystem :regression
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
