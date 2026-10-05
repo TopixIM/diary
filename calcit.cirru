@@ -64,13 +64,16 @@
         'current-hour! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn current-hour! ()
             let
-                now $ unsafe-coerce (new js/Date) 'app.client/BrowserDate
+                now $ js-cast (new js/Date) 'app.client/BrowserDate
               now .get-hours
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Number)
             :args $ []
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-zero-hour)
+            :code $ quote $ assert= 0 (current-hour!)
+            :tags $ #{} :browser-date-contract
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op)
             when config/dev? $ println |Dispatch op
@@ -1120,21 +1123,30 @@
           :tags $ #{} :js-ffi
         'luxon-from-map $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn luxon-from-map (date-info)
-            unsafe-coerce
+            js-cast
               .!fromObject DateTime $ to-js-data date-info
               , 'app.comp.month/LuxonDateTime
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
             :args $ [] 'app.util/DateInfo
             :features $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-map-keeps-method-dispatch)
+            :code $ quote $ assert= |2024-01-01
+              (luxon-from-map (app.util/DateInfo :year 2024 :month 1 :day 1))
+                , .to-format |yyyy-MM-dd
+            :tags $ #{} :browser-date-contract
         'luxon-from-millis $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn luxon-from-millis (timestamp)
-            unsafe-coerce (.!fromMillis DateTime timestamp) 'app.comp.month/LuxonDateTime
+            js-cast (.!fromMillis DateTime timestamp) 'app.comp.month/LuxonDateTime
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
             :args $ [] 'Number
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-millis-keeps-method-dispatch)
+            :code $ quote $ assert= |2024-01-01
+              (luxon-from-millis 1704067200000) .to-format |yyyy-MM-dd
+            :tags $ #{} :browser-date-contract
         'on-change-month! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-change-month! (cursor offset d!)
             let
@@ -3066,7 +3078,7 @@
         'get-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-today! ()
             let
-                now $ unsafe-coerce (new js/Date) 'app.util/BrowserDate
+                now $ js-cast (new js/Date) 'app.util/BrowserDate
               DateInfo :year (now .get-full-year) :month
                 inc $ now .get-month
                 , :day $ now .get-date
@@ -3075,6 +3087,9 @@
             :args $ []
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-calendar-fields)
+            :code $ quote $ assert= (DateInfo :year 2024 :month 1 :day 1) (get-today!)
+            :tags $ #{} :browser-date-contract
         'get-yesterday! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-yesterday! ()
             let
@@ -3094,6 +3109,9 @@
             :args $ []
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-year-rollover)
+            :code $ quote $ assert= (DateInfo :year 2023 :month 12 :day 31) (get-yesterday!)
+            :tags $ #{} :browser-date-contract
         'months-has-30 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def months-has-30 (#{} 4 6 9 11)
           :examples $ []

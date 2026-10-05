@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { current_hour_$x_, replay_browser_date_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { get_today_$x_ } from "../js-out/app.util.mjs";
 import * as ws from "../js-out/ws-edn.client.mjs";
+import { DateTime } from "luxon";
 
 const tag = (name) => core.newTag(name);
 const list = (...values) => core.arrayToList(values);
@@ -93,3 +95,53 @@ try {
 }
 
 console.log("Credentials host boundaries passed: no storage mutation or invalid dispatch.");
+
+const NativeDate = globalThis.Date;
+const originalFromObject = DateTime.fromObject;
+const originalFromMillis = DateTime.fromMillis;
+const originalToFormat = DateTime.prototype.toFormat;
+const made = [];
+const receivers = [];
+try {
+  globalThis.Date = class extends NativeDate {
+    constructor(...args) { super(...(args.length ? args : [1704067200000])); }
+    static now() { return 1704067200000; }
+  };
+  DateTime.fromObject = function (...args) {
+    const result = originalFromObject.apply(this, args); made.push(result); return result;
+  };
+  DateTime.fromMillis = function (...args) {
+    const result = originalFromMillis.apply(this, args); made.push(result); return result;
+  };
+  DateTime.prototype.toFormat = function (...args) {
+    receivers.push(this); return originalToFormat.apply(this, args);
+  };
+  replay_browser_date_contracts_$x_();
+  assert.equal(made.length, 2, "Each Luxon factory must execute once");
+  assert.equal(receivers.length, 2);
+  receivers.forEach((receiver, index) => assert.equal(receiver, made[index], "Checked casts must preserve host identity and this"));
+
+  let constructions = 0;
+  let calls = 0;
+  globalThis.Date = class {
+    constructor() { constructions++; }
+    getHours = null;
+  };
+  assert.throws(() => current_hour_$x_(), error => error instanceof TypeError && error.message.includes("BrowserDate") && error.message.includes("getHours"));
+  assert.equal(constructions, 1);
+  constructions = 0;
+  globalThis.Date = class {
+    constructor() { constructions++; }
+    getFullYear() { calls++; return 2024; }
+    getDate() { calls++; return 1; }
+  };
+  assert.throws(() => get_today_$x_(), error => error instanceof TypeError && error.message.includes("BrowserDate") && error.message.includes("getMonth"));
+  assert.equal(constructions, 1);
+  assert.equal(calls, 0, "Reject missing methods before reading calendar fields");
+} finally {
+  globalThis.Date = NativeDate;
+  DateTime.fromObject = originalFromObject;
+  DateTime.fromMillis = originalFromMillis;
+  DateTime.prototype.toFormat = originalToFormat;
+}
+console.log("Five Calcit browser date contracts passed with real Date/Luxon; invalid host shapes rejected.");

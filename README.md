@@ -22,10 +22,16 @@ COS 仅上传 `dist/`，原 web rsync 与 `/servers/diary/` 服务源码部署�
 ### 业务边界测试
 
 运行 `yarn test-boundaries`：先使用 native server 入口执行定义中的 `:tests`，
-再以生成 JS 回放同一组纯存储、凭证和协议测试，并验证实际生成 JS 的 localStorage/WebSocket 登录恢复。文件测试使用运行器创建的
+再以生成 JS 回放同一组纯存储、凭证和协议测试，并验证实际生成 JS 的 localStorage/WebSocket 登录恢复和日期适配器。文件测试使用运行器创建的
 独立临时目录，结束后清理；WebSocket 注入测试 socket，不连接真实服务。
-只运行不依赖文件系统的测试，可用 `calcit --entry server test --exclude-tag filesystem --require-match`。
+只运行不依赖文件系统的 native 测试，可用 `calcit --entry server test --exclude-tag filesystem --exclude-tag browser-date-contract --require-match`。
 JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot 字节不变。
+
+日期契约写在五个定义的 `:tests` 中，标记 `browser-date-contract`，由真实 Date/Luxon
+宿主回放；native 排除这五个浏览器专用测试，仍运行全部原有测试。宿主固定 UTC 时间，
+覆盖零点、日历字段、跨年昨日和正常 Calcit 方法调用；另验证缺少方法时拒绝、单次构造、
+宿主身份与 `this`。日期适配器使用已有 `js-cast` 检查成员形状，方法返回值仍遵守真实宿主库的声明合同，
+形状检查不冒充任意宿主的深层值校验。
 
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；
