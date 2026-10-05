@@ -22,9 +22,10 @@ COS 仅上传 `dist/`，原 web rsync 与 `/servers/diary/` 服务源码部署�
 ### 业务边界测试
 
 运行 `yarn test-boundaries`：先使用 native server 入口执行定义中的 `:tests`，
-再以生成 JS 回放同一组纯存储测试，并验证实际生成 JS 的 localStorage/WebSocket 登录恢复。文件测试使用运行器创建的
+再以生成 JS 回放同一组纯存储、凭证和协议测试，并验证实际生成 JS 的 localStorage/WebSocket 登录恢复。文件测试使用运行器创建的
 独立临时目录，结束后清理；WebSocket 注入测试 socket，不连接真实服务。
-只运行不依赖文件系统的测试，可用 `calcit test --exclude-tag filesystem --require-match`。
+只运行不依赖文件系统的测试，可用 `calcit --entry server test --exclude-tag filesystem --require-match`。
+JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot 字节不变。
 
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；
@@ -34,11 +35,17 @@ COS 仅上传 `dist/`，原 web rsync 与 `/servers/diary/` 服务源码部署�
 若临时文件验证或替换失败，保留 `.migrating` 供人工核查，不自动用它覆盖原文件；
 检查其 typed 内容和原备份后，再决定重试或删除候选文件。
 
-当前验收范围：已发布 `0.29.0-alpha.6` 的 native 存储/凭证定义附带测试、
-真实文件迁移测试和生成 JS 的同源纯存储测试通过；完整浏览器入口仍被 Feather 的颜色
-`ToString` 约束与 Alerts 的 `placeholder` 类型警告阻塞。因此 `yarn test-boundaries`
-尚未全程通过，localStorage/WebSocket 凭证宿主阶段与浏览器部署尚未验收，不能把候选当作已完成升级。
-问题分别跟踪于 `Respo/respo-feather.calcit#44`、`Respo/alerts.calcit#61`。
+已发布 Alerts `0.10.49-alpha.1`、Feather `0.4.23-alpha.1`、UI `0.7.32-alpha.4`
+解除原有模块类型阻塞。当前本地使用正式 tags 验证：两入口严格编译、客户端 81/服务端 85
+个公开定义检查、37 个 native 附带测试、23 个同源 JS 附带测试和完整 `yarn test-boundaries`
+通过，Vite 生产构建及 hardened 不可变 npm 安装通过。登录恢复使用已发布模块的
+`storage-get: String -> Option<String>`，不再在应用里把宿主结果强转 String；缺失或受限存储
+不会发出登录操作。非法凭证原文不进入反馈，也不删除保存值。
+
+这仍不是完整升级交付：原 CI 的 `fix --workflow strict --verify` 门禁尚未通过，
+包含已隔离的 `Number -> Optional<Number>` 字段写入误拒绝
+（[Calcit #1782](https://github.com/calcit-lang/calcit/issues/1782)）和其余来源证明问题。
+门禁保留，不能把编译通过或本地页面构建称为 CI 全绿、生产部署或 #61/#64 已完成。
 Caps 保留原 CI 安装模式，解析器仍报告共享模块版本选择警告；不宣称严格依赖图已经通过。
 
 ### License

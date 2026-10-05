@@ -22,6 +22,8 @@ globalThis.localStorage = {
   removeItem() { writes++; throw new Error("unexpected storage deletion"); },
   clear() { writes++; throw new Error("unexpected storage clear"); },
 };
+// The typed browser capability reads window.localStorage, just as browsers do.
+globalThis.window = { localStorage: globalThis.localStorage };
 
 const originalLog = console.log;
 const originalWarn = console.warn;
@@ -65,6 +67,21 @@ try {
   assert.equal(core._$n_enum_$o_nth(core.parse_cirru_edn(sent[1]), 0), tag("session/set-cursor"));
   assert.equal(writes, 0);
 
+  // Unavailable or privacy-restricted storage must not dispatch or mutate data.
+  sent.length = 0;
+  delete globalThis.localStorage;
+  delete globalThis.window;
+  assert.doesNotThrow(() => simulate_login_$x_());
+  assert.deepEqual(sent, []);
+  globalThis.localStorage = {};
+  globalThis.window = {};
+  Object.defineProperty(globalThis.window, "localStorage", {
+    get() { throw new Error("storage unavailable"); },
+  });
+  assert.doesNotThrow(() => simulate_login_$x_());
+  assert.deepEqual(sent, []);
+  assert.equal(writes, 0);
+
 } finally {
   console.log = originalLog;
   console.warn = originalWarn;
@@ -72,6 +89,7 @@ try {
   core.reset_$x_(ws._$s_global_client, core._PCT_none());
   ws.client_close_$x_(client);
   delete globalThis.localStorage;
+  delete globalThis.window;
 }
 
 console.log("Credentials host boundaries passed: no storage mutation or invalid dispatch.");

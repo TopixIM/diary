@@ -196,11 +196,10 @@
             :features $ #{} :js-ffi
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
-            let
-                raw $ js/localStorage.getItem $ config/site :storage-key
-              if (js-present? raw)
-                match
-                  schema/try-parse-credentials $ unsafe-coerce raw 'String
+            match
+              browser/storage-get $ config/site :storage-key
+              (:some text)
+                match (schema/try-parse-credentials text)
                   (:ok credentials)
                     do (println "|Found storage.")
                       dispatch! $ schema/ClientOp :user/log-in credentials
@@ -210,7 +209,8 @@
                         util/get-today!
                       , &unit
                   (:err _) (js/console.warn |Invalid-saved-credentials)
-                println "|Found no storage."
+              (:none) (println "|Found no storage.")
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -270,6 +270,7 @@
             |./calcit.build-errors :default client-errors
             |../js-out/calcit.build-errors :default server-errors
             app.util :as util
+            js-ffi.browser :as browser
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -760,6 +761,7 @@
               dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
               js/localStorage.setItem (:storage-key config/site)
                 format-cirru-edn $ [] username password
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] 'String 'String 'Bool
@@ -1808,10 +1810,13 @@
         'normalize-client-payload $ %{} 'CodeEntry
           :doc "|Convert a nominal legacy operation payload to a map without unbounded recursion."
           :code $ quote $ defn normalize-client-payload (value)
-            if (struct? value) (&struct:to-map value) value
+            decode-map-as
+              if (struct? value) (&struct:to-map value) value
+              :: 'Map 'Tag 'Dynamic
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {}
             :args $ [] 'Dynamic
+            :return $ :: 'Map 'Tag 'Dynamic
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
@@ -1836,7 +1841,7 @@
                     schema/Op :session/merge-cursor $ decode-map-as
                       &merge
                         {} (:year nil) (:month nil) (:day nil)
-                        assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
+                        normalize-client-payload payload
                       , app.schema/CursorPatch
                   (:session/remove-message payload)
                     schema/Op :session/remove-message $ decode-map-as (normalize-client-payload payload) app.schema/Message
@@ -1853,8 +1858,7 @@
                   (:user/log-out) (schema/Op :user/log-out)
                   (:router/change payload)
                     schema/Op :router/change $ decode-map-as
-                      &merge (&struct:to-map schema/router)
-                        assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
+                      &merge (&struct:to-map schema/router) (normalize-client-payload payload)
                       , app.schema/Router
                   (:diary/add-one payload)
                     schema/Op :diary/add-one $ decode-map-as (normalize-client-payload payload) app.schema/Diary
@@ -1862,7 +1866,7 @@
                     schema/Op :diary/change $ decode-map-as (normalize-client-payload payload) app.schema/DiaryChange
                   (:diary/copy-yesterday payload)
                     let
-                        payload-map $ assert-type (normalize-client-payload payload) (:: 'Map 'Tag 'Dynamic)
+                        payload-map $ normalize-client-payload payload
                         normalized $ &map:assoc payload-map :date-info $ normalize-client-payload (&map:get payload-map :date-info)
                       schema/Op :diary/copy-yesterday $ decode-map-as normalized app.schema/CopyYesterday
                   (:today payload)
