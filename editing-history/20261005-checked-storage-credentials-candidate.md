@@ -76,3 +76,20 @@ adapter、应用 dispatcher 和 WebSocket 序列化，覆盖空字符串和保�
 
 正式 alpha.6 的完整 strict workflow 从 20 降至 19 个诊断，登录回调自身的来源证明通过。
 其他 core、模块与应用边界仍未处理完，原 CI 门禁保留，PR 继续保持 draft。
+
+## 2026-10-06：正式 alpha.7 消费者验收
+
+将 CLI/npm 与锁文件一致升级到实际已发布的 `0.29.0-alpha.7`，不是使用工作树二进制或修改模块缓存。
+Yarn 原精确预批准项从 alpha.6 更新为已核验的自有 alpha.7，不使用通配符、关闭 age gate 或关闭 hardened mode。
+更新后的 hardened immutable 安装与 Caps 工具链核验通过；锁文件仅改变该 runtime 的版本、resolution 与校验和。
+模块仍为已有正式 tags，ws-edn options 修复尚未正式发布，因此不提前引用。
+
+实际 registry CLI 与 npm 下，两入口检查、81/81 与 85/85 公开定义检查通过；
+37 个原 native 测试的精确 id 集合不变，23 个同源 JS、五个日期和两个登录契约、
+真实生成应用的 credentials/localStorage/WebSocket fixture 全部通过，JS codegen 与原 CDN-base Vite 构建通过。
+canonical format 与回放均不改变 Snapshot 字节，原 chunk-size warning 保留。
+
+完整原 strict workflow 实际返回 1，诊断从 19 降为 17；精确 definition 集合比较确认，
+仅 `app.updater.diary/add-one` 与 `app.updater.diary/change` 的 Optional 写入误报消除。
+剩余 core、模块与应用诊断没有被隐藏，try 返回传播已独立记录为 Calcit #1784。
+PR 仍保持 draft，原 workflow/Actions 没有改动，完整原 CI 通过之前不能合并。

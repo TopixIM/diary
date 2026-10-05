@@ -10,7 +10,7 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选使用已发布 Calcit / @calcit/procs `0.29.0-alpha.6`，默认入口为 browser JS，server 为 native。
+升级候选使用已发布 Calcit / @calcit/procs `0.29.0-alpha.7`，默认入口为 browser JS，server 为 native。
 CI 保留项目测试、严格入口检查和公开定义检查。
 
 前端资源由 `cos-upload-action@v1.2.0` 上传并通过 action 自身的 `public-base-url` / `verify`
@@ -54,11 +54,13 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 `storage-get: String -> Option<String>`，不再在应用里把宿主结果强转 String；缺失或受限存储
 不会发出登录操作。非法凭证原文不进入反馈，也不删除保存值。
 
-这仍不是完整升级交付：原 CI 的 `fix --workflow strict --verify` 门禁尚未通过，
-包含已隔离的 `Number -> Optional<Number>` 字段写入误拒绝
-（[Calcit #1782](https://github.com/calcit-lang/calcit/issues/1782)）和其余来源证明问题。
+这仍不是完整升级交付：alpha.7 已消除两处可证明的 Optional 字段写入误报，
+原 CI 的 `fix --workflow strict --verify` 门禁仍有 17 个来源证明诊断，
+包括 core 的 try 返回传播、模块 options 容器合同与应用 state 边界。
 门禁保留，不能把编译通过或本地页面构建称为 CI 全绿、生产部署或 #61/#64 已完成。
 Caps 保留原 CI 安装模式，解析器仍报告共享模块版本选择警告；不宣称严格依赖图已经通过。
+新发布的自有 runtime 仅按已核验的精确版本更新 Yarn 预批准项；没有放宽其他依赖的门禁，
+仍使用 hardened immutable 安装与 Caps 工具链校验。
 
 ### License
 
