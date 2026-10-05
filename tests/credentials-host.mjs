@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { current_hour_$x_, replay_browser_date_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { current_hour_$x_, dispatch_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
 import { get_today_$x_ } from "../js-out/app.util.mjs";
+import { on_submit } from "../js-out/app.comp.login.mjs";
+import { ClientOp } from "../js-out/app.schema.mjs";
+import { wrap_dispatch } from "../js-out/respo.controller.client.mjs";
 import * as ws from "../js-out/ws-edn.client.mjs";
 import { DateTime } from "luxon";
 
@@ -102,7 +105,15 @@ const originalFromMillis = DateTime.fromMillis;
 const originalToFormat = DateTime.prototype.toFormat;
 const made = [];
 const receivers = [];
+const submittedStorage = [];
 try {
+  globalThis.localStorage = {
+    setItem(key, text) {
+      assert.equal(key, "diary");
+      assert.deepEqual(core.listToArray(core.parse_cirru_edn(text)), ["fixture-user", "fixture-password"]);
+      submittedStorage.push(text);
+    },
+  };
   globalThis.Date = class extends NativeDate {
     constructor(...args) { super(...(args.length ? args : [1704067200000])); }
     static now() { return 1704067200000; }
@@ -116,7 +127,8 @@ try {
   DateTime.prototype.toFormat = function (...args) {
     receivers.push(this); return originalToFormat.apply(this, args);
   };
-  replay_browser_date_contracts_$x_();
+  replay_browser_contracts_$x_();
+  assert.equal(submittedStorage.length, 2, "Both attached login contracts store credentials once");
   assert.equal(made.length, 2, "Each Luxon factory must execute once");
   assert.equal(receivers.length, 2);
   receivers.forEach((receiver, index) => assert.equal(receiver, made[index], "Checked casts must preserve host identity and this"));
@@ -143,5 +155,55 @@ try {
   DateTime.fromObject = originalFromObject;
   DateTime.fromMillis = originalFromMillis;
   DateTime.prototype.toFormat = originalToFormat;
+  delete globalThis.localStorage;
 }
-console.log("Five Calcit browser date contracts passed with real Date/Luxon; invalid host shapes rejected.");
+console.log("Five Calcit date and two typed login contracts passed; invalid date host shapes rejected.");
+
+// Exercise the real Respo dispatch adapter, application dispatcher and WebSocket
+// serializer. Only the transport and storage are injected; no network is opened.
+const actions = [];
+const order = [];
+const submitted = [];
+const submitSocket = { send: text => { order.push("dispatch"); submitted.push(text); }, close() {} };
+const submitClient = ws.create_client_with_$x_("wss://submit-fixture.invalid/", core._$n__$M_(), () => submitSocket);
+submitSocket.onopen({});
+core.reset_$x_(ws._$s_global_client, core._PCT_some(submitClient));
+const wrapped = wrap_dispatch(core.atom(op => { actions.push(op); dispatch_$x_(op); return undefined; }));
+let submittedText;
+try {
+  globalThis.localStorage = {
+    setItem(key, text) { assert.equal(key, "diary"); order.push("storage"); submittedText = text; },
+  };
+  for (const [signup, username, password, variant] of [
+    [false, "fixture-user", "fixture-password", "user/log-in"],
+    [true, "fixture-user", "fixture-password", "user/sign-up"],
+    [false, "", "", "user/log-in"],
+  ]) {
+    actions.length = 0;
+    order.length = 0;
+    submitted.length = 0;
+    const result = on_submit(username, password, signup)(core._$n__$M_(), wrapped);
+    assert.equal(result, undefined);
+    assert.deepEqual(order, ["dispatch", "storage"]);
+    assert.equal(actions.length, 1);
+    assert.equal(actions[0].enumPrototype, ClientOp, "Deliver a nominal ClientOp, not a legacy tag/tuple");
+    assert.equal(core._$n_enum_$o_nth(actions[0], 0), tag(variant));
+    assert.deepEqual(core.listToArray(core._$n_enum_$o_nth(actions[0], 1)), [username, password]);
+    assert.equal(submitted.length, 1);
+    const wire = core.parse_cirru_edn(submitted[0]);
+    assert.equal(core._$n_enum_$o_nth(wire, 0), tag(variant));
+    assert.deepEqual(core.listToArray(core._$n_enum_$o_nth(wire, 1)), [username, password]);
+    assert.deepEqual(core.listToArray(core.parse_cirru_edn(submittedText)), [username, password]);
+  }
+  // Retain the original effect order and observable quota failure, rather than
+  // silently skipping storage or swallowing an error after dispatch.
+  order.length = 0;
+  globalThis.localStorage.setItem = () => { order.push("storage"); throw new Error("fixture quota exceeded"); };
+  assert.throws(() => on_submit("fixture-user", "fixture-password", false)(core._$n__$M_(), wrapped), /fixture quota exceeded/);
+  assert.deepEqual(order, ["dispatch", "storage"]);
+} finally {
+  core.reset_$x_(ws._$s_global_client, core._PCT_none());
+  ws.client_close_$x_(submitClient);
+  delete globalThis.localStorage;
+}
+console.log("Typed login callbacks pass actual Respo/application dispatch and wire serialization with original effect order.");

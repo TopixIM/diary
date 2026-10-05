@@ -55,3 +55,24 @@ ws-edn `0.0.33` 已解除本候选的空 Ref/回调类型警告；没有借此�
 不把无效业务日期变成默认日期。Fixture 保持 core/internal 的单一原生 ESM 身份，避免类实例来自重复 runtime。
 
 原完整 strict workflow、上游 Optional 修复的发布验收与其余迁移要求仍保留，不能把这部分通过当作整个升级完成。
+
+## 2026-10-06：登录提交回调收窄
+
+查询正式 Respo `EventHandler` 确认真实合同为 `Fn(Map<Tag,Dynamic>, Fn(Dynamic)->Unit)->Unit`。
+此前两参数均为 Dynamic，嵌套闭包缺少合同，旧 Tag/list adapter 又使业务操作失去名义身份。
+将事件收窄为 Map、dispatcher 收窄为现有 callable 合同，在闭包声明同一 `hint-fn`，
+直接构造 `ClientOp` 后通过正常 Respo 调用传递。这里保留框架 dispatcher 的异构 operation
+边界，不伪装成接受单一应用操作的框架合同；应用发出的操作仍是已证明的名义值。
+
+保留原来的 dispatch、localStorage 保存及 Unit 顺序，不替换为跳过存储或吞掉失败的 wrapper。
+两个新增登录/注册 `:tests` 复用原 AST，验证返回值与名义操作；宿主 fixture 再经过实际 Respo
+adapter、应用 dispatcher 和 WebSocket 序列化，覆盖空字符串和保存 quota 异常。
+测试没有访问真实账户、数据库或网络。未删除原 37 个 native 与 23 个同源 JS 断言。
+
+打包 fixture 时，外置 core/internal 引用了原生 schema，而 fixture 又打包了一份 schema，
+导致 JavaScript 对象身份断言失败。让两条路径复用同一原生 schema 模块修复测试环境，
+不把名义身份检查改成宽松 tag 比较。七个新浏览器契约都由宿主回放；排除列表逐项检查，
+误标其他测试会失败，canonical Snapshot 在回放后保持字节一致。
+
+正式 alpha.6 的完整 strict workflow 从 20 降至 19 个诊断，登录回调自身的来源证明通过。
+其他 core、模块与应用边界仍未处理完，原 CI 门禁保留，PR 继续保持 draft。

@@ -761,7 +761,13 @@
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
-              dispatch! (if signup? :user/sign-up :user/log-in) ([] username password)
+              hint-fn $ {} (:return 'Unit)
+                :args $ [] (:: 'Map 'Tag 'Dynamic)
+                  :: 'Fn $ {} (:return 'Unit)
+                    :args $ [] 'Dynamic
+              dispatch! $ if signup?
+                schema/ClientOp :user/sign-up $ [] username password
+                schema/ClientOp :user/log-in $ [] username password
               js/localStorage.setItem (:storage-key config/site)
                 format-cirru-edn $ [] username password
               , &unit
@@ -770,8 +776,43 @@
             :args $ [] 'String 'String 'Bool
             :features $ #{} :js-ffi
             :return $ :: 'Fn $ {} (:return 'Unit)
-              :args $ [] 'Dynamic 'Dynamic
+              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                :: 'Fn $ {} (:return 'Unit)
+                  :args $ [] 'Dynamic
           :tags $ #{} :js-ffi
+          :tests $ []
+            %{} 'TestEntry (:name |typed-login-callback-delivers-client-op)
+              :code $ quote $ let
+                  recorded $ atom |
+                  deliver $ fn (op)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic
+                      :return 'Unit
+                    reset! recorded $ format-cirru-edn op
+                    , &unit
+                  handler $ on-submit |fixture-user |fixture-password false
+                  result $ handler ({}) deliver
+                assert= &unit result
+                assert=
+                  format-cirru-edn $ schema/ClientOp :user/log-in $ [] |fixture-user |fixture-password
+                  , @recorded
+              :tags $ #{} :browser-login-contract
+            %{} 'TestEntry (:name |typed-signup-callback-delivers-client-op)
+              :code $ quote $ let
+                  recorded $ atom |
+                  deliver $ fn (op)
+                    hint-fn $ {}
+                      :args $ [] 'Dynamic
+                      :return 'Unit
+                    reset! recorded $ format-cirru-edn op
+                    , &unit
+                  handler $ on-submit |fixture-user |fixture-password true
+                  result $ handler ({}) deliver
+                assert= &unit result
+                assert=
+                  format-cirru-edn $ schema/ClientOp :user/sign-up $ [] |fixture-user |fixture-password
+                  , @recorded
+              :tags $ #{} :browser-login-contract
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.login
           :require

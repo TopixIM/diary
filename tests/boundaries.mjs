@@ -12,7 +12,7 @@ try {
   const browserOnly = JSON.parse(execFileSync("calcit", ["--entry", "server", "test", "--tag", "browser-date-contract", "--list", "--format", "json"], {
     encoding: "utf8",
   }));
-  // Exclude only the five explicitly replayed browser contracts, never an
+  // Exclude only the explicitly replayed browser contracts, never an
   // unrelated test that accidentally receives the browser-only tag.
   assert.deepEqual(browserOnly.tests.map(test => test.id).sort(), [
     "app.client/current-hour!#checked-date-preserves-zero-hour",
@@ -21,7 +21,14 @@ try {
     "app.util/get-today!#checked-date-preserves-calendar-fields",
     "app.util/get-yesterday!#checked-date-preserves-year-rollover",
   ].sort());
-  execFileSync("calcit", ["--entry", "server", "test", "--exclude-tag", "browser-date-contract", "--summary-only", "--require-match"], {
+  const browserLogin = JSON.parse(execFileSync("calcit", ["--entry", "server", "test", "--tag", "browser-login-contract", "--list", "--format", "json"], {
+    encoding: "utf8",
+  }));
+  assert.deepEqual(browserLogin.tests.map(test => test.id).sort(), [
+    "app.comp.login/on-submit#typed-login-callback-delivers-client-op",
+    "app.comp.login/on-submit#typed-signup-callback-delivers-client-op",
+  ].sort());
+  execFileSync("calcit", ["--entry", "server", "test", "--exclude-tag", "browser-date-contract", "--exclude-tag", "browser-login-contract", "--summary-only", "--require-match"], {
     stdio: "inherit",
     env: { ...process.env, DIARY_STORAGE_TEST_DIR: fixtures },
   });
@@ -80,11 +87,12 @@ try {
   console.log(`Shared Calcit storage/credential/protocol tests passed on generated JS: ${count}.`);
 
   // Browser-only contracts remain in their owning Calcit definitions. Replay
-  // their exact ASTs with a deterministic real Date/Luxon host below.
+  // their exact ASTs with real Date/Luxon and bounded storage/dispatch hosts.
   const dateGroups = [
     ["app.client", ["current-hour!"]],
     ["app.util", ["get-today!", "get-yesterday!"]],
     ["app.comp.month", ["luxon-from-map", "luxon-from-millis"]],
+    ["app.comp.login", ["on-submit"]],
   ];
   const dateOperations = [];
   let dateCount = 0;
@@ -92,23 +100,23 @@ try {
     const trees = definitions.flatMap(name => {
       const response = JSON.parse(run("query", "def", `${namespace}/${name}`, "--format", "json"));
       assert.deepEqual(response.diagnostics, []);
-      const tests = response.data.tests.filter(test => test.tags.includes("browser-date-contract"));
-      assert.equal(tests.length, 1, `Missing browser date contract: ${namespace}/${name}`);
+      const tests = response.data.tests.filter(test => test.tags.includes("browser-date-contract") || test.tags.includes("browser-login-contract"));
+      assert.equal(tests.length, name === "on-submit" ? 2 : 1, `Missing browser contract: ${namespace}/${name}`);
       return tests.map(test => test.code);
     });
     dateCount += trees.length;
     dateOperations.push(
-      ["edit", "def", `${namespace}/replay-date-tests!`, "--input-format", "json-ast", "--code",
-        JSON.stringify(["defn", "replay-date-tests!", [], ...trees, "&unit"])],
-      ["edit", "schema", `${namespace}/replay-date-tests!`, "--input-format", "json-ast", "--code",
+      ["edit", "def", `${namespace}/replay-host-tests!`, "--input-format", "json-ast", "--code",
+        JSON.stringify(["defn", "replay-host-tests!", [], ...trees, "&unit"])],
+      ["edit", "schema", `${namespace}/replay-host-tests!`, "--input-format", "json-ast", "--code",
         JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"], [":features", ["#{}", ":js-ffi"]]]])],
     );
   }
-  assert.equal(dateCount, 5);
+  assert.equal(dateCount, 7);
   dateOperations.push(
-    ["edit", "def", "app.client/replay-browser-date-contracts!", "--input-format", "json-ast", "--code",
-      JSON.stringify(["defn", "replay-browser-date-contracts!", [], ...dateGroups.map(([namespace]) => [`${namespace}/replay-date-tests!`]), "&unit"])],
-    ["edit", "schema", "app.client/replay-browser-date-contracts!", "--input-format", "json-ast", "--code",
+    ["edit", "def", "app.client/replay-browser-contracts!", "--input-format", "json-ast", "--code",
+      JSON.stringify(["defn", "replay-browser-contracts!", [], ...dateGroups.map(([namespace]) => [`${namespace}/replay-host-tests!`]), "&unit"])],
+    ["edit", "schema", "app.client/replay-browser-contracts!", "--input-format", "json-ast", "--code",
       JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"]]])],
   );
   const dateRevision = JSON.parse(run("query", "config", "--format", "json")).revision;
@@ -116,23 +124,24 @@ try {
   run(...dateTransaction, "--dry-run");
   run(...dateTransaction);
   const dateOutput = join(fixtures, "date-js");
-  run("--init-fn", "app.client/main!", "--reload-fn", "app.client/replay-browser-date-contracts!", "--emit-path", dateOutput, "js");
+  run("--init-fn", "app.client/main!", "--reload-fn", "app.client/replay-browser-contracts!", "--emit-path", dateOutput, "js");
 
   execFileSync("calcit", ["--emit-path", "js-out", "js"], { stdio: "inherit" });
 
   await build({
     configFile: false,
     plugins: [{
-      name: "preserve-calcit-core-esm",
+      name: "preserve-calcit-shared-esm",
       enforce: "pre",
-      // Preserve native ESM linking for the generated core/internal cycle.
+      // Preserve native ESM linking for the generated core/internal cycle and
+      // its shared nominal definitions; bundling another schema duplicates them.
       resolveId(source, importer) {
         // The fixture consumes one guarded Snapshot copy and one runtime identity.
         if (importer === resolve("tests/credentials-host.mjs") && source.startsWith("../js-out/")) {
           const id = resolve(dateOutput, source.slice("../js-out/".length));
-          return /(?:^|\/)calcit\.(?:core|internal)\.mjs$/.test(source) ? { id, external: true } : id;
+          return /(?:^|\/)(?:calcit\.(?:core|internal)|app\.schema)\.mjs$/.test(source) ? { id, external: true } : id;
         }
-        if (importer && /(?:^|\/)calcit\.(?:core|internal)\.mjs$/.test(source)) {
+        if (importer && /(?:^|\/)(?:calcit\.(?:core|internal)|app\.schema)\.mjs$/.test(source)) {
           return { id: resolve(dirname(importer), source), external: true };
         }
       },
