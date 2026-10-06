@@ -22,6 +22,8 @@ let stored = null;
 let reads = 0;
 let writes = 0;
 globalThis.localStorage = {
+  get length() { return stored === null ? 0 : 1; },
+  key(index) { return index === 0 && stored !== null ? "diary" : null; },
   getItem(key) { assert.equal(key, "diary"); reads++; return stored; },
   setItem() { writes++; throw new Error("unexpected storage write"); },
   removeItem() { writes++; throw new Error("unexpected storage deletion"); },
