@@ -2193,9 +2193,16 @@
                   do
                     wss-send! sid $ format-cirru-edn $ :: :patch changes
                     swap! *client-caches assoc sid new-store
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'cumulo-reel.core/ReelState
+          :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
+            :code $ quote $ let
+                before @*client-caches
+              assert= &unit $ sync-clients! @*reel
+              assert= before @*client-caches
+            :tags $ #{} :native-wss-contract
         'validate-storage-migration $ %{} 'CodeEntry
           :doc "|Check the typed temporary file without changing storage, backups or the candidate."
           :code $ quote $ defn validate-storage-migration (path)
@@ -2285,15 +2292,21 @@
                 today $ normalize-stored-struct (&map:get db :today) |$.today
                 users $ decode-stored-string-map (&map:get db :users) |$.users
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
-                  if (= nil raw-user) (MapEntryDecision :drop)
+                  hint-fn $ {}
+                    :args $ [] 'String 'Dynamic
+                    :return $ :: 'calcit.core/MapEntryDecision 'String $ :: 'Map 'Tag 'Dynamic
+                  if (nil? raw-user) (MapEntryDecision :drop)
                     let
                         user $ normalize-stored-struct raw-user |$.users.*
                         raw-diaries $ &map:get user :diaries
                         diaries $ decode-stored-string-map
-                          if (= nil raw-diaries) ({}) raw-diaries
+                          if (nil? raw-diaries) ({}) raw-diaries
                           , |$.users.*.diaries
                         normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
-                          if (= nil raw-diary) (MapEntryDecision :drop)
+                          hint-fn $ {}
+                            :args $ [] 'String 'Dynamic
+                            :return $ :: 'calcit.core/MapEntryDecision 'String $ :: 'Map 'Tag 'Dynamic
+                          if (nil? raw-diary) (MapEntryDecision :drop)
                             let
                                 diary $ normalize-stored-struct raw-diary |$.users.*.diaries.*
                               MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary

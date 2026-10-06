@@ -10,8 +10,10 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选使用已发布 Calcit / @calcit/procs `0.29.0-alpha.7`，默认入口为 browser JS，server 为 native。
-CI 保留项目测试、严格入口检查和公开定义检查。
+升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.14`，默认入口为 browser JS，server 为 native。
+Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
+安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
+CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
 
 前端资源由 `cos-upload-action@v1.2.0` 上传并通过 action 自身的 `public-base-url` / `verify`
 校验，不维护额外验证脚本。生产 CDN 路径仍为
@@ -39,6 +41,9 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 空字符串、凭证保存和发送后再保存的顺序；保存失败仍抛出原错误。回放复用同一份 schema
 模块，保留名义定义身份断言；native 只排除明确列出并在 JS 验证的七个浏览器专用测试。
 
+服务端同步回调按 `wss-each!` 的合同显式返回 `&unit`，消息发送和缓存更新顺序不变。
+定义中的 `empty-client-sync-returns-unit` 测试验证无连接时返回 Unit 且缓存不变，不启动真实监听器。
+
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；
 `try-parse-stored-db-with-format` 返回 `Result`，保留 typed/legacy 区分及 decoder 字段路径。
@@ -47,18 +52,19 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 若临时文件验证或替换失败，保留 `.migrating` 供人工核查，不自动用它覆盖原文件；
 检查其 typed 内容和原备份后，再决定重试或删除候选文件。
 
-已发布 Alerts `0.10.49-alpha.1`、Feather `0.4.23-alpha.1`、UI `0.7.32-alpha.4`
-解除原有模块类型阻塞。当前本地使用正式 tags 验证：两入口严格编译、客户端 81/服务端 85
-个公开定义检查、37 个 native 附带测试、23 个同源 JS 附带测试和完整 `yarn test-boundaries`
-通过，Vite 生产构建及 hardened 不可变 npm 安装通过。登录恢复使用已发布模块的
-`storage-get: String -> Option<String>`，不再在应用里把宿主结果强转 String；缺失或受限存储
+存储归一化使用 `nil?` 识别待丢弃的 legacy 用户、diary 和缺失的 diaries，
+不以泛型同型比较表达空值检测；保留原过滤、默认值和非法输入拒绝规则。
+两个 Map 回调显式声明 String 键、原始 Dynamic 值和类型化 MapEntryDecision 输出；
+键类型来自 `decode-stored-string-map`，原始值仍通过已有解码器检查，标注不代替检查。
+登录恢复使用已发布模块的 `storage-get: String -> Option<String>`，
+不再在应用里把宿主结果强转 String；缺失或受限存储
 不会发出登录操作。非法凭证原文不进入反馈，也不删除保存值。
 
-这仍不是完整升级交付：alpha.7 已消除两处可证明的 Optional 字段写入误报，
-原 CI 的 `fix --workflow strict --verify` 门禁仍有 17 个来源证明诊断，
-包括 core 的 try 返回传播、模块 options 容器合同与应用 state 边界。
-门禁保留，不能把编译通过或本地页面构建称为 CI 全绿、生产部署或 #61/#64 已完成。
-Caps 保留原 CI 安装模式，解析器仍报告共享模块版本选择警告；不宣称严格依赖图已经通过。
+### 升级限制
+
+完整 `calcit fix --workflow strict --verify --format edn` 仍有上游类型来源证明阻塞；
+入口、业务测试和本地构建通过不等于完整 CI 或生产部署完成。
+Caps 保留原 CI 安装模式及共享模块版本选择警告，不宣称严格依赖图已经通过。
 新发布的自有 runtime 仅按已核验的精确版本更新 Yarn 预批准项；没有放宽其他依赖的门禁，
 仍使用 hardened immutable 安装与 Caps 工具链校验。
 
