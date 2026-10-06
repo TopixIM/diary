@@ -190,7 +190,7 @@
           :code $ quote $ defn render-app! ()
             let
                 raw-states $ deref *states
-                states $ assert-type (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
+                states $ decode-map-as (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
                 store $ deref *store
               render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
