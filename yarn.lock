@@ -12,15 +12,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@calcit/procs@npm:0.29.0-alpha.14":
-  version: 0.29.0-alpha.14
-  resolution: "@calcit/procs@npm:0.29.0-alpha.14"
+"@calcit/procs@npm:0.29.0-alpha.15":
+  version: 0.29.0-alpha.15
+  resolution: "@calcit/procs@npm:0.29.0-alpha.15"
   dependencies:
     "@calcit/finger-vec": "npm:0.1.1"
     "@calcit/ternary-tree": "npm:0.0.26"
     "@cirru/parser.ts": "npm:0.0.10"
     "@cirru/writer.ts": "npm:^0.1.9"
-  checksum: 10c0/64652615238b27f207e16c95fc66b6a91436c53c836d4f90385c56582d8dc7787a47d6fec27d53fe06e787132302da31f7a50d8929452af9fe99558afa76a815
+  checksum: 10c0/0df0373af035bd756ac5febd92b05a1e2056f117219bd5b20fbfd826822218cd3eb1ef146e1c412170da2b46ce20def9b9c04ecfefb009c1f3c919966895b88d
   languageName: node
   linkType: hard
 
@@ -49,7 +49,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@comulo/diary@workspace:."
   dependencies:
-    "@calcit/procs": "npm:0.29.0-alpha.14"
+    "@calcit/procs": "npm:0.29.0-alpha.15"
     bottom-tip: "npm:^0.1.5"
     copy-to-clipboard: "npm:^3.3.3"
     feather-icons: "npm:^4.29.2"

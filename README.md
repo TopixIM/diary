@@ -10,7 +10,7 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.14`，默认入口为 browser JS，server 为 native。
+升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.15`，默认入口为 browser JS，server 为 native。
 Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
 安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
 CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
@@ -43,6 +43,10 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 
 服务端同步回调按 `wss-each!` 的合同显式返回 `&unit`，消息发送和缓存更新顺序不变。
 定义中的 `empty-client-sync-returns-unit` 测试验证无连接时返回 Unit 且缓存不变，不启动真实监听器。
+
+节假日分类通过 `collect-special-days` 对已解码的 `List<HolidayEntry>` 累积 `Set<String>`，
+使用普通 `fold` 和 Set `.union`，不把 Set 当作位置参数展开。
+附带测试覆盖空输入、不匹配类别、混合类别、重复日期和空日期集合；生成 JS 回放同一测试 AST。
 
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；

@@ -863,6 +863,38 @@
             :names $ {} (:from-millis |fromMillis) (:from-object |fromObject)
           :schema $ :: 'Trait
           :tags $ #{} :ffi :js-host
+        'collect-special-days $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn collect-special-days (entries kind)
+            let
+                initial $ assert-type (#{}) (:: 'Set 'String)
+              fold entries initial $ fn (days entry)
+                if
+                  = (:type entry) kind
+                  .union days $ :days entry
+                  , days
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'List 'app.comp.month/HolidayEntry) 'Tag
+            :return $ :: 'Set 'String
+          :tests $ []
+            %{} 'TestEntry (:name |empty-input-and-unmatched-kind)
+              :code $ quote $ let
+                  holiday $ HolidayEntry :name |fixture :type :holiday :days $ #{} |2026-01-01
+                  empty-entries $ assert-type ([]) (:: 'List 'app.comp.month/HolidayEntry)
+                assert= 0 $ .len $ collect-special-days empty-entries :holiday
+                assert= 0 $ .len $ collect-special-days ([] holiday) :workingday
+              :tags $ #{} :holiday-fold-contract
+            %{} 'TestEntry (:name |mixed-types-duplicates-and-empty-days)
+              :code $ quote $ let
+                  first-entry $ HolidayEntry :name |first :type :holiday :days $ #{} |2026-01-01 |2026-01-02
+                  second-entry $ HolidayEntry :name |second :type :holiday :days $ #{} |2026-01-02 |2026-01-03
+                  empty-entry $ HolidayEntry :name |empty :type :holiday :days $ #{}
+                  working-entry $ HolidayEntry :name |working :type :workingday :days $ #{} |2026-01-04
+                  entries $ [] first-entry second-entry empty-entry working-entry
+                assert= (#{} |2026-01-01 |2026-01-02 |2026-01-03) (collect-special-days entries :holiday)
+                assert= (#{} |2026-01-04) (collect-special-days entries :workingday)
+                assert= 0 $ .len $ collect-special-days entries :unknown
+              :tags $ #{} :holiday-fold-contract
         'comp-cell $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-cell (col row first-day today-info cursor overview)
             let
@@ -1257,14 +1289,8 @@
                   parse-holidays $ inline |2021.cirru
                   parse-holidays $ inline |2026.cirru
               {}
-                :workingday $ union & $ -> data
-                  filter $ fn (x)
-                    = :workingday $ x :type
-                  map $ fn (x) (:days x)
-                :holiday $ union & $ -> data
-                  filter $ fn (x)
-                    = :holiday $ x :type
-                  map $ fn (x) (:days x)
+                :workingday $ collect-special-days data :workingday
+                :holiday $ collect-special-days data :holiday
           :examples $ []
           :schema $ :: 'Map 'Tag $ :: 'Set 'String
         'style-date-hint $ %{} 'CodeEntry (:doc |)

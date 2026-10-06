@@ -47,6 +47,7 @@ try {
     ["app.storage", ["normalize-stored-db", "parse-stored-db-with-format", "try-parse-stored-db-with-format"]],
     ["app.schema", ["try-decode-credentials", "try-parse-credentials"]],
     ["app.server", ["parse-client-op"]],
+    ["app.comp.month", ["collect-special-days"]],
   ];
   const operations = [];
   let count = 0;
@@ -84,7 +85,7 @@ try {
   const url = pathToFileURL(join(output, "app.storage.mjs")).href;
   execFileSync(process.execPath, ["--input-type=module", "-e",
     `const storage = await import(${JSON.stringify(url)}); storage.replay_storage_tests_$x_();`], { stdio: "inherit" });
-  console.log(`Shared Calcit storage/credential/protocol tests passed on generated JS: ${count}.`);
+  console.log(`Shared Calcit boundary/holiday tests passed on generated JS: ${count}.`);
 
   // Browser-only contracts remain in their owning Calcit definitions. Replay
   // their exact ASTs with real Date/Luxon and bounded storage/dispatch hosts.
