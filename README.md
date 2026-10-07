@@ -42,6 +42,8 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 模块，保留名义定义身份断言；native 只排除明确列出并在 JS 验证的七个浏览器专用测试。
 
 服务端同步回调按 `wss-each!` 的合同显式返回 `&unit`，消息发送和缓存更新顺序不变。
+WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；模块内部检查真实 host
+启动结果为 Unit。该 one-shot 迭代随后通过队列执行回调，Unit 不表示回调已完成。
 定义中的 `empty-client-sync-returns-unit` 测试验证无连接时返回 Unit 且缓存不变，不启动真实监听器。
 
 节假日分类通过 `collect-special-days` 对已解码的 `List<HolidayEntry>` 累积 `Set<String>`，

@@ -7,7 +7,7 @@
     |Respo/respo-message.calcit |0.0.29
     |Respo/respo-ui.calcit |0.7.32-alpha.5
     |Respo/respo.calcit |0.16.114-alpha.8
-    |calcit-lang/calcit-wss |0.2.32
+    |calcit-lang/calcit-wss |0.2.33
     |calcit-lang/calcit.std |0.2.37
     |calcit-lang/js-ffi |0.2.1-alpha.14
     |calcit-lang/lilac |0.5.9
