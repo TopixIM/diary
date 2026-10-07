@@ -79,9 +79,11 @@
             when config/dev? $ println |Dispatch op
             match op
               (:states cursor s)
-                reset! *states $ assert-type
-                  update-states (deref *states) cursor s
-                  :: 'Map 'Tag 'Dynamic
+                if (list? cursor)
+                  reset! *states $ decode-map-as
+                    update-states (deref *states) cursor s
+                    :: 'Map 'Tag 'Dynamic
+                  raise $ str "|expected states cursor as a list, got: " cursor
               (:effect/connect) (connect!)
               _ $ ws-send! $ to-server-op op
           :examples $ []
@@ -154,8 +156,8 @@
                     base $ match @*store
                       (:online store) store
                       _ $ {}
-                    next-store $ assert-type
-                      normalize-wire-value $ patch-twig base $ assert-type changes (:: 'List 'recollect.schema/change-op)
+                    next-store $ decode-map-as
+                      normalize-wire-value $ patch-twig base $ decode-changes changes
                       :: 'Map 'Tag 'Dynamic
                   when config/dev? $ js/console.log |Changes changes
                   match (schema/try-decode-client-store next-store)
@@ -274,6 +276,7 @@
             |../js-out/calcit.build-errors :default server-errors
             app.util :as util
             js-ffi.browser :as browser
+            recollect.schema :refer $ decode-changes
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -327,7 +330,12 @@
               span
                 {}
                   :style $ {} $ :cursor :pointer
-                  :on-click $ fn (e d!) (d! :effect/connect nil)
+                  :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
+                    d! :effect/connect nil
                 <>
                   if (= state :offline) "|Socket broken! Click to retry." |Loading...
                   {} (:font-family ui/font-fancy) (:font-weight 100) (:font-size 32)
@@ -415,6 +423,10 @@
                 {} $ :style $ {} (:padding "|16px 0")
                 button $ {} (:class-name css/button-primary) (:inner-text |Copy)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     copy! $ format-cirru-edn $ &map:to-list diaries
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
@@ -436,15 +448,22 @@
           :code $ quote $ defstruct DiaryEditorState (:text 'String)
           :examples $ []
           :schema $ :: 'StructDef
+        'as-diary-editor-state $ %{} 'CodeEntry (:doc "|按 Struct 来源校验日记编辑组件状态。")
+          :code $ quote $ defn as-diary-editor-state (value)
+            if (struct? value)
+              if (&struct:matches? value DiaryEditorState) value $ raise "|expected DiaryEditorState in component states"
+              raise "|expected DiaryEditorState in component states"
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.comp.diary/DiaryEditorState)
+            :args $ [] 'Dynamic
         'comp-diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
                 date $ format-to-date date-info
                 original-state $ &map:get states :data
                 cursor $ unsafe-coerce (&map:get states :cursor) 'Dynamic
-                state $ assert-type
-                  or original-state $ DiaryEditorState :text $ :text diary
-                  , 'app.comp.diary/DiaryEditorState
+                state $ as-diary-editor-state $ or original-state
+                  DiaryEditorState :text $ :text diary
               div
                 {}
                   :class-name $ str-spaced css/row css/flex
@@ -478,12 +497,20 @@
                         button $ {} (:class-name css/button) (:inner-text "|Like last day")
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
+                            hint-fn $ {} (:return 'Dynamic)
+                              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                  :args $ [] 'Dynamic
                             d! :diary/copy-yesterday $ {} $ :date-info date-info
                       when
                         not= (:text diary) (:text state)
                         button $ {} (:class-name css/button-primary) (:inner-text |Save)
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
+                            hint-fn $ {} (:return 'Dynamic)
+                              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                  :args $ [] 'Dynamic
                             when
                               not $ blank? $ :text state
                               d! :diary/add-one $ {}
@@ -508,7 +535,12 @@
                         a
                           {} (:class-name css/link)
                             :style $ {} $ :margin-left 16
-                            :on-click $ fn (e d!) (d! cursor nil)
+                            :on-click $ fn (e d!)
+                              hint-fn $ {} (:return 'Dynamic)
+                                :args $ [] (:: 'Map 'Tag 'Dynamic)
+                                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                    :args $ [] 'Dynamic
+                              d! cursor nil
                           <> |Reset
                   textarea $ {}
                     :value $ :text state
@@ -516,7 +548,11 @@
                     :class-name $ str-spaced css/flex css/textarea
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
-                      d! cursor $ assoc state :text $ assert-type (&map:get e :value) 'String
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
+                      d! cursor $ assoc state :text $ decode-map-as (&map:get e :value) 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
@@ -543,6 +579,10 @@
                   comp-guide "|What did you eat?"
                   render-content (:food diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :food) (:date date) (:data data)
                   .render plugin
@@ -555,6 +595,10 @@
                   comp-guide "|How did you sleep?"
                   render-content (:sleep diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :sleep) (:date date) (:data data)
                   .render plugin
@@ -568,6 +612,10 @@
                   comp-guide "|How you feel?"
                   render-content (:mood diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :mood) (:date date) (:data data)
                   .render plugin
@@ -581,6 +629,10 @@
                   comp-guide "|Where you went?"
                   render-content (:place diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :place) (:date date) (:data data)
                   .render plugin
@@ -594,6 +646,10 @@
                   comp-guide "|What's the highlights?"
                   render-content (:highlight diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :highlight) (:date date) (:data data)
                   .render plugin
@@ -607,6 +663,10 @@
                   comp-guide "|People met?"
                   render-content (:met diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :met) (:date date) (:data data)
                   .render plugin
@@ -620,6 +680,10 @@
                   comp-guide |Exercises?
                   render-content (:exercise diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :exercise) (:date date) (:data data)
                   .render plugin
@@ -633,6 +697,10 @@
                   comp-guide |Pains?
                   render-content (:pains diary)
                     fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       .show plugin d! $ fn (data)
                         d! :diary/change $ {} (:field :pains) (:date date) (:data data)
                   .render plugin
@@ -711,13 +779,19 @@
           :code $ quote $ defstruct LoginState (:username 'String) (:password 'String)
           :examples $ []
           :schema $ :: 'StructDef
+        'as-login-state $ %{} 'CodeEntry (:doc "|按 Struct 来源校验登录组件状态。")
+          :code $ quote $ defn as-login-state (value)
+            if (struct? value)
+              if (&struct:matches? value LoginState) value $ raise "|expected LoginState in component states"
+              raise "|expected LoginState in component states"
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.comp.login/LoginState)
+            :args $ [] 'Dynamic
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
                 cursor $ &map:get states :cursor
-                state $ assert-type
-                  or (&map:get states :data) initial-state
-                  , 'app.comp.login/LoginState
+                state $ as-login-state $ or (&map:get states :data) initial-state
               div
                 {} $ :class-name $ str-spaced css/flex css/center
                 div
@@ -730,13 +804,21 @@
                       input $ {} (:placeholder |Username) (:class-name css/input)
                         :value $ :username state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :username $ assert-type (&map:get e :value) 'String
+                          hint-fn $ {} (:return 'Dynamic)
+                            :args $ [] (:: 'Map 'Tag 'Dynamic)
+                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                :args $ [] 'Dynamic
+                          d! cursor $ assoc state :username $ decode-map-as (&map:get e :value) 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password) (:class-name css/input)
                         :value $ :password state
                         :on-input $ fn (e d!)
-                          d! cursor $ assoc state :password $ assert-type (&map:get e :value) 'String
+                          hint-fn $ {} (:return 'Dynamic)
+                            :args $ [] (:: 'Map 'Tag 'Dynamic)
+                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                :args $ [] 'Dynamic
+                          d! cursor $ assoc state :password $ decode-map-as (&map:get e :value) 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -910,8 +992,8 @@
                   = (this-day :day) cursor-day
                 info-option $ &map:get overview $ this-day .to-format |yyyy-MM-dd
                 info $ or info-option $ {}
-                preview-mood $ or (&map:get info :mood) |
-                preview-highlight $ or (&map:get info :highlight) |
+                preview-mood $ text-or-empty $ &map:get info :mood
+                preview-highlight $ text-or-empty $ &map:get info :highlight
               div
                 {}
                   :class-name $ str-spaced css-cell-size css/center css-day-cell
@@ -924,6 +1006,10 @@
                       str "|4px solid " $ hsl 200 80 80
                       , nil
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/set-cursor $ {}
                       :year $ this-day :year
                       :month $ this-day :month
@@ -959,7 +1045,7 @@
                   some? $ :time diary
                   <>
                     let
-                        date $ luxon-from-millis $ unsafe-coerce (:time diary) 'Number
+                        date $ luxon-from-millis $ required-millis (:time diary)
                       date .to-format "|(yyyy-MM-dd hh:mm)"
                     str-spaced css/font-fancy style-date-hint
               comp-divider "|32px 0"
@@ -996,12 +1082,20 @@
                   button
                     {} (:class-name css/button)
                       :on-click $ fn (e d!)
+                        hint-fn $ {} (:return 'Dynamic)
+                          :args $ [] (:: 'Map 'Tag 'Dynamic)
+                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                              :args $ [] 'Dynamic
                         d! :router/change $ {} $ :name :diary
                     <> "|Edit diary"
                 div ({})
                   button
                     {} (:class-name css/button-primary)
                       :on-click $ fn (e d!)
+                        hint-fn $ {} (:return 'Dynamic)
+                          :args $ [] (:: 'Map 'Tag 'Dynamic)
+                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                              :args $ [] 'Dynamic
                         d! :router/change $ {} $ :name :diary
                     <> "|Add diary"
           :examples $ []
@@ -1042,12 +1136,22 @@
                         :style $ {} $ :padding "|0 16px"
                       a
                         {} (:class-name css-month-switch)
-                          :on-click $ fn (e d!) (on-change-month! cursor -1 d!)
+                          :on-click $ fn (e d!)
+                            hint-fn $ {} (:return 'Unit)
+                              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                  :args $ [] 'Dynamic
+                            on-change-month! cursor -1 d!
                         comp-i :chevron-left 16 $ hsl 200 80 70
                       <> (cursor-date .to-format |yyyy-MM) (str-spaced css/font-fancy style-month-header)
                       a
                         {} (:class-name css-month-switch)
-                          :on-click $ fn (e d!) (on-change-month! cursor 1 d!)
+                          :on-click $ fn (e d!)
+                            hint-fn $ {} (:return 'Unit)
+                              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                                  :args $ [] 'Dynamic
+                            on-change-month! cursor 1 d!
                         comp-i :chevron-right 16 $ hsl 200 80 70
                     comp-weekdays
                     list->
@@ -1082,35 +1186,75 @@
                     [] n $ span $ {} (:inner-text n)
                       :class-name $ str-spaced css/center css-month-entry
                       :on-click $ fn (e d!)
+                        hint-fn $ {} (:return 'Dynamic)
+                          :args $ [] (:: 'Map 'Tag 'Dynamic)
+                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                              :args $ [] 'Dynamic
                         d! :session/merge-cursor $ {} $ :month n
               div
                 {} $ :class-name css/row-middle
                 span $ {} (:inner-text |2026) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2026
                 span $ {} (:inner-text |2025) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2025
                 span $ {} (:inner-text |2024) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2024
                 span $ {} (:inner-text |2023) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2023
                 span $ {} (:inner-text |2022) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2022
                 span $ {} (:inner-text |2021) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2021
                 span $ {} (:inner-text |2020) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2020
                 span $ {} (:inner-text |2019) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2019
                 span $ {} (:inner-text |2018) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :session/merge-cursor $ {} $ :year 2018
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
@@ -1247,7 +1391,7 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'app.util/DateInfo 'Number $ :: 'Fn
               {} (:rest 'Dynamic) (:return 'Unit)
-                :args $ []
+                :args $ [] 'Dynamic
         'parse-holidays $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-holidays (text)
             match (try-parse-cirru-edn text)
@@ -1271,6 +1415,12 @@
               is= 14 $ count $ parse-holidays (inline |2021.cirru)
               is= 13 $ count $ parse-holidays (inline |2026.cirru)
             :tags $ #{} :regression
+        'required-millis $ %{} 'CodeEntry (:doc "|日记预览需要毫秒时间戳。")
+          :code $ quote $ defn required-millis (value)
+            if (number? value) value $ raise "|expected diary time in milliseconds"
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Number)
+            :args $ [] 'Dynamic
         'same-luxon-day? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn same-luxon-day? (a b)
             and (a .has-same? b |month) (a .has-same? b |day)
@@ -1321,6 +1471,13 @@
               :border-top $ str "|1px solid " $ hsl 0 0 94
           :examples $ []
           :schema $ :: 'String
+        'text-or-empty $ %{} 'CodeEntry (:doc "|预览字段为字符串，nil 视为空文本。")
+          :code $ quote $ defn text-or-empty (value)
+            if (string? value) value $ if (nil? value) | $ raise
+              str "|expected text, got: " $ type-of value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] 'Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.month
           :require
@@ -1346,16 +1503,28 @@
                 span $ {} (:inner-text |Diary)
                   :style $ {} $ :cursor :pointer
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :router/change $ {} $ :name :home
               div ({})
                 span $ {} (:inner-text |Data)
                   :style $ {} (:cursor :pointer) (:margin-bottom 16) (:display :inline-block)
                   :on-click $ fn (e d!)
+                    hint-fn $ {} (:return 'Dynamic)
+                      :args $ [] (:: 'Map 'Tag 'Dynamic)
+                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                          :args $ [] 'Dynamic
                     d! :router/change $ {} $ :name :data
                 div
                   {}
                     :style $ {} $ :cursor |pointer
                     :on-click $ fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
                       d! :router/change $ {} $ :name :profile
                   <> $ if logged-in? |Me |Guest
                   =< 8 nil
@@ -1401,6 +1570,8 @@
                   {} $ :class-name css/row
                   &list:map-pair (&map:to-list members)
                     fn (k username)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] 'String 'String
                       [] k $ div
                         {} $ :class-name css-member-label
                         <> username
@@ -1409,7 +1580,12 @@
                 button
                   {} (:class-name css/button)
                     :style $ {} (:color :red) (:border-color :red)
-                    :on-click $ fn (e d!) (d! :user/log-out nil)
+                    :on-click $ fn (e d!)
+                      hint-fn $ {} (:return 'Dynamic)
+                        :args $ [] (:: 'Map 'Tag 'Dynamic)
+                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                            :args $ [] 'Dynamic
+                      d! :user/log-out nil
                       js/localStorage.removeItem $ :storage-key config/site
                   <> "|Log out" nil
           :examples $ []
@@ -1457,14 +1633,14 @@
     'app.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientOp $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum ClientOp (:states 'Dynamic 'Dynamic) (:session/connect) (:session/disconnect) (:session/remove-message 'Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'CursorPatch)
+          :code $ quote $ defenum ClientOp (:states 'Dynamic 'Dynamic) (:session/connect) (:session/disconnect) (:session/remove-message 'app.schema/Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'app.schema/CursorPatch)
             :user/log-in $ :: 'List 'String
             :user/sign-up $ :: 'List 'String
             :user/log-out
-            :router/change 'Router
-            :diary/add-one 'Diary
-            :diary/change 'DiaryChange
-            :diary/copy-yesterday 'CopyYesterday
+            :router/change 'app.schema/Router
+            :diary/add-one 'app.schema/Diary
+            :diary/change 'app.schema/DiaryChange
+            :diary/copy-yesterday 'app.schema/CopyYesterday
             :today 'app.util/DateInfo
             :effect/persist
             :effect/ping
@@ -1479,9 +1655,9 @@
           :examples $ []
           :schema $ :: 'StructDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientStore (:logged-in? 'Bool) (:session 'Session) (:reel-length 'Number) (:router 'ClientRouter) (:today 'app.util/DateInfo) (:count 'Number) (:color 'String)
-            :user $ :: 'Optional 'ClientUser
-            :diary $ :: 'Optional 'Diary
+          :code $ quote $ defstruct ClientStore (:logged-in? 'Bool) (:session 'app.schema/Session) (:reel-length 'Number) (:router 'app.schema/ClientRouter) (:today 'app.util/DateInfo) (:count 'Number) (:color 'String)
+            :user $ :: 'Optional 'app.schema/ClientUser
+            :diary $ :: 'Optional 'app.schema/Diary
           :examples $ []
           :schema $ :: 'StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
@@ -1502,8 +1678,8 @@
           :schema $ :: 'StructDef
         'Database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Database
-            :sessions $ :: 'Map 'Number 'Session
-            :users $ :: 'Map 'String 'User
+            :sessions $ :: 'Map 'Number 'app.schema/Session
+            :users $ :: 'Map 'String 'app.schema/User
             :today 'app.util/DateInfo
           :examples $ []
           :schema $ :: 'StructDef
@@ -1526,14 +1702,14 @@
           :examples $ []
           :schema $ :: 'StructDef
         'Op $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'CursorPatch)
+          :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'app.schema/Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'app.schema/CursorPatch)
             :user/log-in $ :: 'List 'String
             :user/sign-up $ :: 'List 'String
             :user/log-out
-            :router/change 'Router
-            :diary/add-one 'Diary
-            :diary/change 'DiaryChange
-            :diary/copy-yesterday 'CopyYesterday
+            :router/change 'app.schema/Router
+            :diary/add-one 'app.schema/Diary
+            :diary/change 'app.schema/DiaryChange
+            :diary/copy-yesterday 'app.schema/CopyYesterday
             :today 'app.util/DateInfo
             :effect/persist
             :effect/ping
@@ -1554,26 +1730,18 @@
           :examples $ []
           :schema $ :: 'StructDef
         'Session $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct Session (:id 'Number) (:nickname 'String) (:router 'Router)
-            :messages $ :: 'Map 'String 'Message
+          :code $ quote $ defstruct Session (:id 'Number) (:nickname 'String) (:router 'app.schema/Router)
+            :messages $ :: 'Map 'String 'app.schema/Message
             :cursor 'app.util/DateInfo
             :user-id $ :: 'Optional 'String
           :examples $ []
           :schema $ :: 'StructDef
         'User $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct User (:name 'String) (:id 'String) (:nickname 'String) (:password 'String)
-            :diaries $ :: 'Map 'String 'Diary
+            :diaries $ :: 'Map 'String 'app.schema/Diary
             :avatar $ :: 'Optional 'String
           :examples $ []
           :schema $ :: 'StructDef
-        'checked-database $ %{} 'CodeEntry (:doc "|在 Reel 状态边界按 Struct 来源校验数据库，取代未证明的 assert-type。")
-          :code $ quote $ defn checked-database (value)
-            if (struct? value)
-              if (&struct:matches? value Database) value $ raise $ str "|expected a Database in reel state, got: " (type-of value)
-              raise $ str "|expected a Database in reel state, got: " $ type-of value
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'Dynamic
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :today $ app.util/DateInfo :year 2018 :month 6 :day 18
@@ -1704,18 +1872,17 @@
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *reader-reel @*reel
           :examples $ []
-          :schema $ :: 'Ref 'cumulo-reel.core/ReelState
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
         '*reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reel
-            struct-with reel-schema (:base @*initial-db) (:db @*initial-db)
+          :code $ quote $ defatom *reel (new-reel @*initial-db)
           :examples $ []
-          :schema $ :: 'Ref 'cumulo-reel.core/ReelState
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
             let
                 today $ get-native-today!
                 reel @*reel
-                db $ schema/checked-database (:db reel)
+                db $ :db reel
               when
                 not= today $ :today db
                 println "|A new day:" today
@@ -1744,6 +1911,7 @@
                 (:effect/ping)
                   wss-send! sid $ format-cirru-edn $ :: :effect/pong
                 _ $ reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'app.schema/Op 'Number
@@ -1862,9 +2030,10 @@
             println "|Running mode:" $ if config/dev? |dev |release
             let
                 maybe-port $ get-env |port
-                port $ match maybe-port
+                port-value $ match maybe-port
                   (:some value) (parse-float value)
                   (:none) (:port config/site)
+                port $ if (number? port-value) port-value $ raise "|expected a numeric server port"
               run-server! port
               println $ str "|Server started on port:" port
             ; "|init it before doing multi-threading"
@@ -1891,6 +2060,7 @@
               validate-storage-migration migration-file
               rename! migration-file path
               println $ str "|Migrated storage to typed data; legacy backup: " backup-file
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'String 'String 'app.schema/Database
@@ -2149,7 +2319,7 @@
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
-                db $ schema/checked-database (:db @*reel)
+                db $ :db @*reel
                 file-content $ format-stored-db db
                 storage-path storage-file
                 backup-path $ get-backup-path!
@@ -2194,6 +2364,7 @@
                     do (println "|Client closed!") (swap! *client-caches &map:dissoc sid)
                       dispatch! (:: :session/disconnect) sid
                   _ $ eprintln "|unknown data:" data
+                , &unit
             , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -2209,7 +2380,7 @@
           :code $ quote $ defn sync-clients! (reel)
             wss-each! $ fn (sid)
               let
-                  db $ schema/checked-database (:db reel)
+                  db $ :db reel
                   records $ :records reel
                   session $ assert-type
                     match
@@ -2230,7 +2401,7 @@
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'cumulo-reel.core/ReelState
+            :args $ [] $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
             :code $ quote $ let
                 before @*client-caches
@@ -2281,7 +2452,7 @@
             app.updater :refer $ updater
             app.updater.diary :as diary-updater
             app.updater.session :as session-updater
-            cumulo-reel.core :refer $ reel-reducer refresh-reel reel-schema
+            cumulo-reel.core :refer $ reel-reducer refresh-reel new-reel
             app.config :as config
             app.twig.container :refer $ twig-container
             recollect.diff :refer $ diff-twig
@@ -2598,7 +2769,7 @@
                 (:none) logged-out
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
-            :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
+            :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'cumulo-reel.core/ReelRecord 'app.schema/Op 'Number 'String)
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
             match
