@@ -91,14 +91,28 @@
             :args $ [] 'app.schema/ClientOp
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+        'dispatch-host! $ %{} 'CodeEntry (:doc "|在 Respo dispatch 边界把 op 解码为 ClientOp 后分发。")
+          :code $ quote $ defn dispatch-host! (op)
+            dispatch! $ decode-map-as op 'app.schema/ClientOp
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Dynamic
+            :features $ #{} :js-ffi
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
             if config/dev? $ load-console-formatter!
             render-app!
             connect!
-            add-watch *store :changes $ fn (store prev) (render-app!)
-            add-watch *states :changes $ fn (states prev) (render-app!)
+            add-watch *store :changes $ fn (store prev)
+              hint-fn $ {} (:return 'Unit)
+                :args $ [] 'app.client/StorePayload 'app.client/StorePayload
+              render-app!
+            add-watch *states :changes $ fn (states prev)
+              hint-fn $ {} (:return 'Unit)
+                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+              render-app!
             on-page-touch $ fn ()
               when (enum? @*store)
                 match @*store
@@ -113,6 +127,7 @@
                 , &unit
               , nil
             println "|App started!"
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -182,9 +197,16 @@
               or (some? client-errors) (some? server-errors)
               hud! |error $ str client-errors &newline server-errors
               do (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!) (render-app!)
-                add-watch *store :changes $ fn (store prev) (render-app!)
-                add-watch *states :changes $ fn (states prev) (render-app!)
+                add-watch *store :changes $ fn (store prev)
+                  hint-fn $ {} (:return 'Unit)
+                    :args $ [] 'app.client/StorePayload 'app.client/StorePayload
+                  render-app!
+                add-watch *states :changes $ fn (states prev)
+                  hint-fn $ {} (:return 'Unit)
+                    :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+                  render-app!
                 hud! |ok~ |Ok
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -195,7 +217,7 @@
                 raw-states $ deref *states
                 states $ decode-map-as (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
                 store $ deref *store
-              render! (mount-target) (comp-container states store) dispatch!
+              render! (mount-target) (comp-container states store) dispatch-host!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -300,11 +322,11 @@
                       comp-navigation (:logged-in? store-typed) (:count store-typed)
                       if (:logged-in? store-typed)
                         case (:name router)
-                          :home $ comp-month (:today store-typed) (:cursor session) diary $ assert-type router-data
+                          :home $ comp-month (:today store-typed) (:cursor session) diary $ decode-map-as router-data
                             :: 'Map 'String $ :: 'Map 'Tag 'String
-                          :data $ comp-data-gather $ assert-type router-data (:: 'Map 'String 'app.comp.data-gather/DiaryPayload)
+                          :data $ comp-data-gather $ decode-map-as router-data (:: 'Map 'String 'Dynamic)
                           :diary $ comp-diary (>> states :diary) (:cursor session) diary
-                          :profile $ comp-profile user $ assert-type router-data (:: 'Map 'String 'String)
+                          :profile $ comp-profile user $ decode-map-as router-data (:: 'Map 'String 'String)
                           <> $ str router
                         comp-login states
                       comp-status-color $ :color store-typed
@@ -313,9 +335,13 @@
                         to-respo-messages $ :messages session
                         {}
                         fn (info d!)
+                          hint-fn $ {} (:return 'Dynamic)
+                            :args $ [] (:: 'Map 'Dynamic 'Dynamic) 'Dynamic
                           match
                             get (:messages session)
-                              assert-type (&map:get info :id) 'String
+                              &let
+                                id $ &map:get info :id
+                                if (string? id) id $ raise "|expected message id as a String"
                             (:some message) (d! :session/remove-message message)
                             (:none) &unit
                       when dev? $ comp-reel (:reel-length store-typed) ({})
@@ -403,13 +429,8 @@
             app.comp.diary :refer $ comp-diary
             app.comp.data-gather :refer $ comp-data-gather
     'app.comp.data-gather $ %{} 'FileEntry
-      :defs $ {}
-        'DiaryPayload $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ deftrait DiaryPayload
-          :examples $ []
-          :schema $ :: 'Trait
-          :tags $ #{} :type-boundary
-        'comp-data-gather $ %{} 'CodeEntry (:doc |)
+      :defs $ {} $ 'comp-data-gather
+        %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-data-gather (diaries)
             div
               {}
@@ -431,7 +452,7 @@
                     copy! $ format-cirru-edn $ &map:to-list diaries
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'String 'app.comp.data-gather/DiaryPayload
+            :args $ [] $ :: 'Map 'String 'Dynamic
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
@@ -732,8 +753,10 @@
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
             :args $ [] 'String $ :: 'Fn
-              {} (:return 'Unit)
-                :args $ [] 'Dynamic 'Dynamic
+              {} (:return 'Dynamic)
+                :args $ [] (:: 'Map 'Tag 'Dynamic)
+                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                    :args $ [] 'Dynamic
         'style-date-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-date-preview
             {} $ |& $ {} (:font-size 32) (:font-weight 100)
