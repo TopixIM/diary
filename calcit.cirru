@@ -1566,6 +1566,14 @@
             :avatar $ :: 'Optional 'String
           :examples $ []
           :schema $ :: 'StructDef
+        'checked-database $ %{} 'CodeEntry (:doc "|在 Reel 状态边界按 Struct 来源校验数据库，取代未证明的 assert-type。")
+          :code $ quote $ defn checked-database (value)
+            if (struct? value)
+              if (&struct:matches? value Database) value $ raise $ str "|expected a Database in reel state, got: " (type-of value)
+              raise $ str "|expected a Database in reel state, got: " $ type-of value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
+            :args $ [] 'Dynamic
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :today $ app.util/DateInfo :year 2018 :month 6 :day 18
@@ -1707,7 +1715,7 @@
             let
                 today $ get-native-today!
                 reel @*reel
-                db $ assert-type (:db reel) 'app.schema/Database
+                db $ schema/checked-database (:db reel)
               when
                 not= today $ :today db
                 println "|A new day:" today
@@ -2141,7 +2149,7 @@
         'persist-db! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn persist-db! ()
             let
-                db $ assert-type (:db @*reel) 'app.schema/Database
+                db $ schema/checked-database (:db @*reel)
                 file-content $ format-stored-db db
                 storage-path storage-file
                 backup-path $ get-backup-path!
@@ -2201,7 +2209,7 @@
           :code $ quote $ defn sync-clients! (reel)
             wss-each! $ fn (sid)
               let
-                  db $ assert-type (:db reel) 'app.schema/Database
+                  db $ schema/checked-database (:db reel)
                   records $ :records reel
                   session $ assert-type
                     match
