@@ -133,12 +133,13 @@
             :args $ []
             :features $ #{} :js-ffi
         'mount-target $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn mount-target () (js/document.querySelector |.app)
+          :code $ quote $ defn mount-target ()
+            unsafe-coerce (js/document.querySelector |.app) (:: 'JsNullish 'respo.dom/DomElement)
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ []
             :features $ #{} :js-ffi
-            :return $ :: 'JsNullish 'JsObject
+            :return $ :: 'JsNullish 'respo.dom/DomElement
         'normalize-wire-value $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-wire-value (value)
             cond
@@ -1898,11 +1899,14 @@
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *reader-reel @*reel
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
         '*reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reel (new-reel @*initial-db)
+          :code $ quote $ defatom *reel
+            %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
+              :records $ []
+              :merged? false
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
+          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
             let
@@ -2351,6 +2355,7 @@
                 backup-path $ get-backup-path!
               check-write-file! storage-path file-content
               check-write-file! backup-path file-content
+              , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -2358,7 +2363,7 @@
           :code $ quote $ defn reload! () (println "|Code updated..")
             if (not config/dev?) (raise "|reloading only happens in dev mode")
             clear-twig-caches!
-            reset! *reel $ refresh-reel @*reel @*initial-db updater
+            reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -2427,13 +2432,21 @@
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'cumulo-reel.core/ReelState 'app.schema/Database 'app.schema/Op 'Number 'String
+            :args $ [] $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
             :code $ quote $ let
                 before @*client-caches
               assert= &unit $ sync-clients! @*reel
               assert= before @*client-caches
             :tags $ #{} :native-wss-contract
+        'updater-from-record $ %{} 'CodeEntry
+          :doc "|Decode one recorded reel entry before replaying it through the typed updater."
+          :code $ quote $ defn updater-from-record (db op sid op-id op-time)
+            updater db (decode-map-as op 'app.schema/Op) (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
+            :args $ [] 'app.schema/Database 'OpInput 'SidInput 'IdInput 'TimeInput
+            :generics $ [] 'OpInput 'SidInput 'IdInput 'TimeInput
         'validate-storage-migration $ %{} 'CodeEntry
           :doc "|Check the typed temporary file without changing storage, backups or the candidate."
           :code $ quote $ defn validate-storage-migration (path)
@@ -2478,7 +2491,7 @@
             app.updater :refer $ updater
             app.updater.diary :as diary-updater
             app.updater.session :as session-updater
-            cumulo-reel.core :refer $ reel-reducer refresh-reel new-reel
+            cumulo-reel.core :refer $ reel-reducer refresh-reel
             app.config :as config
             app.twig.container :refer $ twig-container
             recollect.diff :refer $ diff-twig
@@ -2795,7 +2808,7 @@
                 (:none) logged-out
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
-            :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'cumulo-reel.core/ReelRecord 'app.schema/Op 'Number 'String)
+            :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
             match
