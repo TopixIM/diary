@@ -169,6 +169,7 @@
                         if (not @*resync-attempted?)
                           do (reset! *resync-attempted? true) (connect!)
                           reset! *store $ StorePayload :initial
+                  , &unit
               (:effect/pong) &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -1568,13 +1569,15 @@
                 =< 8 nil
                 list->
                   {} $ :class-name css/row
-                  &list:map-pair (&map:to-list members)
-                    fn (k username)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] 'String 'String
-                      [] k $ div
-                        {} $ :class-name css-member-label
-                        <> username
+                  &list:map (&map:to-list members)
+                    fn (pair)
+                      hint-fn $ {}
+                        :args $ [] $ :: 'List 'Dynamic
+                        :return $ :: 'List 'Dynamic
+                      [] (&list:nth pair 0)
+                        div
+                          {} $ :class-name css-member-label
+                          <> $ decode-map-as (&list:nth pair 1) 'String
               =< nil 48
               div ({})
                 button
