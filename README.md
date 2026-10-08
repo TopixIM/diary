@@ -72,6 +72,15 @@ JS 宿主测试另验证 dispatcher 异常原样传播。事件 Map 和兼容 di
 Reel 使用 `0.0.51` 的 `ReelState<Database>`，同步和持久化直接读取已保留类型的 `:db`。
 旧记录中的 operation/session 等开放字段只在 replay adapter 进入 typed updater 前解码，不反复解码整个数据库。
 
+客户端 patch 的纯边界集中在 `app.client-state`：先校验消息和 change-op，再调用
+Recollect 的 `try-patch-twig`，最后 deep decode `ClientStore`。
+成功结果 `ClientSnapshot` 同时保存 raw patch base 和 typed store，由一次 Ref 更新提交；
+容器组件直接使用 typed store。断线状态保留最近的快照，恢复连接时等待完整 `:replace`，
+不把后续增量误接在已经失步的 base 上。
+失败只记录阶段 tag，不打印私有 patch；每轮恢复至多主动重连一次，完整快照成功后才重新允许恢复。
+服务端现有 EDN diff 协议和持久化格式不变。升级这个客户端内存状态结构时需要刷新页面，
+不要沿用旧 `StorePayload` 的 hot-reload Ref 值。
+
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；
 `try-parse-stored-db-with-format` 返回 `Result`，保留 typed/legacy 区分及 decoder 字段路径。
@@ -93,6 +102,7 @@ Reel 使用 `0.0.51` 的 `ReelState<Database>`，同步和持久化直接读取�
 运行完整 `calcit fix --workflow strict --verify --format edn` 后，仍须执行业务测试和目标构建；
 严格检查通过不等于所有开放业务边界都已完成迁移，也不代表生产部署完成。
 路由 payload、部分 alerts 回调及异构 UI state 仍有明确的开放边界；不能用空 trait、返回标注或强转冒充运行时校验。
+WebSocket 文本解析发生在模块回调前；解析异常的受检通知尚待模块支持，应用 patch Result 不包含这一步。
 Caps 保留原 CI 安装模式及共享模块版本选择警告，不宣称严格依赖图已经通过。
 新发布的自有 runtime 仅按已核验的精确版本更新 Yarn 预批准项；没有放宽其他依赖的门禁，
 仍使用 hardened immutable 安装与 Caps 工具链校验。

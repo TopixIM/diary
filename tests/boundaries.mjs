@@ -51,6 +51,7 @@ try {
     ["app.comp.month", ["collect-special-days", "on-change-month!"]],
     ["app.comp.navigation", ["on-navigate"]],
     ["app.config", ["resolve-port"]],
+    ["app.client-state", ["try-client-patch", "try-client-message"]],
   ];
   const operations = [];
   let count = 0;
