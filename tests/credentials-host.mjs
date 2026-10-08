@@ -1,16 +1,30 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { current_hour_$x_, dispatch_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { _$s_states, current_hour_$x_, dispatch_host_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
 import { get_today_$x_ } from "../js-out/app.util.mjs";
 import { on_submit } from "../js-out/app.comp.login.mjs";
 import { on_navigate } from "../js-out/app.comp.navigation.mjs";
-import { ClientOp } from "../js-out/app.schema.mjs";
+import { comp_month_footer } from "../js-out/app.comp.month.mjs";
+import { ClientOp, Op } from "../js-out/app.schema.mjs";
 import { wrap_dispatch } from "../js-out/respo.controller.client.mjs";
 import * as ws from "../js-out/ws-edn.client.mjs";
 import { DateTime } from "luxon";
 
 const tag = (name) => core.newTag(name);
 const list = (...values) => core.arrayToList(values);
+
+// Follow the real Respo Element/Component/ChildPair tree, not copied callbacks.
+function clickHandlers(node) {
+  if (node == null) return [];
+  if (core.enum_$q_(node)) return node.extra.length ? clickHandlers(node.extra[0]) : [];
+  const handler = node.get(tag("event"))?.get(tag("click"));
+  const children = node.get(tag("children"));
+  return [
+    ...(handler ? [handler] : []),
+    ...clickHandlers(node.get(tag("tree"))),
+    ...(children ? core.listToArray(children).flatMap(child => clickHandlers(child.get(tag("node")))) : []),
+  ];
+}
 
 // Exercise the real generated handler: dispatch failure must not be swallowed.
 const navigationFailure = new Error("navigation dispatch failed");
@@ -180,12 +194,57 @@ const submitSocket = { send: text => { order.push("dispatch"); submitted.push(te
 const submitClient = ws.create_client_with_$x_("wss://submit-fixture.invalid/", core._$n__$M_(), () => submitSocket);
 submitSocket.onopen({});
 core.reset_$x_(ws._$s_global_client, core._PCT_some(submitClient));
-const wrapped = wrap_dispatch(core.atom(op => { actions.push(op); dispatch_$x_(op); return undefined; }));
+const wrapped = wrap_dispatch(core.atom(op => { actions.push(op); return dispatch_host_$x_(op); }));
+const originalStates = core.deref(_$s_states);
 let submittedText;
 try {
   globalThis.localStorage = {
     setItem(key, text) { assert.equal(key, "diary"); order.push("storage"); submittedText = text; },
   };
+  for (const route of ["home", "data", "profile"]) {
+    submitted.length = 0;
+    assert.equal(on_navigate(tag(route))(core._$n__$M_(), wrapped), undefined);
+    assert.equal(submitted.length, 1);
+    const operation = core.parse_cirru_edn(submitted[0]);
+    assert.equal(core._$n_enum_$o_nth(operation, 0), tag("router/change"));
+    assert.equal(actions.at(-1).enumPrototype, ClientOp);
+    assert.equal(core._$n_enum_$o_nth(actions.at(-1), 1).get(tag("name")), tag(route));
+  }
+  const footerHandlers = clickHandlers(comp_month_footer());
+  assert.equal(footerHandlers.length, 21, "All twelve months and nine existing year controls remain reachable");
+  footerHandlers.forEach((handler, index) => {
+    submitted.length = 0;
+    handler(core._$n__$M_(), wrapped);
+    assert.equal(submitted.length, 1);
+    const op = actions.at(-1);
+    assert.equal(op.enumPrototype, ClientOp);
+    assert.equal(op.tag, tag("session/merge-cursor"));
+    const patch = op.extra[0];
+    assert.equal(patch.get(tag("month")), index < 12 ? index + 1 : null);
+    assert.equal(patch.get(tag("year")), index < 12 ? null : 2026 - (index - 12));
+    assert.equal(patch.get(tag("day")), null);
+  });
+  submitted.length = 0;
+  const localData = core._$n__$M_(tag("text"), "local draft");
+  assert.equal(wrapped(list(tag("fixture")), localData), undefined);
+  assert.notEqual(core.deref(_$s_states), originalStates);
+  assert.equal(core.deref(_$s_states).get(tag("states")).get(tag("fixture")).get(tag("data")), localData);
+  assert.deepEqual(submitted, [], "Local UI states must never reach the server");
+  const stateAfterLocalEdit = core.deref(_$s_states);
+  for (const invalid of [
+    null,
+    core._$o__$o_(tag("user/log-out")),
+    core._$o__$o_(tag("states"), tag("invalid-cursor"), localData),
+    core._$o__$o_(tag("states"), list()),
+    core._PCT__$o__$o_(Op, tag("user/log-out")),
+    // Host-created malformed envelopes must also fail before effects.
+    new core.CalcitEnumValue(tag("router/change"), [core._$n__$M_(tag("name"), tag("home"))], ClientOp),
+    new core.CalcitEnumValue(tag("user/log-in"), [list(42, "password")], ClientOp),
+  ]) {
+    assert.throws(() => wrapped(invalid));
+    assert.equal(core.deref(_$s_states), stateAfterLocalEdit);
+    assert.deepEqual(submitted, []);
+  }
   for (const [signup, username, password, variant] of [
     [false, "fixture-user", "fixture-password", "user/log-in"],
     [true, "fixture-user", "fixture-password", "user/sign-up"],
@@ -214,8 +273,9 @@ try {
   assert.throws(() => on_submit("fixture-user", "fixture-password", false)(core._$n__$M_(), wrapped), /fixture quota exceeded/);
   assert.deepEqual(order, ["dispatch", "storage"]);
 } finally {
+  core.reset_$x_(_$s_states, originalStates);
   core.reset_$x_(ws._$s_global_client, core._PCT_none());
   ws.client_close_$x_(submitClient);
   delete globalThis.localStorage;
 }
-console.log("Typed login callbacks pass actual Respo/application dispatch and wire serialization with original effect order.");
+console.log("Typed navigation, month/year and login callbacks pass actual Respo/application dispatch; local states stay local and invalid operations have no effects.");

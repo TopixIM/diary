@@ -59,6 +59,14 @@ WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；�
 附带测试验证 home/data/profile 的原操作和 payload、单次分发与返回值；native 和生成 JS 回放同一 AST，
 JS 宿主测试另验证 dispatcher 异常原样传播。事件 Map 和兼容 dispatcher 的开放参数仍遵守 Respo 的边界合同。
 
+应用业务事件统一构造 `ClientOp` 与具体 Struct payload，经真实 `wrap-dispatch → dispatch-host!`
+进入 dispatcher，不再发送 Tag/Map。边界要求共享的 `ClientOp` 定义身份，已构造的 Struct
+按名义类型检查后直接使用，不重复用 Map decoder 解码；登录等容器 payload 仍递归检查。
+仅 Respo 的匿名 `:states` 保留本地适配，cursor 必须为 List，状态更新不发送网络消息。
+日记弹窗返回的开放值在进入 `DiaryChange.data` 前检查为 String，不以返回标注代替检查。
+年月切换附带测试覆盖跨年、闰月日期收缩及普通日期；宿主测试执行实际导航和全部年月按钮，
+并验证错误操作不提交状态或网络消息。
+
 Reel 使用 `0.0.51` 的 `ReelState<Database>`，同步和持久化直接读取已保留类型的 `:db`。
 旧记录中的 operation/session 等开放字段只在 replay adapter 进入 typed updater 前解码，不反复解码整个数据库。
 

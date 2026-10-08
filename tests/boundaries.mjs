@@ -45,9 +45,9 @@ try {
   });
   const groups = [
     ["app.storage", ["normalize-stored-db", "parse-stored-db-with-format", "try-parse-stored-db-with-format"]],
-    ["app.schema", ["try-decode-credentials", "try-parse-credentials"]],
+    ["app.schema", ["try-decode-credentials", "try-parse-credentials", "decode-client-dispatch-op"]],
     ["app.server", ["parse-client-op"]],
-    ["app.comp.month", ["collect-special-days"]],
+    ["app.comp.month", ["collect-special-days", "on-change-month!"]],
     ["app.comp.navigation", ["on-navigate"]],
     ["app.config", ["resolve-port"]],
   ];
