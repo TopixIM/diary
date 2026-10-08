@@ -1527,30 +1527,15 @@
                 {} $ :class-name css/column
                 span $ {} (:inner-text |Diary)
                   :style $ {} $ :cursor :pointer
-                  :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
-                    d! :router/change $ {} $ :name :home
+                  :on-click $ on-navigate :home
               div ({})
                 span $ {} (:inner-text |Data)
                   :style $ {} (:cursor :pointer) (:margin-bottom 16) (:display :inline-block)
-                  :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
-                    d! :router/change $ {} $ :name :data
+                  :on-click $ on-navigate :data
                 div
                   {}
                     :style $ {} $ :cursor |pointer
-                    :on-click $ fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
-                      d! :router/change $ {} $ :name :profile
+                    :on-click $ on-navigate :profile
                   <> $ if logged-in? |Me |Guest
                   =< 8 nil
                   <> $ str count-members
@@ -1566,6 +1551,73 @@
               :background-color $ hsl 0 0 97
           :examples $ []
           :schema $ :: 'String
+        'on-navigate $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn on-navigate (route)
+            fn (event dispatch!)
+              hint-fn $ {} (:return 'Unit)
+                :args $ [] (:: 'Map 'Tag 'Dynamic)
+                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                    :args $ [] 'Dynamic
+              dispatch! :router/change $ {} $ :name route
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Tag
+            :return $ :: 'Fn $ {} (:return 'Unit)
+              :args $ [] (:: 'Map 'Tag 'Dynamic)
+                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
+                  :args $ [] 'Dynamic
+          :tests $ []
+            %{} 'TestEntry (:name |dispatch-home-returns-unit-once)
+              :code $ quote $ let
+                  recorded $ ref |
+                  calls $ ref 0
+                  dispatch! $ fn (op & payloads)
+                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
+                      :args $ [] 'Dynamic
+                    reset! recorded $ format-cirru-edn $ [] op payloads
+                    swap! calls inc
+                    , &unit
+                  handler $ on-navigate :home
+                assert= &unit $ handler ({}) dispatch!
+                assert= 1 @calls
+                assert=
+                  format-cirru-edn $ [] :router/change $ []
+                    {} $ :name :home
+                  , @recorded
+            %{} 'TestEntry (:name |dispatch-data-returns-unit-once)
+              :code $ quote $ let
+                  recorded $ ref |
+                  calls $ ref 0
+                  dispatch! $ fn (op & payloads)
+                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
+                      :args $ [] 'Dynamic
+                    reset! recorded $ format-cirru-edn $ [] op payloads
+                    swap! calls inc
+                    , &unit
+                  handler $ on-navigate :data
+                assert= &unit $ handler ({}) dispatch!
+                assert= 1 @calls
+                assert=
+                  format-cirru-edn $ [] :router/change $ []
+                    {} $ :name :data
+                  , @recorded
+            %{} 'TestEntry (:name |dispatch-profile-returns-unit-once)
+              :code $ quote $ let
+                  recorded $ ref |
+                  calls $ ref 0
+                  dispatch! $ fn (op & payloads)
+                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
+                      :args $ [] 'Dynamic
+                    reset! recorded $ format-cirru-edn $ [] op payloads
+                    swap! calls inc
+                    , &unit
+                  handler $ on-navigate :profile
+                assert= &unit $ handler ({}) dispatch!
+                assert= 1 @calls
+                assert=
+                  format-cirru-edn $ [] :router/change $ []
+                    {} $ :name :profile
+                  , @recorded
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.navigation
           :require
@@ -1650,6 +1702,35 @@
             = |dev $ option:unwrap-or (get-env |mode) |release
           :examples $ []
           :schema $ :: 'Bool
+        'resolve-port $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn resolve-port (maybe-port)
+            match maybe-port
+              (:some text)
+                match (parse-float text)
+                  (:ok port) port
+                  (:err _) (raise "|expected a numeric server port")
+              (:none) (:port site)
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Number)
+            :args $ [] $ :: 'Option 'String
+          :tests $ []
+            %{} 'TestEntry (:name |uses-configured-default-when-port-is-absent)
+              :code $ quote $ assert= (:port site)
+                resolve-port $ Option :none
+            %{} 'TestEntry (:name |unwraps-valid-port-result)
+              :code $ quote $ assert= 6001
+                resolve-port $ Option :some |6001
+            %{} 'TestEntry (:name |keeps-explicit-zero-port)
+              :code $ quote $ assert= 0
+                resolve-port $ Option :some |0
+            %{} 'TestEntry (:name |rejects-invalid-port-text)
+              :code $ quote $ each ([] | |oops |6001oops)
+                fn (text)
+                  assert= "|expected a numeric server port" $ try
+                    do
+                      resolve-port $ Option :some text
+                      , |unexpected-success
+                    fn (message) message
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             SiteConfig :port 11008 :title |Diary :icon |http://cdn.tiye.me/logo/topix.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/diary/ :cdn-folder |tiye.me:cdn/diary :theme |#eeeeff :storage-key |diary :storage-file |storage.cirru
@@ -2059,11 +2140,7 @@
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
             let
-                maybe-port $ get-env |port
-                port-value $ match maybe-port
-                  (:some value) (parse-float value)
-                  (:none) (:port config/site)
-                port $ if (number? port-value) port-value $ raise "|expected a numeric server port"
+                port $ config/resolve-port $ get-env |port
               run-server! port
               println $ str "|Server started on port:" port
             ; "|init it before doing multi-threading"

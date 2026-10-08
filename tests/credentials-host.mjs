@@ -3,6 +3,7 @@ import * as core from "../js-out/calcit.core.mjs";
 import { current_hour_$x_, dispatch_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
 import { get_today_$x_ } from "../js-out/app.util.mjs";
 import { on_submit } from "../js-out/app.comp.login.mjs";
+import { on_navigate } from "../js-out/app.comp.navigation.mjs";
 import { ClientOp } from "../js-out/app.schema.mjs";
 import { wrap_dispatch } from "../js-out/respo.controller.client.mjs";
 import * as ws from "../js-out/ws-edn.client.mjs";
@@ -10,6 +11,15 @@ import { DateTime } from "luxon";
 
 const tag = (name) => core.newTag(name);
 const list = (...values) => core.arrayToList(values);
+
+// Exercise the real generated handler: dispatch failure must not be swallowed.
+const navigationFailure = new Error("navigation dispatch failed");
+let navigationCalls = 0;
+assert.throws(() => on_navigate(tag("home"))(core._$n__$M_(), () => {
+  navigationCalls++;
+  throw navigationFailure;
+}), error => error === navigationFailure);
+assert.equal(navigationCalls, 1);
 
 // Use the actual WebSocket adapter with an injected socket; no network is opened.
 const sent = [];

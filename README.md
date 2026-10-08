@@ -10,10 +10,15 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.16`，默认入口为 browser JS，server 为 native。
+升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.19`，默认入口为 browser JS，server 为 native。
 Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
 安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
 CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
+
+服务端的 `port` 环境变量经 `resolve-port: Option<String> -> Number` 解析：
+未设置时使用 `SiteConfig.port`，设置后显式匹配 `parse-float` 的 `Result`。
+合法文本（包括 `0`）保留解析值，非法文本在启动监听器前失败；host 原有端口范围约束不变。
+这些分支由 Calcit 附带测试在 native 与生成 JS 上共同回放。
 
 前端资源由 `cos-upload-action@v1.2.0` 上传并通过 action 自身的 `public-base-url` / `verify`
 校验，不维护额外验证脚本。生产 CDN 路径仍为
@@ -50,6 +55,13 @@ WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；�
 使用普通 `fold` 和 Set `.union`，不把 Set 当作位置参数展开。
 附带测试覆盖空输入、不匹配类别、混合类别、重复日期和空日期集合；生成 JS 回放同一测试 AST。
 
+导航栏的三个路由复用 `on-navigate`，直接返回 dispatcher 的真实 `Unit`，不把回调结果标成 `Dynamic`。
+附带测试验证 home/data/profile 的原操作和 payload、单次分发与返回值；native 和生成 JS 回放同一 AST，
+JS 宿主测试另验证 dispatcher 异常原样传播。事件 Map 和兼容 dispatcher 的开放参数仍遵守 Respo 的边界合同。
+
+Reel 使用 `0.0.51` 的 `ReelState<Database>`，同步和持久化直接读取已保留类型的 `:db`。
+旧记录中的 operation/session 等开放字段只在 replay adapter 进入 typed updater 前解码，不反复解码整个数据库。
+
 纯解码集中在 `app.storage`，native 文件读写和迁移留在 `app.server`，JS 通过正常模块引用复用解码器。
 存储 normalization 先检查各层 Map，再 deep decode 为 `Database`；
 `try-parse-stored-db-with-format` 返回 `Result`，保留 typed/legacy 区分及 decoder 字段路径。
@@ -68,8 +80,9 @@ WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；�
 
 ### 升级限制
 
-完整 `calcit fix --workflow strict --verify --format edn` 仍有上游类型来源证明阻塞；
-入口、业务测试和本地构建通过不等于完整 CI 或生产部署完成。
+运行完整 `calcit fix --workflow strict --verify --format edn` 后，仍须执行业务测试和目标构建；
+严格检查通过不等于所有开放业务边界都已完成迁移，也不代表生产部署完成。
+路由 payload、部分 alerts 回调及异构 UI state 仍有明确的开放边界；不能用空 trait、返回标注或强转冒充运行时校验。
 Caps 保留原 CI 安装模式及共享模块版本选择警告，不宣称严格依赖图已经通过。
 新发布的自有 runtime 仅按已核验的精确版本更新 Yarn 预批准项；没有放宽其他依赖的门禁，
 仍使用 hardened immutable 安装与 Caps 工具链校验。
