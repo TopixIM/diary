@@ -34,8 +34,8 @@ COS 仅上传 `dist/`，原 web rsync 与 `/servers/diary/` 服务源码部署�
 只运行不依赖文件系统的 native 测试，可用 `calcit --entry server test --exclude-tag filesystem --exclude-tag browser-date-contract --exclude-tag browser-login-contract --require-match`。
 JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot 字节不变。
 
-日期契约写在五个定义的 `:tests` 中，标记 `browser-date-contract`，由真实 Date/Luxon
-宿主回放；native 排除这五个浏览器专用测试，仍运行全部原有测试。宿主固定 UTC 时间，
+日期契约写在六个定义的 `:tests` 中，标记 `browser-date-contract`，由真实 Date/Luxon
+宿主回放；native 排除这六个浏览器专用测试，仍运行全部原有测试。宿主固定 UTC 时间，
 覆盖零点、日历字段、跨年昨日和正常 Calcit 方法调用；另验证缺少方法时拒绝、单次构造、
 宿主身份与 `this`。日期适配器使用已有 `js-cast` 检查成员形状，方法返回值仍遵守真实宿主库的声明合同，
 形状检查不冒充任意宿主的深层值校验。
@@ -44,7 +44,7 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 不再以 Tag/参数列表调用兼容 adapter。两个 `browser-login-contract` 附带测试由 JS 回放，
 宿主测试经过真实 Respo adapter、应用 dispatcher 和 WebSocket 序列化，验证登录/注册、
 空字符串、凭证保存和发送后再保存的顺序；保存失败仍抛出原错误。回放复用同一份 schema
-模块，保留名义定义身份断言；native 只排除明确列出并在 JS 验证的七个浏览器专用测试。
+模块，保留名义定义身份断言；native 只排除明确列出并在 JS 验证的八个浏览器专用测试。
 
 服务端同步回调按 `wss-each!` 的合同显式返回 `&unit`，消息发送和缓存更新顺序不变。
 WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；模块内部检查真实 host
@@ -54,6 +54,8 @@ WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；�
 节假日分类通过 `collect-special-days` 对已解码的 `List<HolidayEntry>` 累积 `Set<String>`，
 使用普通 `fold` 和 Set `.union`，不把 Set 当作位置参数展开。
 附带测试覆盖空输入、不匹配类别、混合类别、重复日期和空日期集合；生成 JS 回放同一测试 AST。
+分类查询使用 `get` 显式读取 Map 的 Option，保留原先缺少分类键时 unwrap 失败的契约，
+不把 Map 当作 Struct 字段读取。真实 Luxon 回放覆盖法定假日、补班周末、普通周末和工作日。
 
 导航栏的三个路由复用 `on-navigate`，直接返回 dispatcher 的真实 `Unit`，不把回调结果标成 `Dynamic`。
 附带测试验证 home/data/profile 的原操作和 payload、单次分发与返回值；native 和生成 JS 回放同一 AST，

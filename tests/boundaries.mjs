@@ -18,6 +18,7 @@ try {
     "app.client/current-hour!#checked-date-preserves-zero-hour",
     "app.comp.month/luxon-from-map#checked-luxon-map-keeps-method-dispatch",
     "app.comp.month/luxon-from-millis#checked-luxon-millis-keeps-method-dispatch",
+    "app.comp.month/is-holiday?#checked-holiday-map-lookup-preserves-classification",
     "app.util/get-today!#checked-date-preserves-calendar-fields",
     "app.util/get-yesterday!#checked-date-preserves-year-rollover",
   ].sort());
@@ -94,7 +95,7 @@ try {
   const dateGroups = [
     ["app.client", ["current-hour!"]],
     ["app.util", ["get-today!", "get-yesterday!"]],
-    ["app.comp.month", ["luxon-from-map", "luxon-from-millis"]],
+    ["app.comp.month", ["luxon-from-map", "luxon-from-millis", "is-holiday?"]],
     ["app.comp.login", ["on-submit"]],
   ];
   const dateOperations = [];
@@ -115,7 +116,7 @@ try {
         JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"], [":features", ["#{}", ":js-ffi"]]]])],
     );
   }
-  assert.equal(dateCount, 7);
+  assert.equal(dateCount, 8);
   dateOperations.push(
     ["edit", "def", "app.client/replay-browser-contracts!", "--input-format", "json-ast", "--code",
       JSON.stringify(["defn", "replay-browser-contracts!", [], ...dateGroups.map(([namespace]) => [`${namespace}/replay-host-tests!`]), "&unit"])],

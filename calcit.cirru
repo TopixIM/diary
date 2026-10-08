@@ -1339,10 +1339,10 @@
                 d $ day .to-format |yyyy-MM-dd
               cond
                   includes?
-                    option:unwrap $ :holiday special-days
+                    option:unwrap $ get special-days :holiday
                     , d
                   , true
-                (includes? (option:unwrap (:workingday special-days)) d)
+                (includes? (option:unwrap (get special-days :workingday)) d)
                   , false
                 true $ includes? (#{} 6 7) (day :weekday)
           :examples $ []
@@ -1350,6 +1350,14 @@
             :args $ [] 'app.comp.month/LuxonDateTime
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+          :tests $ [] $ %{} 'TestEntry
+            :name |checked-holiday-map-lookup-preserves-classification
+            :code $ quote $ do
+              assert= true $ is-holiday? $ luxon-from-map (app.util/DateInfo :year 2026 :month 1 :day 1)
+              assert= false $ is-holiday? $ luxon-from-map (app.util/DateInfo :year 2026 :month 2 :day 14)
+              assert= true $ is-holiday? $ luxon-from-map (app.util/DateInfo :year 2026 :month 1 :day 10)
+              assert= false $ is-holiday? $ luxon-from-map (app.util/DateInfo :year 2026 :month 1 :day 5)
+            :tags $ #{} :browser-date-contract
         'luxon-from-map $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn luxon-from-map (date-info)
             js-cast

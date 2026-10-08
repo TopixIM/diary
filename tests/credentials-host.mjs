@@ -155,8 +155,10 @@ try {
   };
   replay_browser_contracts_$x_();
   assert.equal(submittedStorage.length, 2, "Both attached login contracts store credentials once");
-  assert.equal(made.length, 2, "Each Luxon factory must execute once");
-  assert.equal(receivers.length, 2);
+  // Two adapter cases plus four holiday classification inputs each construct
+  // and format exactly once; the additional calls come from attached tests.
+  assert.equal(made.length, 6, "Each adapter/classification input must construct exactly once");
+  assert.equal(receivers.length, 6);
   receivers.forEach((receiver, index) => assert.equal(receiver, made[index], "Checked casts must preserve host identity and this"));
 
   let constructions = 0;
@@ -183,7 +185,7 @@ try {
   DateTime.prototype.toFormat = originalToFormat;
   delete globalThis.localStorage;
 }
-console.log("Five Calcit date and two typed login contracts passed; invalid date host shapes rejected.");
+console.log("Six Calcit date and two typed login contracts passed; invalid date host shapes rejected.");
 
 // Exercise the real Respo dispatch adapter, application dispatcher and WebSocket
 // serializer. Only the transport and storage are injected; no network is opened.
