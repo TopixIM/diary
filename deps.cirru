@@ -13,4 +13,4 @@
     |calcit-lang/lilac |0.5.9
     |calcit-lang/memof |0.0.36
     |calcit-lang/recollect |0.0.57
-    |mvc-works/ws-edn.calcit |0.0.36
+    |mvc-works/ws-edn.calcit |0.0.37
