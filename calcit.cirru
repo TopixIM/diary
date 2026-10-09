@@ -61,6 +61,10 @@
                     reset! *store $ StorePayload :offline $ store-snapshot @*store
                     js/console.error "|Lost connection!"
                   :on-data on-server-data
+                  :on-error $ fn (_error)
+                    hint-fn $ {} (:return 'Unit)
+                      :args $ [] 'Dynamic
+                    reject-server-data! :wire
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)

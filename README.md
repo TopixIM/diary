@@ -78,6 +78,8 @@ Recollect 的 `try-patch-twig`，最后 deep decode `ClientStore`。
 容器组件直接使用 typed store。断线状态保留最近的快照，恢复连接时等待完整 `:replace`，
 不把后续增量误接在已经失步的 base 上。
 失败只记录阶段 tag，不打印私有 patch；每轮恢复至多主动重连一次，完整快照成功后才重新允许恢复。
+非文本帧、EDN 解析失败和连接错误通过 ws-edn 0.0.37 的现有 `:on-error` 进入同一恢复路径，
+应用以 `:wire` 标识这类输入/传输边界，不读取或打印宿主错误对象；patch 与 deep decode 保留各自阶段。
 服务端现有 EDN diff 协议和持久化格式不变。升级这个客户端内存状态结构时需要刷新页面，
 不要沿用旧 `StorePayload` 的 hot-reload Ref 值。
 
@@ -102,7 +104,7 @@ Recollect 的 `try-patch-twig`，最后 deep decode `ClientStore`。
 运行完整 `calcit fix --workflow strict --verify --format edn` 后，仍须执行业务测试和目标构建；
 严格检查通过不等于所有开放业务边界都已完成迁移，也不代表生产部署完成。
 路由 payload、部分 alerts 回调及异构 UI state 仍有明确的开放边界；不能用空 trait、返回标注或强转冒充运行时校验。
-WebSocket 文本解析发生在模块回调前；解析异常的受检通知尚待模块支持，应用 patch Result 不包含这一步。
+WebSocket 文本解析发生在 `on-data` 前，由模块的错误通知接入恢复；应用 patch Result 本身不负责解析文本。
 Caps 保留原 CI 安装模式及共享模块版本选择警告，不宣称严格依赖图已经通过。
 新发布的自有 runtime 仅按已核验的精确版本更新 Yarn 预批准项；没有放宽其他依赖的门禁，
 仍使用 hardened immutable 安装与 Caps 工具链校验。

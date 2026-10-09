@@ -183,6 +183,30 @@ try {
   assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
   assert.equal(core.deref(_$s_resync_attempted_$q_), false);
   assert.ok(comp_container(map(), core.deref(_$s_store)));
+
+  // Frame/EDN failures happen before on-data, but must use the same bounded
+  // recovery path without exposing host errors or private frame contents.
+  const beforeWireError = snapshot();
+  assert.doesNotThrow(() => sockets[1].onmessage({ data: 42 }));
+  assert.equal(snapshot(), beforeWireError);
+  assert.equal(sockets.length, 3);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), true);
+  assert.equal(core.deref(_$s_resync_attempted_$q_), true);
+  sockets[2].onopen({});
+  assert.doesNotThrow(() => sockets[2].onmessage({ data: "{" }));
+  assert.doesNotThrow(() => sockets[2].onmessage({ data: { private: "private-wire-payload" } }));
+  assert.equal(snapshot(), beforeWireError);
+  assert.equal(sockets.length, 3, "Repeated frame failures must not start more connections");
+  assert.equal(sockets[2].sent.length, 0, "Rejected frames must not dispatch business messages");
+  assert.equal(patchWarnings.some(line => line.includes("private-wire-payload")), false);
+  assert.ok(patchWarnings.some(line => line.includes(":wire")));
+  incoming(sockets[2], variant("assoc", tag("count"), 99));
+  assert.equal(snapshot(), beforeWireError, "An incremental patch cannot recover a broken wire sequence");
+  incoming(sockets[2], variant("replace", rawStore));
+  assert.equal(snapshot().get(tag("raw")).get(tag("count")), 1);
+  assert.equal(snapshot().get(tag("store")).get(tag("count")), 1);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
+  assert.equal(core.deref(_$s_resync_attempted_$q_), false);
 } finally {
   const active = core.deref(ws._$s_global_client);
   if (core._$n_enum_$o_nth(active, 0) === tag("some")) ws.client_close_$x_(core._$n_enum_$o_nth(active, 1));
