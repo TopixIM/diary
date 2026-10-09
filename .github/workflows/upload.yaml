@@ -38,7 +38,6 @@ jobs:
       - name: Set up Calcit and Caps
         uses: calcit-lang/setup-calcit@v1.5.0
         with:
-          version: "0.27.0"
           tools: calcit,caps
           caps-version: "0.1.1"
 
@@ -56,9 +55,11 @@ jobs:
           git diff --exit-code -- calcit.cirru
           calcit calcit.cirru --check-only
           calcit calcit.cirru --entry server --check-only
-          calcit analyze check-public --ns app.client --ns app.comp.container --ns app.comp.data-gather --ns app.comp.diary --ns app.comp.empty --ns app.comp.login --ns app.comp.month --ns app.comp.navigation --ns app.comp.profile --ns app.config --ns app.style
-          calcit --entry server analyze check-public --ns 'app.$meta' --ns app.config --ns app.schema --ns app.server --ns app.twig.container --ns app.twig.user --ns app.updater --ns app.updater.diary --ns app.updater.router --ns app.updater.session --ns app.updater.user
-          calcit test --summary-only
+          calcit analyze check-public --ns app.client --ns app.comp.container --ns app.comp.data-gather --ns app.comp.diary --ns app.comp.empty --ns app.comp.login --ns app.comp.month --ns app.comp.navigation --ns app.comp.profile --ns app.config --ns app.storage --ns app.style
+          calcit --entry server analyze check-public --ns 'app.$meta' --ns app.config --ns app.schema --ns app.server --ns app.storage --ns app.twig.container --ns app.twig.user --ns app.updater --ns app.updater.diary --ns app.updater.router --ns app.updater.session --ns app.updater.user
+
+      - name: Test storage and credential boundaries
+        run: yarn test-boundaries
 
       - name: Build client
         id: asset-path
