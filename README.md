@@ -10,10 +10,14 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.23`，默认入口为 browser JS，server 为 native。
+升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.24`，默认入口为 browser JS，server 为 native。
 Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
 安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
 CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
+
+alpha.24 的子状态迁移只在 `app.comp.container/checked-child-states` 校验进入 Diary 组件的 Map 键为 Tag；不把 Respo 的混合 String/Tag/Number cursor 改成 Tag 列表，也不放宽组件 schema。三项附带 `:tests` 验证草稿与混合 cursor 保留、缺失分支原有空种子和错误键拒绝，原生与生成 JS 回放同一份 AST。完整边界回归为 76 项原生、61 项同 AST JS，以及原有六项日期和两项登录宿主合同。
+
+真实 Chrome 使用注入 WebSocket（不连接生产服务）验证 Diary 页面、连续 raw/typed patch 同步、错误深层字段保留上一快照、一次有界重连、完整快照恢复与本地草稿输入。主动关闭连接时原有 `Lost connection!` 日志是预期事件；有效数据和草稿更新没有新增异常。本验收不代表全部存储、路由、热更新和历史 alias 任务已完成。
 
 服务端的 `port` 环境变量经 `resolve-port: Option<String> -> Number` 解析：
 未设置时使用 `SiteConfig.port`，设置后显式匹配 `parse-float` 的 `Result`。
