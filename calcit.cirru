@@ -1035,7 +1035,7 @@
                         and (blank? preview-mood) (blank? preview-highlight)
                         , 20 16
                       :color $ hsl 0 0 60
-                      :font-weight $ if (some? info-option) 500 nil
+                      :font-weight $ if (non-nil? info-option) 500 nil
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
@@ -1054,7 +1054,7 @@
                 <> (cursor-date .to-format |yyyy-MM-dd) (str-spaced css/font-fancy style-date-main)
                 =< 8 nil
                 if
-                  some? $ :time diary
+                  non-nil? $ :time diary
                   <>
                     let
                         date $ luxon-from-millis $ required-millis (:time diary)
@@ -1062,7 +1062,7 @@
                     str-spaced css/font-fancy style-date-hint
               comp-divider "|32px 0"
               if
-                some? $ :time diary
+                non-nil? $ :time diary
                 div
                   {}
                     :class-name $ str-spaced css/column css/flex
@@ -1089,7 +1089,7 @@
                   comp-divider "|32px 0"
               =< nil 16
               if
-                some? $ :time diary
+                non-nil? $ :time diary
                 div ({})
                   button
                     {} (:class-name css/button)
