@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import * as core from "../js-out/calcit.core.mjs";
-import { _$s_states, current_hour_$x_, dispatch_host_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { _$s_states, _$s_store, _$s_awaiting_snapshot_$q_, _$s_resync_attempted_$q_, connect_$x_, store_snapshot, current_hour_$x_, dispatch_host_$x_, replay_browser_contracts_$x_, simulate_login_$x_ } from "../js-out/app.client.mjs";
+import { comp_container } from "../js-out/app.comp.container.mjs";
 import { get_today_$x_ } from "../js-out/app.util.mjs";
 import { on_submit } from "../js-out/app.comp.login.mjs";
 import { on_navigate } from "../js-out/app.comp.navigation.mjs";
@@ -124,6 +125,100 @@ try {
 }
 
 console.log("Credentials host boundaries passed: no storage mutation or invalid dispatch.");
+
+// Exercise serialized messages through the actual WebSocket and app callbacks.
+// Recovery keeps the last coherent snapshot and only accepts a full replacement.
+const sockets = [];
+const savedGlobals = new Map(["WebSocket", "location", "window", "document", "navigator"].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)]));
+const map = (...pairs) => core._$n__$M_(...pairs.flatMap(([key, value]) => [tag(key), value]));
+const variant = (name, ...values) => new core.CalcitEnumValue(tag(name), values);
+const date = map(["year", 2026], ["month", 9], ["day", 29]);
+const router = map(["name", tag("home")], ["data", null]);
+const rawStore = map(["logged-in?", false], ["reel-length", 0], ["count", 1], ["color", "#123456"], ["user", null], ["diary", null], ["router", router], ["today", date], ["session", map(["id", 9], ["nickname", ""], ["user-id", null], ["messages", map()], ["router", router], ["cursor", date])]);
+globalThis.location = { hostname: "patch-fixture.invalid" };
+globalThis.window = { localStorage: { getItem: () => null }, addEventListener() {}, removeEventListener() {} };
+globalThis.document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
+Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: true } });
+globalThis.WebSocket = class {
+  constructor(url) { this.url = url; this.sent = []; sockets.push(this); }
+  send(text) { this.sent.push(text); }
+  close() { this.onclose?.({}); }
+};
+const snapshot = () => core._$n_enum_$o_nth(store_snapshot(core.deref(_$s_store)), 1);
+const incoming = (socket, ...changes) => socket.onmessage({ data: core.format_cirru_edn(variant("patch", list(...changes))) });
+const feedbackBeforePatch = console.warn;
+const errorBeforePatch = console.error;
+const patchWarnings = [];
+console.warn = (...args) => patchWarnings.push(args.map(String).join(" "));
+console.error = () => {};
+try {
+  connect_$x_();
+  assert.equal(sockets.length, 1);
+  sockets[0].onopen({});
+  incoming(sockets[0], variant("replace", rawStore));
+  const firstSnapshot = snapshot();
+  assert.equal(firstSnapshot.get(tag("store")).get(tag("count")), 1);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
+  incoming(sockets[0], variant("assoc", tag("count"), 2));
+  const accepted = snapshot();
+  assert.equal(accepted.get(tag("raw")).get(tag("count")), 2);
+  assert.equal(accepted.get(tag("store")).get(tag("count")), 2);
+  // The actual component consumes the already-decoded ClientStore.
+  assert.ok(comp_container(map(), core.deref(_$s_store)));
+
+  incoming(sockets[0], variant("assoc", tag("count"), 3), variant("update-in", list(tag("session"), tag("nickname")), variant("replace", 42)));
+  assert.equal(snapshot(), accepted, "A bad deep field cannot partially commit raw or typed state");
+  assert.equal(sockets.length, 2, "The first invalid patch requests one recovery connection");
+  assert.equal(core.deref(_$s_resync_attempted_$q_), true);
+  sockets[1].onopen({});
+  incoming(sockets[1], variant("assoc", tag("count"), 4));
+  incoming(sockets[1], variant("update", tag("missing"), variant("replace", "private-patch-payload")));
+  assert.equal(sockets.length, 2, "Repeated failure cannot reconnect forever");
+  assert.equal(snapshot(), accepted);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), true);
+  assert.equal(patchWarnings.some(line => line.includes("private-patch-payload")), false);
+  incoming(sockets[1], variant("replace", rawStore), variant("assoc", tag("count"), 5));
+  assert.equal(snapshot().get(tag("raw")).get(tag("count")), 5);
+  assert.equal(snapshot().get(tag("store")).get(tag("count")), 5);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
+  assert.equal(core.deref(_$s_resync_attempted_$q_), false);
+  assert.ok(comp_container(map(), core.deref(_$s_store)));
+
+  // Frame/EDN failures happen before on-data, but must use the same bounded
+  // recovery path without exposing host errors or private frame contents.
+  const beforeWireError = snapshot();
+  assert.doesNotThrow(() => sockets[1].onmessage({ data: 42 }));
+  assert.equal(snapshot(), beforeWireError);
+  assert.equal(sockets.length, 3);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), true);
+  assert.equal(core.deref(_$s_resync_attempted_$q_), true);
+  sockets[2].onopen({});
+  assert.doesNotThrow(() => sockets[2].onmessage({ data: "{" }));
+  assert.doesNotThrow(() => sockets[2].onmessage({ data: { private: "private-wire-payload" } }));
+  assert.equal(snapshot(), beforeWireError);
+  assert.equal(sockets.length, 3, "Repeated frame failures must not start more connections");
+  assert.equal(sockets[2].sent.length, 0, "Rejected frames must not dispatch business messages");
+  assert.equal(patchWarnings.some(line => line.includes("private-wire-payload")), false);
+  assert.ok(patchWarnings.some(line => line.includes(":wire")));
+  incoming(sockets[2], variant("assoc", tag("count"), 99));
+  assert.equal(snapshot(), beforeWireError, "An incremental patch cannot recover a broken wire sequence");
+  incoming(sockets[2], variant("replace", rawStore));
+  assert.equal(snapshot().get(tag("raw")).get(tag("count")), 1);
+  assert.equal(snapshot().get(tag("store")).get(tag("count")), 1);
+  assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
+  assert.equal(core.deref(_$s_resync_attempted_$q_), false);
+} finally {
+  const active = core.deref(ws._$s_global_client);
+  if (core._$n_enum_$o_nth(active, 0) === tag("some")) ws.client_close_$x_(core._$n_enum_$o_nth(active, 1));
+  core.reset_$x_(ws._$s_global_client, core._PCT_none());
+  console.warn = feedbackBeforePatch;
+  console.error = errorBeforePatch;
+  for (const [key, descriptor] of savedGlobals) {
+    if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+    else delete globalThis[key];
+  }
+}
+console.log("Checked patch host boundaries passed: coherent snapshots, bounded recovery and typed render.");
 
 const NativeDate = globalThis.Date;
 const originalFromObject = DateTime.fromObject;

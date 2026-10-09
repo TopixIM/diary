@@ -55,7 +55,7 @@ jobs:
           git diff --exit-code -- calcit.cirru
           calcit calcit.cirru --check-only
           calcit calcit.cirru --entry server --check-only
-          calcit analyze check-public --ns app.client --ns app.comp.container --ns app.comp.data-gather --ns app.comp.diary --ns app.comp.empty --ns app.comp.login --ns app.comp.month --ns app.comp.navigation --ns app.comp.profile --ns app.config --ns app.storage --ns app.style
+          calcit analyze check-public --ns app.client --ns app.client-state --ns app.comp.container --ns app.comp.data-gather --ns app.comp.diary --ns app.comp.empty --ns app.comp.login --ns app.comp.month --ns app.comp.navigation --ns app.comp.profile --ns app.config --ns app.storage --ns app.style
           calcit --entry server analyze check-public --ns 'app.$meta' --ns app.config --ns app.schema --ns app.server --ns app.storage --ns app.twig.container --ns app.twig.user --ns app.updater --ns app.updater.diary --ns app.updater.router --ns app.updater.session --ns app.updater.user
 
       - name: Test storage and credential boundaries

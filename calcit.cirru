@@ -14,6 +14,10 @@
   :files $ {}
     'app.client $ %{} 'FileEntry
       :defs $ {}
+        '*awaiting-snapshot? $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defatom *awaiting-snapshot? true
+          :examples $ []
+          :schema $ :: 'Ref 'Bool
         '*resync-attempted? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *resync-attempted? false
           :examples $ []
@@ -39,12 +43,13 @@
           :schema $ :: 'Trait
           :tags $ #{} :ffi :js-host
         'StorePayload $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum StorePayload (:initial) (:offline)
-            :online $ :: 'Map 'Tag 'Dynamic
+          :code $ quote $ defenum StorePayload (:initial)
+            :offline $ :: 'Option 'app.schema/ClientSnapshot
+            :online 'app.schema/ClientSnapshot
           :examples $ []
           :schema $ :: 'EnumDef
         'connect! $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn connect! ()
+          :code $ quote $ defn connect! () (reset! *awaiting-snapshot? true)
             let
                 host $ unsafe-coerce js/location.hostname 'String
                 port $ config/site :port
@@ -52,10 +57,14 @@
                 if config/dev? (str |ws:// host |: port) |wss://diary.chenyong.life/ws
                 {}
                   :on-open $ fn (event) (simulate-login!)
-                  :on-close $ fn (event)
-                    reset! *store $ StorePayload :offline
+                  :on-close $ fn (event) (reset! *awaiting-snapshot? true)
+                    reset! *store $ StorePayload :offline $ store-snapshot @*store
                     js/console.error "|Lost connection!"
                   :on-data on-server-data
+                  :on-error $ fn (_error)
+                    hint-fn $ {} (:return 'Unit)
+                      :args $ [] 'Dynamic
+                    reject-server-data! :wire
               , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
@@ -105,18 +114,18 @@
             if config/dev? $ load-console-formatter!
             render-app!
             connect!
-            add-watch *store :changes $ fn (store prev)
+            add-watch! *store :changes $ fn (store prev)
               hint-fn $ {} (:return 'Unit)
                 :args $ [] 'app.client/StorePayload 'app.client/StorePayload
               render-app!
-            add-watch *states :changes $ fn (states prev)
+            add-watch! *states :changes $ fn (states prev)
               hint-fn $ {} (:return 'Unit)
                 :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
               render-app!
             on-page-touch $ fn ()
               when (enum? @*store)
                 match @*store
-                  (:offline) (connect!)
+                  (:offline _) (connect!)
                   _ &unit
               , &unit
             visibility-heartbeat
@@ -140,69 +149,45 @@
             :args $ []
             :features $ #{} :js-ffi
             :return $ :: 'JsNullish 'respo.dom/DomElement
-        'normalize-wire-value $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn normalize-wire-value (value)
-            cond
-                struct? value
-                normalize-wire-value $ &struct:to-map value
-              (map? value)
-                &map:map
-                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
-                  fn (pair)
-                    [] (&list:first pair)
-                      normalize-wire-value $ &list:last pair
-              (list? value) (map value normalize-wire-value)
-              true value
-          :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] 'Dynamic
-          :tests $ [] $ %{} 'TestEntry (:name |recursively-converts-struct-patches)
-            :code $ quote $ let
-                value $ %{} schema/ClientRouter (:name :home)
-                  :data $ %{} util/DateInfo (:year 2026) (:month 9) (:day 29)
-                normalized $ normalize-wire-value value
-              do
-                assert |root-is-map $ map? normalized
-                assert |nested-is-map $ map? $ &map:get normalized :data
         'on-server-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-server-data (data)
-            match data
-              (:patch changes)
-                let
-                    base $ match @*store
-                      (:online store) store
-                      _ $ {}
-                    next-store $ decode-map-as
-                      normalize-wire-value $ patch-twig base $ decode-changes changes
-                      :: 'Map 'Tag 'Dynamic
-                  when config/dev? $ js/console.log |Changes changes
-                  match (schema/try-decode-client-store next-store)
-                    (:ok _)
-                      do (reset! *resync-attempted? false)
-                        reset! *store $ StorePayload :online next-store
-                    (:err reason)
-                      do (js/console.warn |Incomplete-client-store-patch reason)
-                        if (not @*resync-attempted?)
-                          do (reset! *resync-attempted? true) (connect!)
-                          reset! *store $ StorePayload :initial
-                  , &unit
-              (:effect/pong) &unit
+            let
+                base $ match (store-snapshot @*store)
+                  (:some snapshot) (:raw snapshot)
+                  (:none) ({})
+              match (try-client-message base data @*awaiting-snapshot?)
+                (:ok next)
+                  match next
+                    (:some snapshot)
+                      do (reset! *resync-attempted? false) (reset! *awaiting-snapshot? false)
+                        reset! *store $ StorePayload :online snapshot
+                    (:none) &unit
+                (:err stage) (reject-server-data! stage)
+            , &unit
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'Dynamic
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
+        'reject-server-data! $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn reject-server-data! (stage) (js/console.warn |Client-sync-rejected stage) (reset! *awaiting-snapshot? true)
+            when (not @*resync-attempted?) (reset! *resync-attempted? true) (connect!)
+            , &unit
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Unit)
+            :args $ [] 'Tag
+            :features $ #{} :js-ffi
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if
-              or (some? client-errors) (some? server-errors)
+              or (non-nil? client-errors) (non-nil? server-errors)
               hud! |error $ str client-errors &newline server-errors
-              do (remove-watch *store :changes) (remove-watch *states :changes) (clear-cache!) (render-app!)
-                add-watch *store :changes $ fn (store prev)
+              do (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (render-app!)
+                add-watch! *store :changes $ fn (store prev)
                   hint-fn $ {} (:return 'Unit)
                     :args $ [] 'app.client/StorePayload 'app.client/StorePayload
                   render-app!
-                add-watch *states :changes $ fn (states prev)
+                add-watch! *states :changes $ fn (states prev)
                   hint-fn $ {} (:return 'Unit)
                     :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
                   render-app!
@@ -244,6 +229,16 @@
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
             :features $ #{} :js-ffi
+        'store-snapshot $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn store-snapshot (state)
+            match state
+              (:online snapshot) (Option :some snapshot)
+              (:offline snapshot) snapshot
+              (:initial) (Option :none)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'app.client/StorePayload
+            :return $ :: 'Option 'app.schema/ClientSnapshot
         'to-server-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn to-server-op (op)
             match op
@@ -292,7 +287,6 @@
             app.schema :as schema
             app.config :as config
             ws-edn.client :refer $ ws-connect! ws-send!
-            recollect.patch :refer $ patch-twig
             cumulo-util.core :refer $ on-page-touch visibility-heartbeat
             |url-parse :default url-parse
             |bottom-tip :default hud!
@@ -300,7 +294,306 @@
             |../js-out/calcit.build-errors :default server-errors
             app.util :as util
             js-ffi.browser :as browser
+            app.client-state :refer $ try-client-message
+    'app.client-state $ %{} 'FileEntry
+      :defs $ {}
+        'normalize-wire-value $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn normalize-wire-value (value)
+            cond
+                struct? value
+                normalize-wire-value $ &struct:to-map value
+              (map? value)
+                &map:map
+                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
+                  fn (pair)
+                    [] (&list:first pair)
+                      normalize-wire-value $ &list:last pair
+              (list? value) (map value normalize-wire-value)
+              true value
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] 'Dynamic
+          :tests $ [] $ %{} 'TestEntry (:name |recursively-converts-struct-patches)
+            :code $ quote $ let
+                value $ %{} schema/ClientRouter (:name :home)
+                  :data $ %{} util/DateInfo (:year 2026) (:month 9) (:day 29)
+                normalized $ normalize-wire-value value
+              do
+                assert |root-is-map $ map? normalized
+                assert |nested-is-map $ map? $ &map:get normalized :data
+        'try-client-message $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-client-message (base message awaiting-snapshot?)
+            if (enum? message)
+              case-default (&enum:nth message 0) (Result :err :message-envelope)
+                :patch $ if
+                  = 2 $ &enum:count message
+                  match
+                    try-client-patch base (&enum:nth message 1) awaiting-snapshot?
+                    (:ok snapshot)
+                      Result :ok $ Option :some snapshot
+                    (:err stage) (Result :err stage)
+                  Result :err :message-envelope
+                :effect/pong $ if
+                  = 1 $ &enum:count message
+                  Result :ok $ Option :none
+                  Result :err :message-envelope
+              Result :err :message-envelope
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic 'Dynamic 'Bool
+            :return $ :: 'Result (:: 'Option 'app.schema/ClientSnapshot) 'Tag
+          :tests $ []
+            %{} 'TestEntry (:name |rejects-map)
+              :code $ quote $ assert= (Result :err :message-envelope)
+                try-client-message ({}) ({}) true
+            %{} 'TestEntry (:name |rejects-unknown)
+              :code $ quote $ assert= (Result :err :message-envelope)
+                try-client-message ({}) (:: :unknown |private) true
+            %{} 'TestEntry (:name |rejects-extra-pong-payload)
+              :code $ quote $ assert= (Result :err :message-envelope)
+                try-client-message ({}) (:: :effect/pong |private) true
+            %{} 'TestEntry (:name |rejects-missing-patch)
+              :code $ quote $ assert= (Result :err :message-envelope)
+                try-client-message ({}) (:: :patch) true
+            %{} 'TestEntry (:name |pong-does-not-replace-snapshot)
+              :code $ quote $ assert=
+                Result :ok $ Option :none
+                try-client-message ({}) (:: :effect/pong) true
+        'try-client-patch $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn try-client-patch (base changes awaiting-snapshot?)
+            match
+              try
+                Result :ok $ decode-changes changes
+                fn (message) (Result :err :patch-message)
+              (:err stage) (Result :err stage)
+              (:ok checked)
+                if
+                  and awaiting-snapshot? $ not $ list-match checked
+                    () false
+                    (initial-snapshot remaining-changes)
+                      match initial-snapshot
+                        (:replace _) true
+                        _ false
+                  Result :err :snapshot-required
+                  match (try-patch-twig base checked)
+                    (:err _) (Result :err :patch-path)
+                    (:ok next)
+                      match
+                        try-decode-map-as (normalize-wire-value next) (:: 'Map 'Tag 'Dynamic)
+                        (:err _) (Result :err :store-shape)
+                        (:ok raw)
+                          match (schema/try-decode-client-store raw)
+                            (:err _) (Result :err :store-shape)
+                            (:ok typed)
+                              Result :ok $ schema/ClientSnapshot :raw raw :store typed
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] 'Dynamic 'Dynamic 'Bool
+            :return $ :: 'Result 'app.schema/ClientSnapshot 'Tag
+          :tests $ []
+            %{} 'TestEntry (:name |retains-raw-and-decoded-state-across-patches)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  initial-snapshot $ match
+                    try-client-patch ({})
+                      [] $ :: :replace raw
+                      , true
+                    (:ok snapshot) snapshot
+                    (:err _) (raise |Expected-valid-client-snapshot)
+                  second $ match
+                    try-client-patch (:raw initial-snapshot)
+                      [] $ :: :assoc :count 2
+                      , false
+                    (:ok snapshot) snapshot
+                    (:err _) (raise |Expected-valid-client-snapshot)
+                  third $ match
+                    try-client-patch (:raw second)
+                      [] $ :: :update-in ([] :session :nickname) (:: :replace |Ada)
+                      , false
+                    (:ok snapshot) snapshot
+                    (:err _) (raise |Expected-valid-client-snapshot)
+                assert= 1 $ :count $ :store initial-snapshot
+                assert= 2 $ :count $ :store second
+                assert= |Ada $ :nickname $ :session (:store third)
+                assert= (:store third)
+                  schema/decode-client-store $ :raw third
+                assert= | $ :nickname $ :session (:store initial-snapshot)
+            %{} 'TestEntry (:name |rejects-non-list)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-message) (try-client-patch raw nil false)
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-unknown-operation)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-message)
+                  try-client-patch raw
+                    [] $ :: :unknown |private
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-wrong-arity)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-message)
+                  try-client-patch raw
+                    [] $ :: :assoc :count
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-missing-path)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-path)
+                  try-client-patch raw
+                    [] $ :: :update-in ([] :missing :child) (:: :replace |private)
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-wrong-container)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-path)
+                  try-client-patch raw
+                    [] $ :: :update-in ([] :count :child) (:: :replace |private)
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-deep-field-type)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :store-shape)
+                  try-client-patch raw
+                    [] $ :: :update-in ([] :session :nickname) (:: :replace 7)
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-incremental-during-resync)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :snapshot-required)
+                  try-client-patch raw
+                    [] $ :: :assoc :count 2
+                    , true
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-empty-initial-batch)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :snapshot-required)
+                  try-client-patch raw ([]) true
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-partial-batch-atomically)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                assert= (Result :err :patch-path)
+                  try-client-patch raw
+                    [] (:: :assoc :count 2)
+                      :: :update :missing $ :: :replace |private
+                    , false
+                assert= 1 $ :count $ schema/decode-client-store raw
+            %{} 'TestEntry (:name |rejects-invalid-index--1)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  base $ assoc raw :probe $ [] 1 2
+                assert= (Result :err :patch-path)
+                  try-client-patch base
+                    [] $ :: :update-in ([] :probe -1) (:: :replace 3)
+                    , false
+            %{} 'TestEntry (:name |rejects-invalid-index-1.5)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  base $ assoc raw :probe $ [] 1 2
+                assert= (Result :err :patch-path)
+                  try-client-patch base
+                    [] $ :: :update-in ([] :probe 1.5) (:: :replace 3)
+                    , false
+            %{} 'TestEntry (:name |rejects-invalid-index-99)
+              :code $ quote $ let
+                  raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456) (:user nil) (:diary nil)
+                    :router $ {} (:name :home) (:data nil)
+                    :today $ {} (:year 2026) (:month 9) (:day 29)
+                    :session $ {} (:id 9) (:nickname |) (:user-id nil)
+                      :messages $ {}
+                      :router $ {} (:name :home) (:data nil)
+                      :cursor $ {} (:year 2026) (:month 9) (:day 29)
+                  base $ assoc raw :probe $ [] 1 2
+                assert= (Result :err :patch-path)
+                  try-client-patch base
+                    [] $ :: :update-in ([] :probe 99) (:: :replace 3)
+                    , false
+      :ns $ %{} 'NsEntry (:doc |)
+        :code $ quote $ ns app.client-state
+          :require (app.schema :as schema)
+            recollect.patch :refer $ try-patch-twig
             recollect.schema :refer $ decode-changes
+            app.util :as util
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
         'comp-container $ %{} 'CodeEntry (:doc |)
@@ -308,10 +601,10 @@
             decorate-defcomp
               extract-effects-list :comp-container $ match store
                 (:initial) (comp-offline :initial)
-                (:offline) (comp-offline :offline)
+                (:offline _) (comp-offline :offline)
                 (:online store-map)
                   let
-                      store-typed $ schema/decode-client-store store-map
+                      store-typed $ :store store-map
                       session $ :session store-typed
                       router $ either (:router store-typed) (schema/ClientRouter :name :home :data nil)
                       router-data $ either (:data router) ({})
@@ -1035,7 +1328,7 @@
                         and (blank? preview-mood) (blank? preview-highlight)
                         , 20 16
                       :color $ hsl 0 0 60
-                      :font-weight $ if (some? info-option) 500 nil
+                      :font-weight $ if (non-nil? info-option) 500 nil
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
@@ -1054,7 +1347,7 @@
                 <> (cursor-date .to-format |yyyy-MM-dd) (str-spaced css/font-fancy style-date-main)
                 =< 8 nil
                 if
-                  some? $ :time diary
+                  non-nil? $ :time diary
                   <>
                     let
                         date $ luxon-from-millis $ required-millis (:time diary)
@@ -1062,7 +1355,7 @@
                     str-spaced css/font-fancy style-date-hint
               comp-divider "|32px 0"
               if
-                some? $ :time diary
+                non-nil? $ :time diary
                 div
                   {}
                     :class-name $ str-spaced css/column css/flex
@@ -1089,7 +1382,7 @@
                   comp-divider "|32px 0"
               =< nil 16
               if
-                some? $ :time diary
+                non-nil? $ :time diary
                 div ({})
                   button
                     {} (:class-name css/button)
@@ -1805,6 +2098,12 @@
           :schema $ :: 'EnumDef
         'ClientRouter $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientRouter (:name 'Tag) (:data 'Dynamic)
+          :examples $ []
+          :schema $ :: 'StructDef
+        'ClientSnapshot $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defstruct ClientSnapshot
+            :raw $ :: 'Map 'Tag 'Dynamic
+            :store 'app.schema/ClientStore
           :examples $ []
           :schema $ :: 'StructDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
