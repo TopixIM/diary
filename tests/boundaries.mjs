@@ -52,6 +52,7 @@ try {
     ["app.comp.navigation", ["on-navigate"]],
     ["app.config", ["resolve-port"]],
     ["app.client-state", ["try-client-patch", "try-client-message"]],
+    ["app.comp.container", ["checked-child-states"]],
   ];
   const operations = [];
   let count = 0;

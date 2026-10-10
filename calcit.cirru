@@ -596,6 +596,41 @@
             app.util :as util
     'app.comp.container $ %{} 'FileEntry
       :defs $ {}
+        'checked-child-states $ %{} 'CodeEntry
+          :doc "|在组件入口校验子状态 Map 的 Tag 键；cursor 与 data 保持异构，不改变框架的混合 cursor 合同。"
+          :code $ quote $ defn checked-child-states (states key)
+            decode-map-as (>> states key) (:: 'Map 'Tag 'Dynamic)
+          :examples $ []
+          :schema $ :: 'Fn $ {}
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag
+            :features $ #{} :js-ffi
+            :return $ :: 'Map 'Tag 'Dynamic
+          :tests $ []
+            %{} 'TestEntry (:name |preserves-data-and-mixed-cursor)
+              :code $ quote $ let
+                  data $ app.comp.diary/DiaryEditorState :text |draft
+                  root $ {}
+                    :cursor $ [] :panel |item 7
+                    :diary $ {} $ :data data
+                  child $ checked-child-states root :diary
+                assert= (get child :data) (Option :some data)
+                assert= (get child :cursor)
+                  Option :some $ [] :panel |item 7 :diary
+                assert= (get root :cursor)
+                  Option :some $ [] :panel |item 7
+            %{} 'TestEntry (:name |missing-branch-keeps-empty-seed)
+              :code $ quote $ assert=
+                {} $ :cursor $ [] :diary
+                checked-child-states ({}) :diary
+            %{} 'TestEntry (:name |rejects-non-tag-branch-keys)
+              :code $ quote $ assert= |rejected
+                try
+                  do
+                    checked-child-states
+                      {} $ :diary $ {} (|wrong |value)
+                      , :diary
+                    , |accepted
+                  fn (error) |rejected
         'comp-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-container (states store)
             decorate-defcomp
@@ -619,7 +654,7 @@
                           :home $ comp-month (:today store-typed) (:cursor session) diary $ decode-map-as router-data
                             :: 'Map 'String $ :: 'Map 'Tag 'String
                           :data $ comp-data-gather $ decode-map-as router-data (:: 'Map 'String 'Dynamic)
-                          :diary $ comp-diary (>> states :diary) (:cursor session) diary
+                          :diary $ comp-diary (checked-child-states states :diary) (:cursor session) diary
                           :profile $ comp-profile user $ decode-map-as router-data (:: 'Map 'String 'String)
                           <> $ str router
                         comp-login states
