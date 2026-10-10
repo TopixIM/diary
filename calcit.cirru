@@ -861,7 +861,7 @@
                       d! cursor $ assoc state :text $ decode-map-as (&map:get e :value) 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
+            :args $ [] (:: 'Map 'Dynamic 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
         'comp-guide $ %{} 'CodeEntry (:doc |)
@@ -1012,7 +1012,7 @@
                   .render plugin
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Diary 'String
+            :args $ [] (:: 'Map 'Dynamic 'Dynamic) 'app.schema/Diary 'String
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
             {} $ |$0 $ {}
@@ -1137,7 +1137,7 @@
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
