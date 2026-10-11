@@ -2444,7 +2444,7 @@
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defatom *initial-db
             if
-              path-exists? $ w-log storage-file
+              path-exists? $ dbg storage-file
               do (println "|Found local EDN data") (load-stored-db! storage-file)
               do (println "|Found no data") schema/database
           :examples $ []
