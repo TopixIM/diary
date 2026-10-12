@@ -722,7 +722,7 @@
           :doc "|Convert typed session messages to the map contract expected by respo-message."
           :code $ quote $ defn to-respo-messages (messages)
             filter-map-kv messages $ fn (id message)
-              %:: MapEntryDecision :keep id $ &struct:to-map message
+              MapEntryDecision :keep id $ &struct:to-map message
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] $ :: 'Map 'String 'app.schema/Message
@@ -3365,9 +3365,9 @@
               (:some user-id)
                 match (get users user-id)
                   (:some user)
-                    %:: MapEntryDecision :keep sid $ :name user
-                  (:none) (%:: MapEntryDecision :drop)
-              (:none) (%:: MapEntryDecision :drop)
+                    MapEntryDecision :keep sid $ :name user
+                  (:none) (MapEntryDecision :drop)
+              (:none) (MapEntryDecision :drop)
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'Map 'String 'app.schema/User) 'Number 'app.schema/Session
@@ -3416,7 +3416,7 @@
             let
                 month-prefix $ slice (format-to-date cursor) 0 8
               filter-map-kv diaries $ fn (date diary)
-                if (starts-with? date month-prefix) (twig-overview-entry date diary) (%:: MapEntryDecision :drop)
+                if (starts-with? date month-prefix) (twig-overview-entry date diary) (MapEntryDecision :drop)
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'Map 'String 'app.schema/Diary) 'app.util/DateInfo
@@ -3434,7 +3434,7 @@
             :tags $ #{} :regression
         'twig-overview-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview-entry (date diary)
-            %:: MapEntryDecision :keep date $ {}
+            MapEntryDecision :keep date $ {}
               :mood $ :mood diary
               :highlight $ :highlight diary
           :examples $ []
@@ -3449,7 +3449,7 @@
             :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
-            %:: MapEntryDecision :keep date $ {}
+            MapEntryDecision :keep date $ {}
               :mood $ :mood diary
               :highlight $ :highlight diary
               :food $ :food diary
@@ -3774,8 +3774,8 @@
                       typed-user $ assert-type user 'app.schema/User
                     if
                       = username $ :name typed-user
-                      %:: MapEntryDecision :keep id typed-user
-                      %:: MapEntryDecision :drop
+                      MapEntryDecision :keep id typed-user
+                      MapEntryDecision :drop
               first $ &set:to-list $ vals matching-users
           :examples $ []
           :schema $ :: 'Fn $ {}

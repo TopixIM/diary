@@ -10,12 +10,17 @@ Preview http://diary.topix.im
 
 https://github.com/Cumulo/calcium-workflow/
 
-升级候选配对使用已发布 Calcit / @calcit/procs `0.29.0-alpha.24`，默认入口为 browser JS，server 为 native。
+项目配对使用已发布 Calcit / @calcit/procs `0.29.0`，默认入口为 browser JS，server 为 native。
 Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
 安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
 CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
 
-alpha.24 的子状态迁移只在 `app.comp.container/checked-child-states` 校验进入 Diary 组件的 Map 键为 Tag；不把 Respo 的混合 String/Tag/Number cursor 改成 Tag 列表，也不放宽组件 schema。三项附带 `:tests` 验证草稿与混合 cursor 保留、缺失分支原有空种子和错误键拒绝，原生与生成 JS 回放同一份 AST。完整边界回归为 76 项原生、61 项同 AST JS，以及原有六项日期和两项登录宿主合同。
+子状态适配只在 `app.comp.container/checked-child-states` 校验进入 Diary 组件的 Map 键为 Tag；不把 Respo 的混合 String/Tag/Number cursor 改成 Tag 列表，也不放宽组件 schema。三项附带 `:tests` 验证草稿与混合 cursor 保留、缺失分支原有空种子和错误键拒绝，原生与生成 JS 回放同一份 AST。完整边界回归为 76 项原生、61 项同 AST JS，以及原有六项日期和两项登录宿主合同。
+
+从 alpha.25 升级到正式版时同步安装 `deps.cirru` 的正式模块版本，保留原有 84 项附带测试。
+已知名义枚举使用直接 `MapEntryDecision` 构造器；升级预览中的宏来源待审候选不自动改写。
+公开定义检查统一使用 `calcit --check-only --ns <namespace>`，其范围与原 CI 的 namespace 列表一致。
+归档的 Lilac 仍固定在 `0.5.9`，不修改归档源码；应用回归不代表该归档库的全部定义都经过新工具链验证。
 
 真实 Chrome 使用注入 WebSocket（不连接生产服务）验证 Diary 页面、连续 raw/typed patch 同步、错误深层字段保留上一快照、一次有界重连、完整快照恢复与本地草稿输入。主动关闭连接时原有 `Lost connection!` 日志是预期事件；有效数据和草稿更新没有新增异常。本验收不代表全部存储、路由、热更新和历史 alias 任务已完成。
 
@@ -51,7 +56,7 @@ JS 回放只改临时 Snapshot，复制当前依赖 pin 并校验原 Snapshot �
 模块，保留名义定义身份断言；native 只排除明确列出并在 JS 验证的八个浏览器专用测试。
 
 服务端同步回调按 `wss-each!` 的合同显式返回 `&unit`，消息发送和缓存更新顺序不变。
-WSS 使用已发布的 `0.2.33`，由 Caps 正常解析并构建原生模块；模块内部检查真实 host
+WSS 使用已发布的 `0.2.34`，由 Caps 正常解析并构建原生模块；模块内部检查真实 host
 启动结果为 Unit。该 one-shot 迭代随后通过队列执行回调，Unit 不表示回调已完成。
 定义中的 `empty-client-sync-returns-unit` 测试验证无连接时返回 Unit 且缓存不变，不启动真实监听器。
 
@@ -73,7 +78,7 @@ JS 宿主测试另验证 dispatcher 异常原样传播。事件 Map 和兼容 di
 年月切换附带测试覆盖跨年、闰月日期收缩及普通日期；宿主测试执行实际导航和全部年月按钮，
 并验证错误操作不提交状态或网络消息。
 
-Reel 使用 `0.0.51` 的 `ReelState<Database>`，同步和持久化直接读取已保留类型的 `:db`。
+Reel 使用 `0.0.52` 的 `ReelState<Database>`，同步和持久化直接读取已保留类型的 `:db`。
 旧记录中的 operation/session 等开放字段只在 replay adapter 进入 typed updater 前解码，不反复解码整个数据库。
 
 客户端 patch 的纯边界集中在 `app.client-state`：先校验消息和 change-op，再调用
@@ -82,7 +87,7 @@ Recollect 的 `try-patch-twig`，最后 deep decode `ClientStore`。
 容器组件直接使用 typed store。断线状态保留最近的快照，恢复连接时等待完整 `:replace`，
 不把后续增量误接在已经失步的 base 上。
 失败只记录阶段 tag，不打印私有 patch；每轮恢复至多主动重连一次，完整快照成功后才重新允许恢复。
-非文本帧、EDN 解析失败和连接错误通过 ws-edn 0.0.37 的现有 `:on-error` 进入同一恢复路径，
+非文本帧、EDN 解析失败和连接错误通过 ws-edn 0.0.38 的现有 `:on-error` 进入同一恢复路径，
 应用以 `:wire` 标识这类输入/传输边界，不读取或打印宿主错误对象；patch 与 deep decode 保留各自阶段。
 服务端现有 EDN diff 协议和持久化格式不变。升级这个客户端内存状态结构时需要刷新页面，
 不要沿用旧 `StorePayload` 的 hot-reload Ref 值。
