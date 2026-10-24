@@ -6,7 +6,7 @@
     :default $ {} (:description |) (:init-fn 'app.client/main!) (:mode :js) (:reload-fn 'app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |cumulo-reel.calcit/ |respo-feather.calcit/ |alerts.calcit/
-      :type-slots $ {}
+      :type-slots $ {} $ :dispatch-op |app.schema/ClientOp
     :server $ {} (:description |) (:init-fn 'app.server/main!) (:mode :native) (:reload-fn 'app.server/reload!) (:target :native)
       :feature-policy $ {}
       :modules $ [] |recollect/ |memof/ |cumulo-util.calcit/ |cumulo-reel.calcit/ |calcit.std/ |calcit-wss/
@@ -95,12 +95,14 @@
                   raise $ str "|expected states cursor as a list, got: " cursor
               (:effect/connect) (connect!)
               _ $ ws-send! $ to-server-op op
+            , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+          :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ [] 'app.schema/ClientOp
             :features $ #{} :js-ffi
           :tags $ #{} :js-ffi
-        'dispatch-host! $ %{} 'CodeEntry (:doc "|在 Respo dispatch 边界把 op 解码为 ClientOp 后分发。")
+        'dispatch-host! $ %{} 'CodeEntry
+          :doc "|在宿主（JS）边界把未检查的 op 解码为 ClientOp 后分发；Respo 渲染直接使用带类型的 dispatch!。"
           :code $ quote $ defn dispatch-host! (op)
             dispatch! $ app.schema/decode-client-dispatch-op op
             , &unit
@@ -201,9 +203,11 @@
           :code $ quote $ defn render-app! ()
             let
                 raw-states $ deref *states
-                states $ decode-map-as (&map:get raw-states :states) (:: 'Map 'Tag 'Dynamic)
+                states $ decode-map-as
+                  .unwrap-or (&map:get raw-states :states) ({})
+                  :: 'Map 'Tag 'Dynamic
                 store $ deref *store
-              render! (mount-target) (comp-container states store) dispatch-host!
+              render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'Unit)
             :args $ []
@@ -306,8 +310,9 @@
                 &map:map
                   assert-type value $ :: 'Map 'Dynamic 'Dynamic
                   fn (pair)
-                    [] (&list:first pair)
-                      normalize-wire-value $ &list:last pair
+                    []
+                      .unwrap $ &list:first pair
+                      normalize-wire-value $ .unwrap $ &list:last pair
               (list? value) (map value normalize-wire-value)
               true value
           :examples $ []
@@ -320,7 +325,7 @@
                 normalized $ normalize-wire-value value
               do
                 assert |root-is-map $ map? normalized
-                assert |nested-is-map $ map? $ &map:get normalized :data
+                assert |nested-is-map $ map? $ .unwrap (&map:get normalized :data)
         'try-client-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-client-message (base message awaiting-snapshot?)
             if (enum? message)
@@ -368,9 +373,9 @@
               (:err stage) (Result :err stage)
               (:ok checked)
                 if
-                  and awaiting-snapshot? $ not $ list-match checked
-                    () false
-                    (initial-snapshot remaining-changes)
+                  and awaiting-snapshot? $ not $ match (destruct-list checked)
+                    (:none) false
+                    (:some initial-snapshot remaining-changes)
                       match initial-snapshot
                         (:replace _) true
                         _ false
@@ -667,10 +672,7 @@
                           hint-fn $ {} (:return 'Dynamic)
                             :args $ [] (:: 'Map 'Dynamic 'Dynamic) 'Dynamic
                           match
-                            get (:messages session)
-                              &let
-                                id $ &map:get info :id
-                                if (string? id) id $ raise "|expected message id as a String"
+                            get (:messages session) (message-id-of info)
                             (:some message)
                               d! $ app.schema/ClientOp :session/remove-message message
                             (:none) &unit
@@ -713,6 +715,16 @@
               |$0:hover $ {} $ :transform "|scale(1.1)"
           :examples $ []
           :schema $ :: 'String
+        'message-id-of $ %{} 'CodeEntry
+          :doc "|Read the String id of a toast message rendered by respo-message."
+          :code $ quote $ defn message-id-of (info)
+            match (&map:get info :id)
+              (:some id)
+                if (string? id) id $ raise "|expected message id as a String"
+              (:none) (raise "|expected message id as a String")
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'String)
+            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
         'style-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
@@ -732,11 +744,11 @@
                 messages $ {} $ |message-1
                   %{} schema/Message (:id |message-1) (:text |Hello)
                 rendered $ to-respo-messages messages
-                message $ &map:get rendered |message-1
+                message $ .unwrap $ &map:get rendered |message-1
               do
                 assert |toast-is-map $ map? message
-                assert= |message-1 $ &map:get message :id
-                assert= |Hello $ &map:get message :text
+                assert= |message-1 $ .unwrap $ &map:get message :id
+                assert= |Hello $ .unwrap $ &map:get message :text
             :tags $ #{} :regression
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.container
@@ -812,10 +824,12 @@
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
                 date $ format-to-date date-info
-                original-state $ &map:get states :data
-                cursor $ unsafe-coerce (&map:get states :cursor) 'Dynamic
-                state $ as-diary-editor-state $ or original-state
-                  DiaryEditorState :text $ :text diary
+                cursor $ .unwrap-or (&map:get states :cursor) ([])
+                initial-state $ DiaryEditorState :text $ :text diary
+                state $ as-diary-editor-state $ match (&map:get states :data)
+                  (:some original-state)
+                    if (nil? original-state) initial-state original-state
+                  (:none) initial-state
               div
                 {}
                   :class-name $ str-spaced css/row css/flex
@@ -866,7 +880,7 @@
                             when
                               not $ blank? $ :text state
                               d! $ app.schema/ClientOp :diary/add-one $ app.schema/Diary :food (:food diary) :sleep (:sleep diary) :mood (:mood diary) :place (:place diary) :highlight (:highlight diary) :met (:met diary) :exercise (:exercise diary) :pains (:pains diary) :text (:text state) :date date :time (:time diary)
-                              d! cursor nil
+                              d! $ :: :states cursor nil
                               let
                                   lost-copy |diary-lost-copy
                                 js/localStorage.setItem lost-copy $ :text state
@@ -881,7 +895,7 @@
                                 :args $ [] (:: 'Map 'Tag 'Dynamic)
                                   :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                     :args $ [] 'Dynamic
-                              d! cursor nil
+                              d! $ :: :states cursor nil
                           <> |Reset
                   textarea $ {}
                     :value $ :text state
@@ -893,7 +907,10 @@
                         :args $ [] (:: 'Map 'Tag 'Dynamic)
                           :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                             :args $ [] 'Dynamic
-                      d! cursor $ assoc state :text $ decode-map-as (&map:get e :value) 'String
+                      d! $ :: :states cursor $ assoc state :text
+                        decode-map-as
+                          .unwrap $ &map:get e :value
+                          , 'String
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
             :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
@@ -1133,8 +1150,8 @@
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
-                cursor $ &map:get states :cursor
-                state $ as-login-state $ or (&map:get states :data) initial-state
+                cursor $ .unwrap-or (&map:get states :cursor) ([])
+                state $ as-login-state $ .unwrap-or (&map:get states :data) initial-state
               div
                 {} $ :class-name $ str-spaced css/flex css/center
                 div
@@ -1151,7 +1168,10 @@
                             :args $ [] (:: 'Map 'Tag 'Dynamic)
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
-                          d! cursor $ assoc state :username $ decode-map-as (&map:get e :value) 'String
+                          d! $ :: :states cursor $ assoc state :username
+                            decode-map-as
+                              .unwrap $ &map:get e :value
+                              , 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password) (:class-name css/input)
@@ -1161,7 +1181,10 @@
                             :args $ [] (:: 'Map 'Tag 'Dynamic)
                               :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
                                 :args $ [] 'Dynamic
-                          d! cursor $ assoc state :password $ decode-map-as (&map:get e :value) 'String
+                          d! $ :: :states cursor $ assoc state :password
+                            decode-map-as
+                              .unwrap $ &map:get e :value
+                              , 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -1334,20 +1357,27 @@
                   = (this-day :month) cursor-month
                   = (this-day :day) cursor-day
                 info-option $ &map:get overview $ this-day .to-format |yyyy-MM-dd
-                info $ or info-option $ {}
-                preview-mood $ text-or-empty $ &map:get info :mood
-                preview-highlight $ text-or-empty $ &map:get info :highlight
+                has-info? $ match info-option
+                  (:some _) true
+                  (:none) false
+                info $ .unwrap-or info-option $ {}
+                preview-mood $ text-or-empty $ .unwrap-or (&map:get info :mood) |
+                preview-highlight $ text-or-empty $ .unwrap-or (&map:get info :highlight) |
               div
                 {}
                   :class-name $ str-spaced css-cell-size css/center css-day-cell
-                  :style $ {}
-                    :color $ if same-month? (hsl 0 0 30) (hsl 0 0 80)
-                    :background-color $ if selected? (hsl 170 80 94)
-                      if today? (hsl 30 80 97) nil
-                    :transform $ if selected? "|scale(1.1)" nil
-                    :border-bottom $ if (is-holiday? this-day)
-                      str "|4px solid " $ hsl 200 80 80
-                      , nil
+                  :style $ let
+                      base-style $ {} $ :color
+                        if same-month? (hsl 0 0 30) (hsl 0 0 80)
+                      day-style $ cond
+                        selected? $ -> base-style
+                          assoc :background-color $ hsl 170 80 94
+                          assoc :transform "|scale(1.1)"
+                        today? $ assoc base-style :background-color $ hsl 30 80 97
+                        true base-style
+                    if (is-holiday? this-day)
+                      assoc day-style :border-bottom $ str "|4px solid " $ hsl 200 80 80
+                      , day-style
                   :on-click $ fn (e d!)
                     hint-fn $ {} (:return 'Dynamic)
                       :args $ [] (:: 'Map 'Tag 'Dynamic)
@@ -1358,12 +1388,13 @@
                   {} (:class-name css/column)
                     :style $ {} $ :width |100%
                   <> (this-day .to-format |d)
-                    {}
-                      :font-size $ if
-                        and (blank? preview-mood) (blank? preview-highlight)
-                        , 20 16
-                      :color $ hsl 0 0 60
-                      :font-weight $ if (non-nil? info-option) 500 nil
+                    let
+                        text-style $ {}
+                          :font-size $ if
+                            and (blank? preview-mood) (blank? preview-highlight)
+                            , 20 16
+                          :color $ hsl 0 0 60
+                      if has-info? (assoc text-style :font-weight 500) text-style
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
@@ -2703,7 +2734,8 @@
                   (:diary/copy-yesterday payload)
                     let
                         payload-map $ normalize-client-payload payload
-                        normalized $ &map:assoc payload-map :date-info $ normalize-client-payload (&map:get payload-map :date-info)
+                        normalized $ &map:assoc payload-map :date-info $ normalize-client-payload
+                          .unwrap $ &map:get payload-map :date-info
                       schema/Op :diary/copy-yesterday $ decode-map-as normalized app.schema/CopyYesterday
                   (:today payload)
                     schema/Op :today $ decode-map-as (normalize-client-payload payload) app.util/DateInfo
@@ -2838,12 +2870,8 @@
                   updated $ match op
                     (:diary/add-one payload) (diary-updater/add-one db payload 1 |op-1 123)
                     _ $ raise |Expected-diary-add-operation
-                  updated-user $ assert-type
-                    &map:get (:users updated) |user-1
-                    , 'app.schema/User
-                  saved $ assert-type
-                    &map:get (:diaries updated-user) |2026-09-29
-                    , 'app.schema/Diary
+                  updated-user $ .unwrap $ &map:get (:users updated) |user-1
+                  saved $ .unwrap $ &map:get (:diaries updated-user) |2026-09-29
                 do
                   assert= |saved-entry $ :text saved
                   assert= 123 $ :time saved
@@ -3082,8 +3110,8 @@
           :code $ quote $ defn normalize-stored-db (raw)
             let
                 db $ normalize-stored-struct raw |$
-                today $ normalize-stored-struct (&map:get db :today) |$.today
-                users $ decode-stored-string-map (&map:get db :users) |$.users
+                today $ normalize-stored-struct (stored-field db :today |$.today) |$.today
+                users $ decode-stored-string-map (stored-field db :users |$.users) |$.users
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
                   hint-fn $ {}
                     :args $ [] 'String 'Dynamic
@@ -3091,9 +3119,11 @@
                   if (nil? raw-user) (MapEntryDecision :drop)
                     let
                         user $ normalize-stored-struct raw-user |$.users.*
-                        raw-diaries $ &map:get user :diaries
                         diaries $ decode-stored-string-map
-                          if (nil? raw-diaries) ({}) raw-diaries
+                          match (&map:get user :diaries)
+                            (:some raw-diaries)
+                              if (nil? raw-diaries) ({}) raw-diaries
+                            (:none) ({})
                           , |$.users.*.diaries
                         normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
                           hint-fn $ {}
@@ -3105,7 +3135,7 @@
                               MapEntryDecision :keep date $ &merge (&struct:to-map schema/diary) diary
                       MapEntryDecision :keep id $ &map:assoc user :diaries normalized-diaries
               match
-                try-decode-map-as (&map:get db :sessions) (:: 'Map 'Number 'Dynamic)
+                try-decode-map-as (stored-field db :sessions |$.sessions) (:: 'Map 'Number 'Dynamic)
                 (:ok _) &unit
                 (:err reason)
                   raise $ str "|$.sessions: " reason
@@ -3129,9 +3159,9 @@
                         |2026-09-29 $ {} $ :text |legacy-entry
                     |user-2 $ {} (:name |user-2) (:id |user-2) (:nickname |User) (:password |secret) (:avatar nil) (:diaries nil)
                 db $ parse-stored-db $ format-cirru-edn raw
-                user $ &map:get (:users db) |user-1
+                user $ .unwrap $ &map:get (:users db) |user-1
                 diaries $ :diaries user
-                diary $ &map:get diaries |2026-09-29
+                diary $ .unwrap $ &map:get diaries |2026-09-29
               do
                 assert= 2 $ count $ :users db
                 assert= 1 $ count diaries
@@ -3139,7 +3169,7 @@
                 assert= |legacy-entry $ :text diary
                 assert= | $ :sleep diary
                 assert= 0 $ count $ :diaries
-                  &map:get (:users db) |user-2
+                  .unwrap $ &map:get (:users db) |user-2
             :tags $ #{} :regression
         'normalize-stored-struct $ %{} 'CodeEntry
           :doc "|Convert one known storage struct boundary to a map for legacy or hybrid snapshots."
@@ -3206,6 +3236,16 @@
                       :return 'Bool
                     , true
               :tags $ #{} :regression
+        'stored-field $ %{} 'CodeEntry
+          :doc "|Read a required field of a legacy storage map, reporting the storage path when it is absent."
+          :code $ quote $ defn stored-field (data field path)
+            match (&map:get data field)
+              (:some value) value
+              (:none)
+                raise $ str path "|: missing field"
+          :examples $ []
+          :schema $ :: 'Fn $ {} (:return 'Dynamic)
+            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag 'String
         'try-parse-stored-db-with-format $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-parse-stored-db-with-format (text)
             try
@@ -3333,7 +3373,7 @@
                   schema/ClientRouter :name (:name router) :data nil
                   , :today (:today db) :count session-count :color color :user nil :diary nil
               match
-                optionally $ :user-id session
+                nil->option $ :user-id session
                 (:some user-id-value)
                   let
                       user-id $ assert-type user-id-value 'String
@@ -3361,7 +3401,7 @@
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
             match
-              optionally $ :user-id session
+              nil->option $ :user-id session
               (:some user-id)
                 match (get users user-id)
                   (:some user)
@@ -3414,8 +3454,11 @@
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
             let
-                month-prefix $ slice (format-to-date cursor) 0 8
+                month-prefix $ slice (format-to-date cursor) 0 $ Option :some 8
               filter-map-kv diaries $ fn (date diary)
+                hint-fn $ {}
+                  :args $ [] 'String 'app.schema/Diary
+                  :return $ :: 'MapEntryDecision 'String $ :: 'Map 'Tag 'String
                 if (starts-with? date month-prefix) (twig-overview-entry date diary) (MapEntryDecision :drop)
           :examples $ []
           :schema $ :: 'Fn $ {}
@@ -3528,7 +3571,7 @@
               match session
                 (:some session-data)
                   match
-                    optionally $ :user-id session-data
+                    nil->option $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
@@ -3536,7 +3579,7 @@
                           get (:users db) uid
                           (:some user)
                             match
-                              optionally $ :date diary-data
+                              nil->option $ :date diary-data
                               (:some date)
                                 let
                                     next-diary $ struct-with diary-data $ :time op-time
@@ -3557,7 +3600,7 @@
               match session
                 (:some session-data)
                   match
-                    optionally $ :user-id session-data
+                    nil->option $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
@@ -3629,7 +3672,7 @@
               match session
                 (:some session-data)
                   match
-                    optionally $ :user-id session-data
+                    nil->option $ :user-id session-data
                     (:some uid-value)
                       let
                           uid $ assert-type uid-value 'String
@@ -3714,17 +3757,17 @@
         'merge-cursor-value $ %{} 'CodeEntry (:doc "|Apply a nullable cursor patch to a date.")
           :code $ quote $ defn merge-cursor-value (cursor patch)
             match
-              optionally $ :year patch
+              nil->option $ :year patch
               (:some value)
                 struct-with cursor $ :year value
               (:none)
                 match
-                  optionally $ :month patch
+                  nil->option $ :month patch
                   (:some value)
                     struct-with cursor $ :month value
                   (:none)
                     match
-                      optionally $ :day patch
+                      nil->option $ :day patch
                       (:some value)
                         struct-with cursor $ :day value
                       (:none) cursor

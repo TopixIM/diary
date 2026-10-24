@@ -7,7 +7,6 @@ import { on_submit } from "../js-out/app.comp.login.mjs";
 import { on_navigate } from "../js-out/app.comp.navigation.mjs";
 import { comp_month_footer } from "../js-out/app.comp.month.mjs";
 import { ClientOp, Op } from "../js-out/app.schema.mjs";
-import { wrap_dispatch } from "../js-out/respo.controller.client.mjs";
 import * as ws from "../js-out/ws-edn.client.mjs";
 import { DateTime } from "luxon";
 
@@ -291,7 +290,7 @@ const submitSocket = { send: text => { order.push("dispatch"); submitted.push(te
 const submitClient = ws.create_client_with_$x_("wss://submit-fixture.invalid/", core._$n__$M_(), () => submitSocket);
 submitSocket.onopen({});
 core.reset_$x_(ws._$s_global_client, core._PCT_some(submitClient));
-const wrapped = wrap_dispatch(core.atom(op => { actions.push(op); return dispatch_host_$x_(op); }));
+const wrapped = op => { actions.push(op); return dispatch_host_$x_(op); };
 const originalStates = core.deref(_$s_states);
 let submittedText;
 try {
@@ -323,7 +322,7 @@ try {
   });
   submitted.length = 0;
   const localData = core._$n__$M_(tag("text"), "local draft");
-  assert.equal(wrapped(list(tag("fixture")), localData), undefined);
+  assert.equal(wrapped(core._$o__$o_(tag("states"), list(tag("fixture")), localData)), undefined);
   assert.notEqual(core.deref(_$s_states), originalStates);
   assert.equal(core.deref(_$s_states).get(tag("states")).get(tag("fixture")).get(tag("data")), localData);
   assert.deepEqual(submitted, [], "Local UI states must never reach the server");
