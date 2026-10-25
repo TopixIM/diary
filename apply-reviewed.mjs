@@ -18,7 +18,10 @@ if(process.argv[2]==='apply'){
   const d=expected.defs.find(d=>d.id===s.id),test=s.region==='test'?d.tests.find(t=>t.name===s.testName):null,tree=test?test.code:d.code;
   const old=s.path.reduce((v,i)=>v[i],tree);assert.deepEqual(old,s.before);
   let next;
-  if(old[0]==='case-default'){
+  if(old==='vals'){
+   assert.ok(['app.updater.user/find-user-by-name','app.comp.history/comp-records','app.updater.user/find-user'].includes(s.id));
+   next='distinct-values';
+  }else if(old[0]==='case-default'){
    assert.ok(old.slice(3).every(b=>Array.isArray(b)&&b.length===2&&typeof b[0]==='string'&&b[0].startsWith(':')));
    next=['match',old[1],...old.slice(3),['_',old[2]]];
   }else if(old[0]==='defatom'){assert.equal(old.length,3);next=['defref',...old.slice(1)];}
