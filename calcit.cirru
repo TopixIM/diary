@@ -15,21 +15,21 @@
     'app.client $ %{} 'FileEntry
       :defs $ {}
         '*awaiting-snapshot? $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *awaiting-snapshot? true
+          :code $ quote $ defref *awaiting-snapshot? true
           :examples $ []
           :schema $ :: 'Ref 'Bool
         '*resync-attempted? $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *resync-attempted? false
+          :code $ quote $ defref *resync-attempted? false
           :examples $ []
           :schema $ :: 'Ref 'Bool
         '*states $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *states
+          :code $ quote $ defref *states
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
         '*store $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *store (StorePayload :initial)
+          :code $ quote $ defref *store (StorePayload :initial)
           :examples $ []
           :schema $ :: 'Ref 'app.client/StorePayload
         'BrowserDate $ %{} 'CodeEntry (:doc |)
@@ -329,7 +329,7 @@
         'try-client-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-client-message (base message awaiting-snapshot?)
             if (enum? message)
-              case-default (&enum:nth message 0) (Result :err :message-envelope)
+              match (&enum:nth message 0)
                 :patch $ if
                   = 2 $ &enum:count message
                   match
@@ -342,6 +342,7 @@
                   = 1 $ &enum:count message
                   Result :ok $ Option :none
                   Result :err :message-envelope
+                _ $ Result :err :message-envelope
               Result :err :message-envelope
           :examples $ []
           :schema $ :: 'Fn $ {}
@@ -2469,11 +2470,11 @@
     'app.server $ %{} 'FileEntry
       :defs $ {}
         '*client-caches $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *client-caches ({})
+          :code $ quote $ defref *client-caches ({})
           :examples $ []
           :schema $ :: 'Ref $ :: 'Map 'Number 'app.schema/ClientStore
         '*initial-db $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *initial-db
+          :code $ quote $ defref *initial-db
             if
               path-exists? $ dbg storage-file
               do (println "|Found local EDN data") (load-stored-db! storage-file)
@@ -2481,11 +2482,11 @@
           :examples $ []
           :schema $ :: 'Ref 'app.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reader-reel @*reel
+          :code $ quote $ defref *reader-reel @*reel
           :examples $ []
           :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
         '*reel $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defatom *reel
+          :code $ quote $ defref *reel
             %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
               :records $ []
               :merged? false
@@ -3381,11 +3382,12 @@
                       get (:users db) user-id
                       (:some user)
                         let
-                            route-data $ case-default (:name router) nil
+                            route-data $ match (:name router)
                               :home $ twig-overview (:diaries user) (:cursor session)
                               :diary nil
                               :profile $ twig-members (:sessions db) (:users db)
                               :data $ twig-personal-data $ :diaries user
+                              _ nil
                             client-router $ schema/ClientRouter :name (:name router) :data route-data
                             current-diary $ match
                               get (:diaries user)
@@ -3819,7 +3821,7 @@
                       = username $ :name typed-user
                       MapEntryDecision :keep id typed-user
                       MapEntryDecision :drop
-              first $ &set:to-list $ vals matching-users
+              first $ &set:to-list $ distinct-values matching-users
           :examples $ []
           :schema $ :: 'Fn $ {}
             :args $ [] (:: 'Map 'String 'app.schema/User) 'String
