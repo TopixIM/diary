@@ -30,7 +30,7 @@ if(process.argv[2]==='apply'){
   }
   assert.deepEqual(next,s.after);
   if(s.region==='code'){
-   assert.deepEqual(JSON.parse(run('tree','show',s.id,'--path','@'+s.path.join('.'),'--format','json')).tree,old);
+   assert.deepEqual(JSON.parse(run('tree','show',s.id,...(s.path.length?['--path','@'+s.path.join('.')]:[]),'--format','json')).tree,old);
    const path=old[0]==='defatom'?[...s.path,0]:s.path;
    const code=old[0]==='defatom'?'defref':next;
    ops.push(['tree','replace',s.id,'--path','@'+path.join('.'),'--input-format','json-ast','--code',JSON.stringify(code)]);
