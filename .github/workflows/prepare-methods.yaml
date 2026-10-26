@@ -1,0 +1,47 @@
+name: Protected Diary method migration
+on:
+  push:
+    branches: [prepare/diary-methods-alpha6]
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6.5.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: calcit-lang/setup-calcit@v1.5.0
+        with:
+          tools: calcit,caps
+          caps-version: "0.1.1"
+          deps-file: deps.cirru
+      - name: Original immutable toolchain and dependencies
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare yarn@4.18.0 --activate
+          caps --ci
+          yarn install --immutable
+          caps verify --toolchain
+          test ! -e compact.cirru
+          test ! -e package.cirru
+      - name: Exact receiver evidence, source transaction and original before-after gates
+        run: node prepare-methods.mjs
+      - uses: actions/upload-artifact@v7.0.2
+        if: success()
+        with:
+          name: accepted-source
+          path: prepared-source/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7.0.2
+        if: always()
+        with:
+          name: diagnostics
+          path: acceptance/
+          if-no-files-found: error
