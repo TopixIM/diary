@@ -27,12 +27,13 @@ for(const head of Object.keys(methods)){
 }
 const receiverEvidence=[];
 for(const [i,s]of p.sites.entries())if(s.region==='code'){
-  const report=query('type-at',s.definition,'--path','code@'+s.path+'.1');
+  const entry=s.definition.startsWith('app.twig.')||s.definition.startsWith('app.updater.')?'server':'default';
+  const reply=JSON.parse(log('receiver-'+i,'calcit',['calcit.cirru','--entry',entry,'query','type-at',s.definition,'--path','code@'+s.path+'.1','--format','json']));assert.deepEqual(reply.diagnostics||[],[]);const report=norm(reply.data);
   assert.deepEqual(report.tree,s.before[1]);assert.equal(report.confidence,'exact');
   const method=report.static_methods.find(m=>m.name===methods[s.head]);assert.ok(method);assert.ok(['proven','open'].includes(method.status));
   if(s.head==='count'){assert.match(JSON.stringify(report.inferred_type),/List|Map|String/);assert.equal(method.parameter_types.length,0);assert.equal(method.return_type,'number');assert.match(method.definition,/^calcit.core\/(?:&list:count|&map:count|&str:count|count)$/);}
   else{assert.match(JSON.stringify(report.inferred_type),/Option/);assert.equal(method.definition,'calcit.core/'+s.head);}
-  receiverEvidence.push({site:i,report});
+  receiverEvidence.push({site:i,entry,report});
 }
 writeFileSync('acceptance/receivers.json',JSON.stringify(receiverEvidence));
 // Attached test receivers are preserved calls to checked producers/nominal fields,
