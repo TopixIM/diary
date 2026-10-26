@@ -1232,7 +1232,7 @@
           :tests $ []
             %{} 'TestEntry (:name |typed-login-callback-delivers-client-op)
               :code $ quote $ let
-                  recorded $ atom |
+                  recorded $ ref |
                   deliver $ fn (op)
                     hint-fn $ {}
                       :args $ [] 'Dynamic
@@ -1248,7 +1248,7 @@
               :tags $ #{} :browser-login-contract
             %{} 'TestEntry (:name |typed-signup-callback-delivers-client-op)
               :code $ quote $ let
-                  recorded $ atom |
+                  recorded $ ref |
                   deliver $ fn (op)
                     hint-fn $ {}
                       :args $ [] 'Dynamic
