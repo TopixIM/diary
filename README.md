@@ -17,10 +17,16 @@ CI 依次执行完整 strict workflow、格式与入口检查、公开定义检�
 
 子状态适配只在 `app.comp.container/checked-child-states` 校验进入 Diary 组件的 Map 键为 Tag；不把 Respo 的混合 String/Tag/Number cursor 改成 Tag 列表，也不放宽组件 schema。三项附带 `:tests` 验证草稿与混合 cursor 保留、缺失分支原有空种子和错误键拒绝，原生与生成 JS 回放同一份 AST。完整边界回归为 76 项原生、61 项同 AST JS，以及原有六项日期和两项登录宿主合同。
 
-从 alpha.25 升级到正式版时同步安装 `deps.cirru` 的正式模块版本，保留原有 84 项附带测试。
+后续安装按当前 `deps.cirru` 的精确版本解析模块，不沿用历史 alpha.25 或其他工具链的缓存视图，保留原有 84 项附带测试。
 已知名义枚举使用直接 `MapEntryDecision` 构造器；升级预览中的宏来源待审候选不自动改写。
 公开定义检查统一使用 `calcit --check-only --ns <namespace>`，其范围与原 CI 的 namespace 列表一致。
 归档的 Lilac 仍固定在 `0.5.9`，不修改归档源码；应用回归不代表该归档库的全部定义都经过新工具链验证。
+
+当前写法维护将 13 处已知 List/Map/String 的 `count` 改为 `.len`，五处 Option helper
+改为 `.unwrap`、`.unwrap-or`、`.some?`，包括原测试中的对应调用。
+长度单位、缺失值拒绝、默认值及原断言不变；`records` 保留真实的 `List<List<Dynamic>>`，
+不为计数伪造封闭载荷类型。同版本前后 214 个生成模块字节一致，原完整 strict、
+双入口与边界回归仍执行；单参数 `merge`、两处宿主 unsafe 和既有开放边界不在本次改动范围。
 
 真实 Chrome 使用注入 WebSocket（不连接生产服务）验证 Diary 页面、连续 raw/typed patch 同步、错误深层字段保留上一快照、一次有界重连、完整快照恢复与本地草稿输入。主动关闭连接时原有 `Lost connection!` 日志是预期事件；有效数据和草稿更新没有新增异常。本验收不代表全部存储、路由、热更新和历史 alias 任务已完成。
 
