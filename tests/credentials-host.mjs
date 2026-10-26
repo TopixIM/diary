@@ -40,7 +40,7 @@ const sent = [];
 const socket = { send: (text) => sent.push(text), close() {} };
 const client = ws.create_client_with_$x_("wss://credentials-fixture.invalid/", core._$n__$M_(), () => socket);
 socket.onopen({});
-core.reset_$x_(ws._$s_global_client, core._PCT_some(client));
+core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("some"), client));
 
 let stored = null;
 let reads = 0;
@@ -117,7 +117,7 @@ try {
   console.log = originalLog;
   console.warn = originalWarn;
   console.error = originalError;
-  core.reset_$x_(ws._$s_global_client, core._PCT_none());
+  core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("none")));
   ws.client_close_$x_(client);
   delete globalThis.localStorage;
   delete globalThis.window;
@@ -209,7 +209,7 @@ try {
 } finally {
   const active = core.deref(ws._$s_global_client);
   if (core._$n_enum_$o_nth(active, 0) === tag("some")) ws.client_close_$x_(core._$n_enum_$o_nth(active, 1));
-  core.reset_$x_(ws._$s_global_client, core._PCT_none());
+  core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("none")));
   console.warn = feedbackBeforePatch;
   console.error = errorBeforePatch;
   for (const [key, descriptor] of savedGlobals) {
@@ -289,7 +289,7 @@ const submitted = [];
 const submitSocket = { send: text => { order.push("dispatch"); submitted.push(text); }, close() {} };
 const submitClient = ws.create_client_with_$x_("wss://submit-fixture.invalid/", core._$n__$M_(), () => submitSocket);
 submitSocket.onopen({});
-core.reset_$x_(ws._$s_global_client, core._PCT_some(submitClient));
+core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("some"), submitClient));
 const wrapped = op => { actions.push(op); return dispatch_host_$x_(op); };
 const originalStates = core.deref(_$s_states);
 let submittedText;
@@ -370,7 +370,7 @@ try {
   assert.deepEqual(order, ["dispatch", "storage"]);
 } finally {
   core.reset_$x_(_$s_states, originalStates);
-  core.reset_$x_(ws._$s_global_client, core._PCT_none());
+  core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("none")));
   ws.client_close_$x_(submitClient);
   delete globalThis.localStorage;
 }
