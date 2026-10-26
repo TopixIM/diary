@@ -1699,10 +1699,10 @@
                 d $ day .to-format |yyyy-MM-dd
               cond
                   includes?
-                    option:unwrap $ get special-days :holiday
+                    .unwrap $ get special-days :holiday
                     , d
                   , true
-                (includes? (option:unwrap (get special-days :workingday)) d)
+                (includes? (.unwrap (get special-days :workingday)) d)
                   , false
                 true $ includes? (#{} 6 7) (day :weekday)
           :examples $ []
@@ -1839,11 +1839,11 @@
             :return $ :: 'List 'app.comp.month/HolidayEntry
           :tests $ [] $ %{} 'TestEntry (:name |decodes-legacy-holiday-maps)
             :code $ quote $ do
-              is= 12 $ count $ parse-holidays (inline |2018.cirru)
-              is= 13 $ count $ parse-holidays (inline |2019.cirru)
-              is= 13 $ count $ parse-holidays (inline |2020.cirru)
-              is= 14 $ count $ parse-holidays (inline |2021.cirru)
-              is= 13 $ count $ parse-holidays (inline |2026.cirru)
+              is= 12 $ .len $ parse-holidays (inline |2018.cirru)
+              is= 13 $ .len $ parse-holidays (inline |2019.cirru)
+              is= 13 $ .len $ parse-holidays (inline |2020.cirru)
+              is= 14 $ .len $ parse-holidays (inline |2021.cirru)
+              is= 13 $ .len $ parse-holidays (inline |2026.cirru)
             :tags $ #{} :regression
         'required-millis $ %{} 'CodeEntry (:doc "|日记预览需要毫秒时间戳。")
           :code $ quote $ defn required-millis (value)
@@ -2104,7 +2104,7 @@
           :schema $ :: 'Struct
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def dev?
-            = |dev $ option:unwrap-or (get-env |mode) |release
+            = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
           :schema $ :: 'Bool
         'resolve-port $ %{} 'CodeEntry (:doc |)
@@ -2357,7 +2357,7 @@
                 fn (op)
                   let
                       decoded $ decode-client-dispatch-op op
-                    assert= true $ identical? ClientOp $ option:unwrap (enum-definition decoded)
+                    assert= true $ identical? ClientOp $ .unwrap (enum-definition decoded)
                     assert= op decoded
         'decode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-store (raw) (decode-map-as raw app.schema/ClientStore)
@@ -3164,12 +3164,12 @@
                 diaries $ :diaries user
                 diary $ .unwrap $ &map:get diaries |2026-09-29
               do
-                assert= 2 $ count $ :users db
-                assert= 1 $ count diaries
+                assert= 2 $ .len $ :users db
+                assert= 1 $ .len diaries
                 assert= false $ contains? diaries |2026-09-28
                 assert= |legacy-entry $ :text diary
                 assert= | $ :sleep diary
-                assert= 0 $ count $ :diaries
+                assert= 0 $ .len $ :diaries
                   .unwrap $ &map:get (:users db) |user-2
             :tags $ #{} :regression
         'normalize-stored-struct $ %{} 'CodeEntry
@@ -3220,7 +3220,7 @@
                       (:typed typed-db)
                         do
                           assert= 2026 $ :year $ :today typed-db
-                          assert= 0 $ count $ :sessions typed-db
+                          assert= 0 $ .len $ :sessions typed-db
                       _ $ raise |Expected-typed-storage
                   _ $ raise |Expected-legacy-storage
               :tags $ #{} :regression
@@ -3367,8 +3367,8 @@
           :code $ quote $ defn twig-container (db session records)
             let
                 router $ :router session
-                reel-length $ count records
-                session-count $ count $ :sessions db
+                reel-length $ .len records
+                session-count $ .len $ :sessions db
                 color $ rand-hex-color!
                 logged-out $ schema/ClientStore :logged-in? false :session session :reel-length reel-length :router
                   schema/ClientRouter :name (:name router) :data nil
@@ -3472,7 +3472,7 @@
                 cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 15)
                 overview $ twig-overview diaries cursor
               do
-                assert= 2 $ count overview
+                assert= 2 $ .len overview
                 assert= true $ contains? overview |2026-09-01
                 assert= false $ contains? overview |2026-10-01
                 assert= false $ contains? overview |2025-09-01
@@ -3889,7 +3889,7 @@
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-              if (option:some? maybe-user)
+              if (.some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
                       assoc (:messages session) op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
@@ -4015,7 +4015,7 @@
         'pad-start $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn pad-start (acc n c)
             if
-              &>= (count acc) n
+              &>= (.len acc) n
               , acc $ recur (str c acc) (dec n) c
           :examples $ []
           :schema $ :: 'Fn $ {} (:return 'String)
