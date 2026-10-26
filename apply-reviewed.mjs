@@ -31,6 +31,15 @@ if(mode==='apply'){
     test.code[1][0][1]=site.after;
     ops.push(['edit','add-test',target.id,test.name,'--tags',test.tags.join(','),'--input-format','json-ast','--code',JSON.stringify(test.code),'--overwrite']);
   }
+  assert.equal(input.sourceSites.length,2);const subtrees=[];
+  for(const site of input.sourceSites){
+    const d=expected.defs.find(d=>d.id===site.id),tree=site.path.reduce((n,i)=>n[i],d.code);
+    assert.equal(tree[0],'dissoc');assert.equal(tree.length,3);assert.deepEqual(tree,site.before);assert.deepEqual(site.after,['.dissoc',...tree.slice(1)]);
+    const actual=JSON.parse(run('tree','show',site.id,'--path','@'+site.path.join('.'),'--format','json')).tree;assert.deepEqual(actual,tree);
+    subtrees.push({id:site.id,path:site.path,tree:actual,evidence:site.evidence});tree[0]='.dissoc';
+    ops.push(['tree','replace',site.id,'--path','@'+[...site.path,0].join('.'),'--input-format','json-ast','--code',JSON.stringify('.dissoc')]);
+  }
+  writeFileSync('acceptance/subtrees.json',JSON.stringify(subtrees));
   assert.deepEqual(expected,input.expected);writeFileSync('acceptance/operations.json',JSON.stringify(ops));
   run('docs','agents','--contract');
   const txn=['edit','transaction','--file','acceptance/operations.json','--format','json'];
@@ -41,7 +50,9 @@ if(mode==='apply'){
   writeFileSync('acceptance/snapshot-after-blob.txt',blob());
 }else if(mode==='paired-baseline'){
   assert.equal(exec('calcit',['-v']).trim(),input.baseline);ordinary();assert.deepEqual(views(),input.expected);
-  assert.deepEqual(modules(),JSON.parse(readFileSync('acceptance/modules-before.json')));
+  const before=JSON.parse(readFileSync('acceptance/modules-before.json')),after=modules();assert.deepEqual(Object.keys(after).sort(),Object.keys(before).sort());
+  const changed=Object.keys(after).filter(n=>after[n]!==before[n]);for(const n of changed)assert.ok(input.allowedSourceModules.includes(n),n);
+  writeFileSync('acceptance/source-module-diff.json',JSON.stringify({before,after,changed}));
   const needle='(:calcit-version |'+input.baseline+')';assert.equal(input.manifests['deps.cirru'].split(needle).length,2);
   writeFileSync('deps.cirru',input.manifests['deps.cirru'].replace(needle,'(:calcit-version |'+input.target+')'));
   const pkg=JSON.parse(input.manifests['package.json']);assert.equal(pkg.dependencies['@calcit/procs'],input.baseline);pkg.dependencies['@calcit/procs']=input.target;
@@ -52,5 +63,5 @@ if(mode==='apply'){
   assert.deepEqual(views(),input.expected);writeFileSync('acceptance/after.json',JSON.stringify(views()));
   writeFileSync('acceptance/modules-after.json',JSON.stringify(modules()));
   for(const[from,to]of [['calcit.cirru','snapshot.cirru'],['deps.cirru','deps.cirru'],['package.json','package.json'],['yarn.lock','yarn.lock']])writeFileSync('acceptance/'+to,readFileSync(from));
-  writeFileSync('acceptance/success.json',JSON.stringify({base:input.base,before:input.snapshotBlob,after:blob(),definitions:input.before.defs.length,sites:input.sites.length,target:input.target}));
+  writeFileSync('acceptance/success.json',JSON.stringify({base:input.base,before:input.snapshotBlob,after:blob(),definitions:input.before.defs.length,sites:input.sites.length,sourceSites:input.sourceSites.length,target:input.target}));
 }
