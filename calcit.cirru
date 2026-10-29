@@ -730,7 +730,7 @@
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ :: 'Map 'Tag 'String
         'to-respo-messages $ %{} 'CodeEntry
           :doc "|Convert typed session messages to the map contract expected by respo-message."
           :code $ quote $ defn to-respo-messages (messages)
