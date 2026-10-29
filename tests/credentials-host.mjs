@@ -133,7 +133,8 @@ const map = (...pairs) => core._$n__$M_(...pairs.flatMap(([key, value]) => [tag(
 const variant = (name, ...values) => new core.CalcitEnumValue(tag(name), values);
 const date = map(["year", 2026], ["month", 9], ["day", 29]);
 const router = map(["name", tag("home")], ["data", null]);
-const rawStore = map(["logged-in?", false], ["reel-length", 0], ["count", 1], ["color", "#123456"], ["user", null], ["diary", null], ["router", router], ["today", date], ["session", map(["id", 9], ["nickname", ""], ["user-id", null], ["messages", map()], ["router", router], ["cursor", date])]);
+// Absent Option fields (:user, :diary, session :user-id, session router :data) are left out, as the client normalizes `:none` on the wire.
+const rawStore = map(["logged-in?", false], ["reel-length", 0], ["count", 1], ["color", "#123456"], ["router", router], ["today", date], ["session", map(["id", 9], ["nickname", ""], ["messages", map()], ["router", map(["name", tag("home")])], ["cursor", date])]);
 globalThis.location = { hostname: "patch-fixture.invalid" };
 globalThis.window = { localStorage: { getItem: () => null }, addEventListener() {}, removeEventListener() {} };
 globalThis.document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
@@ -206,6 +207,18 @@ try {
   assert.equal(snapshot().get(tag("store")).get(tag("count")), 1);
   assert.equal(core.deref(_$s_awaiting_snapshot_$q_), false);
   assert.equal(core.deref(_$s_resync_attempted_$q_), false);
+
+  // The server sends Option fields as printed `:some`/`:none` variants; the client decodes them back to Option.
+  const optionWireStore = map(["logged-in?", false], ["reel-length", 0], ["count", 1], ["color", "#123456"], ["user", variant("none")], ["router", router], ["today", date],
+    ["session", map(["id", 9], ["nickname", ""], ["user-id", variant("some", "user-1")], ["messages", map()], ["router", map(["name", tag("home")], ["data", variant("none")])], ["cursor", date])]);
+  incoming(sockets[2], variant("replace", optionWireStore));
+  const optionStore = snapshot().get(tag("store"));
+  assert.equal(optionStore.get(tag("user")).tag, tag("none"));
+  assert.equal(optionStore.get(tag("diary")).tag, tag("none"));
+  const userId = optionStore.get(tag("session")).get(tag("user-id"));
+  assert.equal(userId.tag, tag("some"));
+  assert.equal(userId.extra[0], "user-1");
+  assert.ok(comp_container(map(), core.deref(_$s_store)));
 } finally {
   const active = core.deref(ws._$s_global_client);
   if (core._$n_enum_$o_nth(active, 0) === tag("some")) ws.client_close_$x_(core._$n_enum_$o_nth(active, 1));
@@ -316,9 +329,15 @@ try {
     assert.equal(op.enumPrototype, ClientOp);
     assert.equal(op.tag, tag("session/merge-cursor"));
     const patch = op.extra[0];
-    assert.equal(patch.get(tag("month")), index < 12 ? index + 1 : null);
-    assert.equal(patch.get(tag("year")), index < 12 ? null : 2026 - (index - 12));
-    assert.equal(patch.get(tag("day")), null);
+    const optional = (field) => {
+      const value = patch.get(tag(field));
+      if (value.tag === tag("none")) return null;
+      assert.equal(value.tag, tag("some"));
+      return value.extra[0];
+    };
+    assert.equal(optional("month"), index < 12 ? index + 1 : null);
+    assert.equal(optional("year"), index < 12 ? null : 2026 - (index - 12));
+    assert.equal(optional("day"), null);
   });
   submitted.length = 0;
   const localData = core._$n__$M_(tag("text"), "local draft");
