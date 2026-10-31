@@ -17,37 +17,35 @@
         '*awaiting-snapshot? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *awaiting-snapshot? true
           :examples $ []
-          :schema $ :: 'Ref 'Bool
+          :schema $ quote $ Ref Bool
         '*resync-attempted? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *resync-attempted? false
           :examples $ []
-          :schema $ :: 'Ref 'Bool
+          :schema $ quote $ Ref Bool
         '*states $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *states
             {} $ :states $ {}
               :cursor $ []
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Ref (Map Tag Dynamic)
         '*store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *store (StorePayload :initial)
           :examples $ []
-          :schema $ :: 'Ref 'app.client/StorePayload
+          :schema $ quote $ Ref app.client/StorePayload
         'BrowserDate $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait BrowserDate
-            .get-hours $ :: 'Fn $ {}
-              :args $ [] 'app.client/BrowserDate
-              :return 'Number
+            .get-hours $ quote $ Fn app.client/BrowserDate (-> Number)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :browser)
             :names $ {} $ :get-hours |getHours
-          :schema $ :: 'Trait
+          :schema $ quote Trait
           :tags $ #{} :ffi :js-host
         'StorePayload $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum StorePayload (:initial)
-            :offline $ :: 'Option 'app.schema/ClientSnapshot
+            :offline $ quote $ Option app.schema/ClientSnapshot
             :online 'app.schema/ClientSnapshot
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! () (reset! *awaiting-snapshot? true)
             let
@@ -62,23 +60,18 @@
                     js/console.error "|Lost connection!"
                   :on-data on-server-data
                   :on-error $ fn (_error)
-                    hint-fn $ {} (:return 'Unit)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic $ -> Unit
                     reject-server-data! :wire
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'current-hour! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn current-hour! ()
             let
                 now $ js-cast (new js/Date) 'app.client/BrowserDate
               now .get-hours
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Number) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-zero-hour)
             :code $ quote $ assert= 0 (current-hour!)
@@ -97,9 +90,7 @@
               _ $ ws-send! $ to-server-op op
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'app.schema/ClientOp
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.schema/ClientOp (-> Unit) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'dispatch-host! $ %{} 'CodeEntry
           :doc "|在宿主（JS）边界把未检查的 op 解码为 ClientOp 后分发；Respo 渲染直接使用带类型的 dispatch!。"
@@ -107,9 +98,7 @@
             dispatch! $ app.schema/decode-client-dispatch-op op
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -117,12 +106,10 @@
             render-app!
             connect!
             add-watch! *store :changes $ fn (store prev)
-              hint-fn $ {} (:return 'Unit)
-                :args $ [] 'app.client/StorePayload 'app.client/StorePayload
+              hint-fn $ Fn app.client/StorePayload app.client/StorePayload $ -> Unit
               render-app!
             add-watch! *states :changes $ fn (states prev)
-              hint-fn $ {} (:return 'Unit)
-                :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+              hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
               render-app!
             on-page-touch $ fn ()
               when (enum? @*store)
@@ -140,17 +127,15 @@
             println "|App started!"
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn mount-target ()
-            unsafe-coerce (js/document.querySelector |.app) (:: 'JsNullish 'respo.dom/DomElement)
+            unsafe-coerce (js/document.querySelector |.app)
+              quote $ JsNullish respo.dom/DomElement
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ []
-            :features $ #{} :js-ffi
-            :return $ :: 'JsNullish 'respo.dom/DomElement
+          :schema $ quote $ Fn
+            -> $ JsNullish respo.dom/DomElement
+            :features :js-ffi
         'on-server-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-server-data (data)
             let
@@ -167,18 +152,14 @@
                 (:err stage) (reject-server-data! stage)
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'reject-server-data! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reject-server-data! (stage) (js/console.warn |Client-sync-rejected stage) (reset! *awaiting-snapshot? true)
             when (not @*resync-attempted?) (reset! *resync-attempted? true) (connect!)
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Tag
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Tag (-> Unit) (:features :js-ffi)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if
@@ -186,19 +167,15 @@
               hud! |error $ str client-errors &newline server-errors
               do (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (render-app!)
                 add-watch! *store :changes $ fn (store prev)
-                  hint-fn $ {} (:return 'Unit)
-                    :args $ [] 'app.client/StorePayload 'app.client/StorePayload
+                  hint-fn $ Fn app.client/StorePayload app.client/StorePayload $ -> Unit
                   render-app!
                 add-watch! *states :changes $ fn (states prev)
-                  hint-fn $ {} (:return 'Unit)
-                    :args $ [] (:: 'Map 'Tag 'Dynamic) (:: 'Map 'Tag 'Dynamic)
+                  hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
                   render-app!
                 hud! |ok~ |Ok
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             let
@@ -209,9 +186,7 @@
                 store $ deref *store
               render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
             match
@@ -230,9 +205,7 @@
               (:none) (println "|Found no storage.")
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
         'store-snapshot $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn store-snapshot (state)
             match state
@@ -240,9 +213,8 @@
               (:offline snapshot) snapshot
               (:initial) (Option :none)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'app.client/StorePayload
-            :return $ :: 'Option 'app.schema/ClientSnapshot
+          :schema $ quote $ Fn app.client/StorePayload
+            -> $ Option app.schema/ClientSnapshot
         'to-server-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn to-server-op (op)
             match op
@@ -267,8 +239,7 @@
               (:reel/reset) (schema/Op :reel/reset)
               (:reel/merge) (schema/Op :reel/merge)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
-            :args $ [] 'app.schema/ClientOp
+          :schema $ quote $ Fn app.schema/ClientOp (-> app.schema/Op)
           :tests $ [] $ %{} 'TestEntry (:name |sends-op-with-server-nominal-type)
             :code $ quote $ do
               assert= :user/log-in $ &enum:nth
@@ -308,11 +279,9 @@
                 normalize-wire-value $ &struct:to-map value
               (map? value)
                 filter-map-kv
-                  assert-type value $ :: 'Map 'Dynamic 'Dynamic
+                  assert-type value $ quote $ Map Dynamic Dynamic
                   fn (key item)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic 'Dynamic
-                      :return $ :: 'calcit.core/MapEntryDecision 'Dynamic 'Dynamic
+                    hint-fn $ Fn Dynamic Dynamic $ -> (calcit.core/MapEntryDecision Dynamic Dynamic)
                     if (wire-option? item 1) (MapEntryDecision :drop)
                       MapEntryDecision :keep key $ normalize-wire-value item
               (list? value) (map value normalize-wire-value)
@@ -322,8 +291,7 @@
                   , value
               true value
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> Dynamic)
           :tests $ [] $ %{} 'TestEntry (:name |recursively-converts-struct-patches)
             :code $ quote $ let
                 value $ %{} schema/ClientRouter (:name :home)
@@ -351,9 +319,8 @@
                 _ $ Result :err :message-envelope
               Result :err :message-envelope
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic 'Dynamic 'Bool
-            :return $ :: 'Result (:: 'Option 'app.schema/ClientSnapshot) 'Tag
+          :schema $ quote $ Fn Dynamic Dynamic Bool
+            -> $ Result (Option app.schema/ClientSnapshot) Tag
           :tests $ []
             %{} 'TestEntry (:name |rejects-map)
               :code $ quote $ assert= (Result :err :message-envelope)
@@ -399,9 +366,8 @@
                             (:ok typed)
                               Result :ok $ schema/ClientSnapshot :raw raw :store typed
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic 'Dynamic 'Bool
-            :return $ :: 'Result 'app.schema/ClientSnapshot 'Tag
+          :schema $ quote $ Fn Dynamic Dynamic Bool
+            -> $ Result app.schema/ClientSnapshot Tag
           :tests $ []
             %{} 'TestEntry (:name |retains-raw-and-decoded-state-across-patches)
               :code $ quote $ let
@@ -610,8 +576,7 @@
                   if (= size 1) :none :some
               , false
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Bool)
-            :args $ [] 'Dynamic 'Number
+          :schema $ quote $ Fn Dynamic Number (-> Bool)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.client-state
           :require (app.schema :as schema)
@@ -625,10 +590,9 @@
           :code $ quote $ defn checked-child-states (states key)
             decode-map-as (>> states key) (:: 'Map 'Tag 'Dynamic)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag
-            :features $ #{} :js-ffi
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) Tag
+            -> $ Map Tag Dynamic
+            :features :js-ffi
           :tests $ []
             %{} 'TestEntry (:name |preserves-data-and-mixed-cursor)
               :code $ quote $ let
@@ -688,8 +652,7 @@
                         to-respo-messages $ :messages session
                         {}
                         fn (info d!)
-                          hint-fn $ {} (:return 'Dynamic)
-                            :args $ [] (:: 'Map 'Dynamic 'Dynamic) 'Dynamic
+                          hint-fn $ Fn (Map Dynamic Dynamic) Dynamic $ -> Dynamic
                           match
                             get (:messages session) (message-id-of info)
                             (:some message)
@@ -698,9 +661,7 @@
                       when dev? $ comp-reel (:reel-length store-typed) ({})
               , |comp-container
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.client/StorePayload
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (Map Tag Dynamic) app.client/StorePayload (-> respo.schema/Component) (:features :js-ffi)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline (state)
             div
@@ -709,31 +670,28 @@
                 {}
                   :style $ {} $ :cursor :pointer
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :effect/connect
                 <>
                   if (= state :offline) "|Socket broken! Click to retry." |Loading...
                   {} (:font-family ui/font-fancy) (:font-weight 100) (:font-size 32)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Tag
+          :schema $ quote $ Fn Tag (-> respo.schema/Component)
         'comp-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-status-color (color)
             div $ {} (:class-name css-status-color)
               :style $ {} $ :background-color color
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> respo.schema/Component)
         'css-status-color $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-status-color
             {}
               |$0 $ {} (:width 16) (:height 16) (:position :absolute) (:top 16) (:right 16) (:border-radius |8px) (:opacity 0.8) (:transition-duration |240ms)
               |$0:hover $ {} $ :transform "|scale(1.1)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'message-id-of $ %{} 'CodeEntry
           :doc "|Read the String id of a toast message rendered by respo-message."
           :code $ quote $ defn message-id-of (info)
@@ -742,22 +700,20 @@
                 if (string? id) id $ raise "|expected message id as a String"
               (:none) (raise "|expected message id as a String")
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] $ :: 'Map 'Dynamic 'Dynamic
+          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> String)
         'style-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
           :examples $ []
-          :schema $ :: 'Map 'Tag 'String
+          :schema $ quote $ Map Tag String
         'to-respo-messages $ %{} 'CodeEntry
           :doc "|Convert typed session messages to the map contract expected by respo-message."
           :code $ quote $ defn to-respo-messages (messages)
             filter-map-kv messages $ fn (id message)
               MapEntryDecision :keep id $ &struct:to-map message
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'String 'app.schema/Message
-            :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map String app.schema/Message)
+            -> $ Map String $ Map Tag Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |converts-typed-toast-messages)
             :code $ quote $ let
                 messages $ {} $ |message-1
@@ -806,15 +762,12 @@
                 {} $ :style $ {} (:padding "|16px 0")
                 button $ {} (:class-name css/button-primary) (:inner-text |Copy)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     copy! $ format-cirru-edn $ &map:to-list diaries
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'String 'Dynamic
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (Map String Dynamic) (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.data-gather
@@ -830,15 +783,14 @@
         'DiaryEditorState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct DiaryEditorState (:text 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'as-diary-editor-state $ %{} 'CodeEntry (:doc "|按 Struct 来源校验日记编辑组件状态。")
           :code $ quote $ defn as-diary-editor-state (value)
             if (struct? value)
               if (&struct:matches? value DiaryEditorState) value $ raise "|expected DiaryEditorState in component states"
               raise "|expected DiaryEditorState in component states"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.comp.diary/DiaryEditorState)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.comp.diary/DiaryEditorState)
         'comp-diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
@@ -882,20 +834,18 @@
                         button $ {} (:class-name css/button) (:inner-text "|Like last day")
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
-                            hint-fn $ {} (:return 'Dynamic)
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                  :args $ [] 'Dynamic
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Dynamic
                             d! $ app.schema/ClientOp :diary/copy-yesterday $ app.schema/CopyYesterday :date-info date-info
                       when
                         not= (:text diary) (:text state)
                         button $ {} (:class-name css/button-primary) (:inner-text |Save)
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
-                            hint-fn $ {} (:return 'Dynamic)
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                  :args $ [] 'Dynamic
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Dynamic
                             when
                               not $ blank? $ :text state
                               d! $ app.schema/ClientOp :diary/add-one $ app.schema/Diary :food (:food diary) :sleep (:sleep diary) :mood (:mood diary) :place (:place diary) :highlight (:highlight diary) :met (:met diary) :exercise (:exercise diary) :pains (:pains diary) :text (:text state) :date (Option :some date) :time (:time diary)
@@ -910,10 +860,9 @@
                           {} (:class-name css/link)
                             :style $ {} $ :margin-left 16
                             :on-click $ fn (e d!)
-                              hint-fn $ {} (:return 'Dynamic)
-                                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                    :args $ [] 'Dynamic
+                              hint-fn $ Fn (Map Tag Dynamic)
+                                Fn Dynamic & Dynamic $ -> Unit
+                                -> Dynamic
                               d! $ :: :states cursor nil
                           <> |Reset
                   textarea $ {}
@@ -922,18 +871,15 @@
                     :class-name $ str-spaced css/flex css/textarea
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       d! $ :: :states cursor $ assoc state :text
                         decode-map-as
                           .unwrap $ &map:get e :value
                           , 'String
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.util/DateInfo 'app.schema/Diary
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo app.schema/Diary (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'comp-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-guide (text)
@@ -941,8 +887,7 @@
               {} $ :class-name css-guide
               <> text
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> respo.schema/Component)
         'comp-records $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-records (states diary date)
             div
@@ -956,10 +901,9 @@
                   comp-guide "|What did you eat?"
                   render-content (:food diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :food :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -972,10 +916,9 @@
                   comp-guide "|How did you sleep?"
                   render-content (:sleep diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :sleep :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -989,10 +932,9 @@
                   comp-guide "|How you feel?"
                   render-content (:mood diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :mood :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -1006,10 +948,9 @@
                   comp-guide "|Where you went?"
                   render-content (:place diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :place :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -1023,10 +964,9 @@
                   comp-guide "|What's the highlights?"
                   render-content (:highlight diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :highlight :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -1040,10 +980,9 @@
                   comp-guide "|People met?"
                   render-content (:met diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :met :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -1057,10 +996,9 @@
                   comp-guide |Exercises?
                   render-content (:exercise diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :exercise :date date :data (decode-map-as data 'String)
                   .render plugin
@@ -1074,16 +1012,14 @@
                   comp-guide |Pains?
                   render-content (:pains diary)
                     fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       .show plugin d! $ fn (data)
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :pains :date date :data (decode-map-as data 'String)
                   .render plugin
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'app.schema/Diary 'String
+          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Diary String (-> respo.schema/Component)
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
             {} $ |$0 $ {}
@@ -1092,12 +1028,12 @@
               :min-width 160
               :text-align :left
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-record-layout $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-record-layout
             {} $ |$0 $ {} (:margin-bottom 20)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'render-content $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-content (x on-click)
             span
@@ -1106,17 +1042,16 @@
                 :on-click on-click
               if (blank? x) (comp-empty) (<> x)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
-            :args $ [] 'String $ :: 'Fn
-              {} (:return 'Dynamic)
-                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                    :args $ [] 'Dynamic
+          :schema $ quote $ Fn String
+            Fn (Map Tag Dynamic)
+              Fn Dynamic & Dynamic $ -> Unit
+              -> Dynamic
+            -> respo.schema/Element
         'style-date-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-date-preview
             {} $ |& $ {} (:font-size 32) (:font-weight 100)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.diary
           :require
@@ -1143,8 +1078,7 @@
                 :color $ hsl 0 0 80
               <> |Empty
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ []
+          :schema $ quote $ Fn (-> respo.schema/Component)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.empty
           :require
@@ -1157,15 +1091,14 @@
         'LoginState $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct LoginState (:username 'String) (:password 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'as-login-state $ %{} 'CodeEntry (:doc "|按 Struct 来源校验登录组件状态。")
           :code $ quote $ defn as-login-state (value)
             if (struct? value)
               if (&struct:matches? value LoginState) value $ raise "|expected LoginState in component states"
               raise "|expected LoginState in component states"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.comp.login/LoginState)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.comp.login/LoginState)
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
@@ -1183,10 +1116,9 @@
                       input $ {} (:placeholder |Username) (:class-name css/input)
                         :value $ :username state
                         :on-input $ fn (e d!)
-                          hint-fn $ {} (:return 'Dynamic)
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                :args $ [] 'Dynamic
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Dynamic
                           d! $ :: :states cursor $ assoc state :username
                             decode-map-as
                               .unwrap $ &map:get e :value
@@ -1196,10 +1128,9 @@
                       input $ {} (:placeholder |Password) (:class-name css/input)
                         :value $ :password state
                         :on-input $ fn (e d!)
-                          hint-fn $ {} (:return 'Dynamic)
-                            :args $ [] (:: 'Map 'Tag 'Dynamic)
-                              :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                :args $ [] 'Dynamic
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn Dynamic & Dynamic $ -> Unit
+                            -> Dynamic
                           d! $ :: :states cursor $ assoc state :password
                             decode-map-as
                               .unwrap $ &map:get e :value
@@ -1213,12 +1144,11 @@
                     span $ {} (:inner-text "|Log in") (:class-name css/link)
                       :on-click $ on-submit (:username state) (:password state) false
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> respo.schema/Component)
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
-          :schema $ :: 'app.comp.login/LoginState
+          :schema $ quote app.comp.login/LoginState
           :tests $ [] $ %{} 'TestEntry (:name |keeps-nominal-empty-credentials)
             :code $ quote $ do (assert-type initial-state 'app.comp.login/LoginState)
               assert= | $ :username initial-state
@@ -1228,10 +1158,9 @@
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
             fn (e dispatch!)
-              hint-fn $ {} (:return 'Unit)
-                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                  :: 'Fn $ {} (:return 'Unit)
-                    :args $ [] 'Dynamic
+              hint-fn $ Fn (Map Tag Dynamic)
+                Fn Dynamic $ -> Unit
+                -> Unit
               dispatch! $ if signup?
                 schema/ClientOp :user/sign-up $ [] username password
                 schema/ClientOp :user/log-in $ [] username password
@@ -1239,22 +1168,18 @@
                 format-cirru-edn $ [] username password
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String 'String 'Bool
-            :features $ #{} :js-ffi
-            :return $ :: 'Fn $ {} (:return 'Unit)
-              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                :: 'Fn $ {} (:return 'Unit)
-                  :args $ [] 'Dynamic
+          :schema $ quote $ Fn String String Bool
+            -> $ Fn (Map Tag Dynamic)
+              Fn Dynamic $ -> Unit
+              -> Unit
+            :features :js-ffi
           :tags $ #{} :js-ffi
           :tests $ []
             %{} 'TestEntry (:name |typed-login-callback-delivers-client-op)
               :code $ quote $ let
                   recorded $ ref |
                   deliver $ fn (op)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic
-                      :return 'Unit
+                    hint-fn $ Fn Dynamic $ -> Unit
                     reset! recorded $ format-cirru-edn op
                     , &unit
                   handler $ on-submit |fixture-user |fixture-password false
@@ -1268,9 +1193,7 @@
               :code $ quote $ let
                   recorded $ ref |
                   deliver $ fn (op)
-                    hint-fn $ {}
-                      :args $ [] 'Dynamic
-                      :return 'Unit
+                    hint-fn $ Fn Dynamic $ -> Unit
                     reset! recorded $ format-cirru-edn op
                     , &unit
                   handler $ on-submit |fixture-user |fixture-password true
@@ -1296,58 +1219,49 @@
       :defs $ {}
         'HolidayEntry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct HolidayEntry
-            :days $ :: 'Set 'String
+            :days $ quote $ Set String
             :name 'String
             :type 'Tag
           :examples $ []
-          :schema $ :: 'Struct
+          :schema $ quote Struct
         'LuxonDateTime $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait LuxonDateTime (:weekday 'Number) (:year 'Number) (:month 'Number) (:day 'Number)
-            .plus $ :: 'Fn $ {}
-              :args $ [] 'app.comp.month/LuxonDateTime 'JsObject
-              :return 'app.comp.month/LuxonDateTime
-            .to-format $ :: 'Fn $ {}
-              :args $ [] 'app.comp.month/LuxonDateTime 'String
-              :return 'String
-            .has-same? $ :: 'Fn $ {}
-              :args $ [] 'app.comp.month/LuxonDateTime 'app.comp.month/LuxonDateTime 'String
-              :return 'Bool
+            .plus $ quote $ Fn app.comp.month/LuxonDateTime JsObject (-> app.comp.month/LuxonDateTime)
+            .to-format $ quote $ Fn app.comp.month/LuxonDateTime String (-> String)
+            .has-same? $ quote $ Fn app.comp.month/LuxonDateTime app.comp.month/LuxonDateTime String (-> Bool)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :browser)
             :names $ {} (:has-same? |hasSame) (:to-format |toFormat)
-          :schema $ :: 'Trait
+          :schema $ quote Trait
           :tags $ #{} :ffi :js-host
         'LuxonFactory $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait LuxonFactory
-            .from-object $ :: 'Fn $ {}
-              :args $ [] 'app.comp.month/LuxonFactory 'JsObject
-              :return 'app.comp.month/LuxonDateTime
-            .from-millis $ :: 'Fn $ {}
-              :args $ [] 'app.comp.month/LuxonFactory 'Number
-              :return 'app.comp.month/LuxonDateTime
+            .from-object $ quote $ Fn app.comp.month/LuxonFactory JsObject (-> app.comp.month/LuxonDateTime)
+            .from-millis $ quote $ Fn app.comp.month/LuxonFactory Number (-> app.comp.month/LuxonDateTime)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :browser)
             :names $ {} (:from-millis |fromMillis) (:from-object |fromObject)
-          :schema $ :: 'Trait
+          :schema $ quote Trait
           :tags $ #{} :ffi :js-host
         'collect-special-days $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn collect-special-days (entries kind)
             let
-                initial $ assert-type (#{}) (:: 'Set 'String)
+                initial $ assert-type (#{})
+                  quote $ Set String
               fold entries initial $ fn (days entry)
                 if
                   = (:type entry) kind
                   .union days $ :days entry
                   , days
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'List 'app.comp.month/HolidayEntry) 'Tag
-            :return $ :: 'Set 'String
+          :schema $ quote $ Fn (List app.comp.month/HolidayEntry) Tag
+            -> $ Set String
           :tests $ []
             %{} 'TestEntry (:name |empty-input-and-unmatched-kind)
               :code $ quote $ let
                   holiday $ HolidayEntry :name |fixture :type :holiday :days $ #{} |2026-01-01
-                  empty-entries $ assert-type ([]) (:: 'List 'app.comp.month/HolidayEntry)
+                  empty-entries $ assert-type ([])
+                    quote $ List app.comp.month/HolidayEntry
                 assert= 0 $ .len $ collect-special-days empty-entries :holiday
                 assert= 0 $ .len $ collect-special-days ([] holiday) :workingday
               :tags $ #{} :holiday-fold-contract
@@ -1398,10 +1312,9 @@
                       assoc day-style :border-bottom $ str "|4px solid " $ hsl 200 80 80
                       , day-style
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year (this-day :year) :month (this-day :month) :day (this-day :day)
                 div
                   {} (:class-name css/column)
@@ -1417,9 +1330,10 @@
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Number 'Number 'app.comp.month/LuxonDateTime 'app.util/DateInfo 'app.util/DateInfo $ :: 'Map 'String (:: 'Map 'Tag 'String)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number Number app.comp.month/LuxonDateTime app.util/DateInfo app.util/DateInfo
+            Map String $ Map Tag String
+            -> respo.schema/Component
+            :features :js-ffi
         'comp-diary-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-diary-preview (cursor-date diary)
             div
@@ -1474,26 +1388,22 @@
                   button
                     {} (:class-name css/button)
                       :on-click $ fn (e d!)
-                        hint-fn $ {} (:return 'Dynamic)
-                          :args $ [] (:: 'Map 'Tag 'Dynamic)
-                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                              :args $ [] 'Dynamic
+                        hint-fn $ Fn (Map Tag Dynamic)
+                          Fn Dynamic & Dynamic $ -> Unit
+                          -> Dynamic
                         d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data (Option :none)
                     <> "|Edit diary"
                 div ({})
                   button
                     {} (:class-name css/button-primary)
                       :on-click $ fn (e d!)
-                        hint-fn $ {} (:return 'Dynamic)
-                          :args $ [] (:: 'Map 'Tag 'Dynamic)
-                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                              :args $ [] 'Dynamic
+                        hint-fn $ Fn (Map Tag Dynamic)
+                          Fn Dynamic & Dynamic $ -> Unit
+                          -> Dynamic
                         d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data (Option :none)
                     <> "|Add diary"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.comp.month/LuxonDateTime 'app.schema/Diary
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.comp.month/LuxonDateTime app.schema/Diary (-> respo.schema/Component) (:features :js-ffi)
         'comp-divider $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-divider (padding)
             div $ {} $ :style
@@ -1502,8 +1412,7 @@
                 :height 1
                 :margin padding
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> respo.schema/Component)
         'comp-month $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-month (today cursor diary overview)
             let
@@ -1529,20 +1438,18 @@
                       a
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!)
-                            hint-fn $ {} (:return 'Unit)
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                  :args $ [] 'Dynamic
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Unit
                             on-change-month! cursor -1 d!
                         comp-i :chevron-left 16 $ hsl 200 80 70
                       <> (cursor-date .to-format |yyyy-MM) (str-spaced css/font-fancy style-month-header)
                       a
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!)
-                            hint-fn $ {} (:return 'Unit)
-                              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                                  :args $ [] 'Dynamic
+                            hint-fn $ Fn (Map Tag Dynamic)
+                              Fn Dynamic & Dynamic $ -> Unit
+                              -> Unit
                             on-change-month! cursor 1 d!
                         comp-i :chevron-right 16 $ hsl 200 80 70
                     comp-weekdays
@@ -1561,9 +1468,10 @@
                   comp-diary-preview cursor-date diary
                 comp-month-footer
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.util/DateInfo 'app.util/DateInfo 'app.schema/Diary $ :: 'Map 'String (:: 'Map 'Tag 'String)
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.util/DateInfo app.util/DateInfo app.schema/Diary
+            Map String $ Map Tag String
+            -> respo.schema/Component
+            :features :js-ffi
         'comp-month-footer $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn comp-month-footer ()
             div
@@ -1578,79 +1486,68 @@
                     [] n $ span $ {} (:inner-text n)
                       :class-name $ str-spaced css/center css-month-entry
                       :on-click $ fn (e d!)
-                        hint-fn $ {} (:return 'Dynamic)
-                          :args $ [] (:: 'Map 'Tag 'Dynamic)
-                            :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                              :args $ [] 'Dynamic
+                        hint-fn $ Fn (Map Tag Dynamic)
+                          Fn Dynamic & Dynamic $ -> Unit
+                          -> Dynamic
                         d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :none) :month (Option :some n) :day (Option :none)
               div
                 {} $ :class-name css/row-middle
                 span $ {} (:inner-text |2026) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2026) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2025) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2025) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2024) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2024) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2023) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2023) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2022) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2022) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2021) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2021) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2020) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2020) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2019) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2019) :month (Option :none) :day (Option :none)
                 span $ {} (:inner-text |2018) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ {} (:return 'Dynamic)
-                      :args $ [] (:: 'Map 'Tag 'Dynamic)
-                        :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                          :args $ [] 'Dynamic
+                    hint-fn $ Fn (Map Tag Dynamic)
+                      Fn Dynamic & Dynamic $ -> Unit
+                      -> Dynamic
                     d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2018) :month (Option :none) :day (Option :none)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Element)
-            :args $ []
+          :schema $ quote $ Fn (-> respo.schema/Element)
         'comp-weekdays $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-weekdays ()
             list->
@@ -1661,13 +1558,12 @@
                     {} $ :class-name $ str-spaced css-cell-size css-week-note
                     <> x
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ []
+          :schema $ quote $ Fn (-> respo.schema/Component)
         'css-cell-size $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-cell-size
             {} $ |$0 $ {} (:width 92) (:height 84) (:margin 6) (:vertical-align :middle) (:text-align :center)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-day-cell $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-day-cell
             {}
@@ -1680,17 +1576,17 @@
                 :background-color $ hsl 0 0 98
                 :transform "|scale(1.06)"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-month-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-month-entry
             {} $ |$0 $ {} (:font-family ui/font-fancy) (:line-height |40px) (:width 40) (:font-size 16) (:font-weight 100) (:cursor :pointer)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-month-switch $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-month-switch
             {} $ |$0 $ {} (:width 40) (:text-align :center) (:cursor :pointer)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-week-note $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-week-note
             {} $ |$0 $ {}
@@ -1699,20 +1595,19 @@
               :height 32
               :line-height |32px
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'css-year-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-year-entry
             {} $ |$0 $ {} (:cursor :pointer) (:width 60) (:text-align :center)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'inline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defmacro inline (path)
             read-file $ str |holidays/ path
           :examples $ []
-          :schema $ :: 'Macro $ {}
-            :capabilities $ #{} :fs-read
-            :expansion $ :: 'Expr 'Dynamic
-            :required $ [] 'Syntax
+          :schema $ quote $ Macro Syntax
+            -> $ Expr Dynamic
+            :capabilities :fs-read
         'is-holiday? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn is-holiday? (day)
             let
@@ -1726,9 +1621,7 @@
                   , false
                 true $ includes? (#{} 6 7) (day :weekday)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Bool)
-            :args $ [] 'app.comp.month/LuxonDateTime
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.comp.month/LuxonDateTime (-> Bool) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry
             :name |checked-holiday-map-lookup-preserves-classification
@@ -1744,9 +1637,7 @@
               .!fromObject DateTime $ to-js-data date-info
               , 'app.comp.month/LuxonDateTime
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
-            :args $ [] 'app.util/DateInfo
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.util/DateInfo (-> app.comp.month/LuxonDateTime) (:features :js-ffi)
           :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-map-keeps-method-dispatch)
             :code $ quote $ assert= |2024-01-01
               (luxon-from-map (app.util/DateInfo :year 2024 :month 1 :day 1))
@@ -1756,9 +1647,7 @@
           :code $ quote $ defn luxon-from-millis (timestamp)
             js-cast (.!fromMillis DateTime timestamp) 'app.comp.month/LuxonDateTime
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.comp.month/LuxonDateTime)
-            :args $ [] 'Number
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn Number (-> app.comp.month/LuxonDateTime) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-millis-keeps-method-dispatch)
             :code $ quote $ assert= |2024-01-01
@@ -1781,17 +1670,15 @@
                     app.util/DateInfo :year year :month next-month :day $ if (< count-days day) count-days day
               d! $ app.schema/ClientOp :session/set-cursor next-cursor
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'app.util/DateInfo 'Number $ :: 'Fn
-              {} (:rest 'Dynamic) (:return 'Unit)
-                :args $ [] 'Dynamic
+          :schema $ quote $ Fn app.util/DateInfo Number
+            Fn Dynamic & Dynamic $ -> Unit
+            -> Unit
           :tests $ []
             %{} 'TestEntry (:name |previous-year)
               :code $ quote $ let
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     assert=
                       app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year 2023 :month 12 :day 15
@@ -1804,8 +1691,7 @@
               :code $ quote $ let
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     assert=
                       app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year 2025 :month 1 :day 15
@@ -1818,8 +1704,7 @@
               :code $ quote $ let
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     assert=
                       app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year 2024 :month 2 :day 29
@@ -1832,8 +1717,7 @@
               :code $ quote $ let
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     assert=
                       app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year 2024 :month 6 :day 12
@@ -1854,9 +1738,8 @@
               (:err message)
                 raise $ str-spaced |failed |to |parse |holiday |data: message
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'List 'app.comp.month/HolidayEntry
+          :schema $ quote $ Fn String
+            -> $ List app.comp.month/HolidayEntry
           :tests $ [] $ %{} 'TestEntry (:name |decodes-legacy-holiday-maps)
             :code $ quote $ do
               is= 12 $ .len $ parse-holidays (inline |2018.cirru)
@@ -1869,15 +1752,12 @@
           :code $ quote $ defn required-millis (value)
             if (number? value) value $ raise "|expected diary time in milliseconds"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> Number)
         'same-luxon-day? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn same-luxon-day? (a b)
             and (a .has-same? b |month) (a .has-same? b |day)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Bool)
-            :args $ [] 'app.comp.month/LuxonDateTime 'app.comp.month/LuxonDateTime
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.comp.month/LuxonDateTime app.comp.month/LuxonDateTime (-> Bool) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'special-days $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def special-days
@@ -1892,42 +1772,41 @@
                 :workingday $ collect-special-days data :workingday
                 :holiday $ collect-special-days data :holiday
           :examples $ []
-          :schema $ :: 'Map 'Tag $ :: 'Set 'String
+          :schema $ quote $ Map Tag (Set String)
         'style-date-hint $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-date-hint
             {} $ |& $ {} (:font-size 12) (:font-weight 100)
               :color $ hsl 0 0 72
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-date-main $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-date-main
             {} $ |& $ {} (:font-size 16) (:font-weight 300)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-month-header $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-month-header
             {} $ |& $ {} (:font-size 16) (:font-weight 300)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-preview
             {} $ |& $ {} (:font-size 12) (:white-space :nowrap) (:text-overflow :ellipsis) (:display :inline-block) (:overflow :hidden) (:width |100%)
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'style-week-header $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-week-header
             {} $ |& $ {}
               :border-bottom $ str "|1px solid " $ hsl 0 0 94
               :border-top $ str "|1px solid " $ hsl 0 0 94
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'text-or-empty $ %{} 'CodeEntry (:doc "|预览字段为字符串，nil 视为空文本。")
           :code $ quote $ defn text-or-empty (value)
             if (string? value) value $ if (nil? value) | $ raise
               str "|expected text, got: " $ type-of value
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> String)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.month
           :require
@@ -1965,8 +1844,7 @@
                   =< 8 nil
                   <> $ str count-members
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'Bool 'Number
+          :schema $ quote $ Fn Bool Number (-> respo.schema/Component)
         'css-nav $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-nav
             {} $ |$0 $ {} (:width 64) (:padding "|16px 0") (:font-size 16)
@@ -1975,30 +1853,26 @@
               :align-items :center
               :background-color $ hsl 0 0 97
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'on-navigate $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-navigate (route)
             fn (event dispatch!)
-              hint-fn $ {} (:return 'Unit)
-                :args $ [] (:: 'Map 'Tag 'Dynamic)
-                  :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                    :args $ [] 'Dynamic
+              hint-fn $ Fn (Map Tag Dynamic)
+                Fn Dynamic & Dynamic $ -> Unit
+                -> Unit
               dispatch! $ app.schema/ClientOp :router/change $ app.schema/Router :name route :data (Option :none)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Tag
-            :return $ :: 'Fn $ {} (:return 'Unit)
-              :args $ [] (:: 'Map 'Tag 'Dynamic)
-                :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                  :args $ [] 'Dynamic
+          :schema $ quote $ Fn Tag
+            -> $ Fn (Map Tag Dynamic)
+              Fn Dynamic & Dynamic $ -> Unit
+              -> Unit
           :tests $ []
             %{} 'TestEntry (:name |dispatch-home-returns-unit-once)
               :code $ quote $ let
                   recorded $ ref |
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
                     swap! calls inc
@@ -2014,8 +1888,7 @@
                   recorded $ ref |
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
                     swap! calls inc
@@ -2031,8 +1904,7 @@
                   recorded $ ref |
                   calls $ ref 0
                   dispatch! $ fn (op & payloads)
-                    hint-fn $ {} (:return 'Unit) (:rest 'Dynamic)
-                      :args $ [] 'Dynamic
+                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
                     assert= ([]) payloads
                     reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
                     swap! calls inc
@@ -2072,9 +1944,8 @@
                   {} $ :class-name css/row
                   &list:map (&map:to-list members)
                     fn (pair)
-                      hint-fn $ {}
-                        :args $ [] $ :: 'List 'Dynamic
-                        :return $ :: 'List 'Dynamic
+                      hint-fn $ Fn (List Dynamic)
+                        -> $ List Dynamic
                       [] (&list:nth pair 0)
                         div
                           {} $ :class-name css-member-label
@@ -2085,17 +1956,14 @@
                   {} (:class-name css/button)
                     :style $ {} (:color :red) (:border-color :red)
                     :on-click $ fn (e d!)
-                      hint-fn $ {} (:return 'Dynamic)
-                        :args $ [] (:: 'Map 'Tag 'Dynamic)
-                          :: 'Fn $ {} (:rest 'Dynamic) (:return 'Unit)
-                            :args $ [] 'Dynamic
+                      hint-fn $ Fn (Map Tag Dynamic)
+                        Fn Dynamic & Dynamic $ -> Unit
+                        -> Dynamic
                       d! $ app.schema/ClientOp :user/log-out
                       js/localStorage.removeItem $ :storage-key config/site
                   <> "|Log out" nil
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'respo.schema/Component)
-            :args $ [] 'app.schema/ClientUser $ :: 'Map 'String 'String
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn app.schema/ClientUser (Map String String) (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-member-label
@@ -2104,7 +1972,7 @@
               :border-radius |16px
               :margin "|0 4px"
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.profile
           :require
@@ -2121,12 +1989,12 @@
         'SiteConfig $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct SiteConfig (:port 'Number) (:title 'String) (:icon 'String) (:dev-ui 'String) (:release-ui 'String) (:cdn-url 'String) (:cdn-folder 'String) (:theme 'String) (:storage-key 'String) (:storage-file 'String)
           :examples $ []
-          :schema $ :: 'Struct
+          :schema $ quote Struct
         'dev? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def dev?
             = |dev $ .unwrap-or (get-env |mode) |release
           :examples $ []
-          :schema $ :: 'Bool
+          :schema $ quote Bool
         'resolve-port $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn resolve-port (maybe-port)
             match maybe-port
@@ -2136,8 +2004,7 @@
                   (:err _) (raise "|expected a numeric server port")
               (:none) (:port site)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] $ :: 'Option 'String
+          :schema $ quote $ Fn (Option String) (-> Number)
           :tests $ []
             %{} 'TestEntry (:name |uses-configured-default-when-port-is-absent)
               :code $ quote $ assert= (:port site)
@@ -2160,15 +2027,15 @@
           :code $ quote $ def site
             SiteConfig :port 11008 :title |Diary :icon |http://cdn.tiye.me/logo/topix.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/diary/ :cdn-folder |tiye.me:cdn/diary :theme |#eeeeff :storage-key |diary :storage-file |storage.cirru
           :examples $ []
-          :schema $ :: 'app.config/SiteConfig
+          :schema $ quote app.config/SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientOp $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum ClientOp (:states 'Dynamic 'Dynamic) (:session/connect) (:session/disconnect) (:session/remove-message 'app.schema/Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'app.schema/CursorPatch)
-            :user/log-in $ :: 'List 'String
-            :user/sign-up $ :: 'List 'String
+            :user/log-in $ quote $ List String
+            :user/sign-up $ quote $ List String
             :user/log-out
             :router/change 'app.schema/Router
             :diary/add-one 'app.schema/Diary
@@ -2182,68 +2049,68 @@
             :reel/reset
             :reel/merge
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'ClientRouter $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientRouter (:name 'Tag) (:data 'Dynamic)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'ClientSnapshot $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientSnapshot
-            :raw $ :: 'Map 'Tag 'Dynamic
+            :raw $ quote $ Map Tag Dynamic
             :store 'app.schema/ClientStore
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientStore (:logged-in? 'Bool) (:session 'app.schema/Session) (:reel-length 'Number) (:router 'app.schema/ClientRouter) (:today 'app.util/DateInfo) (:count 'Number) (:color 'String)
-            :user $ :: 'Option 'app.schema/ClientUser
-            :diary $ :: 'Option 'app.schema/Diary
+            :user $ quote $ Option app.schema/ClientUser
+            :diary $ quote $ Option app.schema/Diary
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'ClientUser $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientUser (:name 'String) (:id 'String) (:nickname 'String)
-            :avatar $ :: 'Option 'String
+            :avatar $ quote $ Option String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'CopyYesterday $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CopyYesterday (:date-info 'app.util/DateInfo)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'CursorPatch $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct CursorPatch
-            :year $ :: 'Option 'Number
-            :month $ :: 'Option 'Number
-            :day $ :: 'Option 'Number
+            :year $ quote $ Option Number
+            :month $ quote $ Option Number
+            :day $ quote $ Option Number
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Database
-            :sessions $ :: 'Map 'Number 'app.schema/Session
-            :users $ :: 'Map 'String 'app.schema/User
+            :sessions $ quote $ Map Number app.schema/Session
+            :users $ quote $ Map String app.schema/User
             :today 'app.util/DateInfo
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Diary (:food 'String) (:sleep 'String) (:mood 'String) (:place 'String) (:highlight 'String) (:met 'String) (:exercise 'String) (:pains 'String) (:text 'String)
-            :date $ :: 'Option 'String
-            :time $ :: 'Option 'Number
+            :date $ quote $ Option String
+            :time $ quote $ Option Number
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'DiaryChange $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct DiaryChange (:field 'Tag) (:date 'String) (:data 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Message (:id 'String) (:text 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Notification $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Notification (:id 'String) (:kind 'Tag) (:text 'String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defenum Op (:session/connect) (:session/disconnect) (:session/remove-message 'app.schema/Message) (:session/set-cursor 'app.util/DateInfo) (:session/merge-cursor 'app.schema/CursorPatch)
-            :user/log-in $ :: 'List 'String
-            :user/sign-up $ :: 'List 'String
+            :user/log-in $ quote $ List String
+            :user/sign-up $ quote $ List String
             :user/log-out
             :router/change 'app.schema/Router
             :diary/add-one 'app.schema/Diary
@@ -2257,35 +2124,35 @@
             :reel/reset
             :reel/merge
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'Page $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Page (:id 'String) (:title 'String)
-            :time $ :: 'Option 'Number
+            :time $ quote $ Option Number
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Router (:name 'Tag)
-            :data $ :: 'Option $ :: 'Map 'Tag 'String
+            :data $ quote $ Option (Map Tag String)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'Session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct Session (:id 'Number) (:nickname 'String) (:router 'app.schema/Router)
-            :messages $ :: 'Map 'String 'app.schema/Message
+            :messages $ quote $ Map String app.schema/Message
             :cursor 'app.util/DateInfo
-            :user-id $ :: 'Option 'String
+            :user-id $ quote $ Option String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'User $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct User (:name 'String) (:id 'String) (:nickname 'String) (:password 'String)
-            :diaries $ :: 'Map 'String 'app.schema/Diary
-            :avatar $ :: 'Option 'String
+            :diaries $ quote $ Map String app.schema/Diary
+            :avatar $ quote $ Option String
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'database $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :today $ app.util/DateInfo :year 2018 :month 6 :day 18
           :examples $ []
-          :schema $ :: 'app.schema/Database
+          :schema $ quote app.schema/Database
         'decode-client-dispatch-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-dispatch-op (op)
             if (enum? op)
@@ -2334,8 +2201,7 @@
                     raise |Expected-nominal-client-operation
               raise |Expected-client-operation
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientOp)
-            :args $ [] 'Dynamic
+          :schema $ quote $ Fn Dynamic (-> app.schema/ClientOp)
           :tests $ []
             %{} 'TestEntry (:name |nominal-operation-preserves-payload)
               :code $ quote $ let
@@ -2382,8 +2248,7 @@
         'decode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-store (raw) (decode-map-as raw app.schema/ClientStore)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> app.schema/ClientStore)
           :tests $ [] $ %{} 'TestEntry (:name |decodes-plain-wire-maps)
             :code $ quote $ let
                 raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456)
@@ -2402,32 +2267,31 @@
           :code $ quote $ def diary
             Diary :date (Option :none) :food | :sleep | :mood | :place | :highlight | :met | :exercise | :pains | :text | :time $ Option :none
           :examples $ []
-          :schema $ :: 'app.schema/Diary
+          :schema $ quote app.schema/Diary
         'notification $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def notification (Notification :id | :kind :info :text |)
           :examples $ []
-          :schema $ :: 'app.schema/Notification
+          :schema $ quote app.schema/Notification
         'page $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def page
             Page :id | :title | :time $ Option :none
           :examples $ []
-          :schema $ :: 'app.schema/Page
+          :schema $ quote app.schema/Page
         'router $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def router
             Router :name :home :data $ Option :none
           :examples $ []
-          :schema $ :: 'app.schema/Router
+          :schema $ quote app.schema/Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
             Session :user-id (Option :none) :id 0 :nickname | :router router :messages ({}) :cursor $ get-native-today!
           :examples $ []
-          :schema $ :: 'app.schema/Session
+          :schema $ quote app.schema/Session
         'try-decode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-decode-client-store (raw) (try-decode-map-as raw app.schema/ClientStore)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'Tag 'Dynamic
-            :return $ :: 'Result 'app.schema/ClientStore 'String
+          :schema $ quote $ Fn (Map Tag Dynamic)
+            -> $ Result app.schema/ClientStore String
           :tests $ [] $ %{} 'TestEntry (:name |rejects-incomplete-patches)
             :code $ quote $ match
               try-decode-client-store $ {} $ :logged-in? false
@@ -2445,9 +2309,8 @@
                   Result :err |Invalid-credentials
               (:err _) (Result :err |Invalid-credentials)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Result (:: 'List 'String) 'String
+          :schema $ quote $ Fn Dynamic
+            -> $ Result (List String) String
           :tests $ []
             %{} 'TestEntry (:name |accepts-exactly-two-strings)
               :code $ quote $ assert=
@@ -2466,9 +2329,8 @@
               (:ok raw) (try-decode-credentials raw)
               (:err _) (Result :err |Invalid-credentials)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'Result (:: 'List 'String) 'String
+          :schema $ quote $ Fn String
+            -> $ Result (List String) String
           :tests $ []
             %{} 'TestEntry (:name |preserves-valid-saved-credentials)
               :code $ quote $ assert=
@@ -2484,7 +2346,7 @@
           :code $ quote $ def user
             User :name | :id | :nickname | :avatar (Option :none) :password | :diaries $ {}
           :examples $ []
-          :schema $ :: 'app.schema/User
+          :schema $ quote app.schema/User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
           :require $ [] app.util :refer $ [] get-native-today!
@@ -2493,7 +2355,7 @@
         '*client-caches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *client-caches ({})
           :examples $ []
-          :schema $ :: 'Ref $ :: 'Map 'Number 'app.schema/ClientStore
+          :schema $ quote $ Ref (Map Number app.schema/ClientStore)
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *initial-db
             if
@@ -2501,18 +2363,18 @@
               do (println "|Found local EDN data") (load-stored-db! storage-file)
               do (println "|Found no data") schema/database
           :examples $ []
-          :schema $ :: 'Ref 'app.schema/Database
+          :schema $ quote $ Ref app.schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reader-reel @*reel
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState app.schema/Database)
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
             %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
               :records $ []
               :merged? false
           :examples $ []
-          :schema $ :: 'Ref $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState app.schema/Database)
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
             let
@@ -2525,17 +2387,15 @@
                 dispatch! (:: :today today) -1
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'decode-credentials $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-credentials (raw)
             match (schema/try-decode-credentials raw)
               (:ok credentials) credentials
               (:err _) (raise |Invalid-credentials)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'List 'String
+          :schema $ quote $ Fn Dynamic
+            -> $ List String
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op sid)
             let
@@ -2549,8 +2409,7 @@
                 _ $ reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'app.schema/Op 'Number
+          :schema $ quote $ Fn app.schema/Op Number (-> Unit)
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -2559,8 +2418,7 @@
                 str $ :month today
                 str (:day today) |-snapshot.cirru
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ []
+          :schema $ quote $ Fn (-> String)
         'load-stored-db! $ %{} 'CodeEntry
           :doc "|Load storage and rewrite legacy map data into the current typed schema before serving clients."
           :code $ quote $ defn load-stored-db! (path)
@@ -2575,8 +2433,7 @@
                 (:err reason)
                   raise $ str |Invalid-stored-database:- reason
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> app.schema/Database)
           :tests $ []
             %{} 'TestEntry
               :name |invalid-input-preserves-storage-and-existing-backup
@@ -2596,9 +2453,7 @@
                     assert= true $ try
                       do (load-stored-db! path) false
                       fn (message)
-                        hint-fn $ {}
-                          :args $ [] 'String
-                          :return 'Bool
+                        hint-fn $ Fn String $ -> Bool
                         , true
                     assert= text $ read-file path
                     assert= backup-text $ read-file backup
@@ -2676,8 +2531,7 @@
             set-interval 37000 $ fn () $ check-today!
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'migrate-storage! $ %{} 'CodeEntry
           :doc "|Back up legacy text, validate a typed temporary file, then atomically replace storage."
           :code $ quote $ defn migrate-storage! (path legacy-text db)
@@ -2694,8 +2548,7 @@
               println $ str "|Migrated storage to typed data; legacy backup: " backup-file
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String 'String 'app.schema/Database
+          :schema $ quote $ Fn String String app.schema/Database (-> Unit)
         'normalize-client-payload $ %{} 'CodeEntry
           :doc "|Convert a nominal legacy operation payload to a map without unbounded recursion. Legacy clients sent nil for absent optional fields; those entries are dropped so the decoder fills `Option :none`."
           :code $ quote $ defn normalize-client-payload (value)
@@ -2704,19 +2557,15 @@
                 if (struct? value) (&struct:to-map value) value
                 :: 'Map 'Tag 'Dynamic
               fn (field item)
-                hint-fn $ {}
-                  :args $ [] 'Tag 'Dynamic
-                  :return $ :: 'calcit.core/MapEntryDecision 'Tag 'Dynamic
+                hint-fn $ Fn Tag Dynamic $ -> (calcit.core/MapEntryDecision Tag Dynamic)
                 if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Dynamic
+            -> $ Map Tag Dynamic
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'parse-client-op $ %{} 'CodeEntry
           :doc "|Accept nominal operations and legacy map payloads from JS clients."
           :code $ quote $ defn parse-client-op (text)
@@ -2771,8 +2620,7 @@
                   (:reel/merge) (schema/Op :reel/merge)
                   _ $ raise |Unsupported-client-operation
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Op)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> app.schema/Op)
           :tests $ []
             %{} 'TestEntry (:name |decodes-legacy-map-date-payload)
               :code $ quote $ let
@@ -2889,9 +2737,7 @@
                     :date $ Option :some |2026-09-29
                     :text |entry
                 fn (diary)
-                  hint-fn $ {}
-                    :args $ [] 'app.schema/Diary
-                    :return 'Unit
+                  hint-fn $ Fn app.schema/Diary $ -> Unit
                   let
                       original $ %:: schema/Op :diary/add-one diary
                     assert= original $ parse-client-op $ format-cirru-edn original
@@ -2947,9 +2793,7 @@
                       parse-client-op $ format-cirru-edn raw
                       , |unexpected-success
                     fn (message)
-                      hint-fn $ {}
-                        :args $ [] 'String
-                        :return 'String
+                      hint-fn $ Fn String $ -> String
                       , message
               :tags $ #{} :regression
             %{} 'TestEntry (:name |rejects-invalid-protocol-before-update)
@@ -2963,9 +2807,7 @@
                       parse-client-op $ format-cirru-edn raw
                       , false
                     fn (message)
-                      hint-fn $ {}
-                        :args $ [] 'String
-                        :return 'Bool
+                      hint-fn $ Fn String $ -> Bool
                       , true
               :tags $ #{} :regression
         'persist-db! $ %{} 'CodeEntry (:doc |)
@@ -2979,8 +2821,7 @@
               check-write-file! backup-path file-content
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated..")
             if (not config/dev?) (raise "|reloading only happens in dev mode")
@@ -2988,8 +2829,7 @@
             reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'render-loop! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-loop! ()
             when
@@ -2998,8 +2838,7 @@
               sync-clients! @*reader-reel
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ []
+          :schema $ quote $ Fn (-> Unit)
         'run-server! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn run-server! (port)
             wss-serve! (&{} :port port)
@@ -3020,15 +2859,14 @@
                 , &unit
             , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'Number
+          :schema $ quote $ Fn Number (-> Unit)
         'storage-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def storage-file
             if (empty? calcit-dirname)
               str calcit-dirname $ :storage-file config/site
               str calcit-dirname |/ $ :storage-file config/site
           :examples $ []
-          :schema $ :: 'String
+          :schema $ quote String
         'sync-clients! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sync-clients! (reel)
             wss-each! $ fn (sid)
@@ -3053,8 +2891,7 @@
                     swap! *client-caches assoc sid new-store
               , &unit
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] $ :: 'cumulo-reel.core/ReelState 'app.schema/Database
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState app.schema/Database) (-> Unit)
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
             :code $ quote $ let
                 before @*client-caches
@@ -3066,9 +2903,7 @@
           :code $ quote $ defn updater-from-record (db op sid op-id op-time)
             updater db (decode-map-as op 'app.schema/Op) (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'OpInput 'SidInput 'IdInput 'TimeInput
-            :generics $ [] 'OpInput 'SidInput 'IdInput 'TimeInput
+          :schema $ quote $ Fn app.schema/Database OpInput SidInput IdInput TimeInput (-> app.schema/Database) (:generics OpInput SidInput IdInput TimeInput)
         'validate-storage-migration $ %{} 'CodeEntry
           :doc "|Check the typed temporary file without changing storage, backups or the candidate."
           :code $ quote $ defn validate-storage-migration (path)
@@ -3078,8 +2913,7 @@
               (:err reason)
                 raise $ str "|Typed storage migration validation failed: " reason
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Unit)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> Unit)
           :tests $ [] $ %{} 'TestEntry
             :name |invalid-candidate-is-retained-with-original-and-backup
             :code $ quote $ let
@@ -3099,9 +2933,7 @@
               assert= true $ try
                 do (validate-storage-migration candidate) false
                 fn (message)
-                  hint-fn $ {}
-                    :args $ [] 'String
-                    :return 'Bool
+                  hint-fn $ Fn String $ -> Bool
                   , true
               assert= original $ read-file path
               assert= saved-backup $ read-file backup
@@ -3132,7 +2964,7 @@
           :doc "|Identifies whether storage was already typed or decoded through the legacy compatibility path."
           :code $ quote $ defenum StoredDbFormat (:typed 'app.schema/Database) (:legacy 'app.schema/Database)
           :examples $ []
-          :schema $ :: 'EnumDef
+          :schema $ quote EnumDef
         'decode-stored-string-map $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-stored-string-map (raw path)
             match
@@ -3141,16 +2973,14 @@
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic 'String
-            :return $ :: 'Map 'String 'Dynamic
+          :schema $ quote $ Fn Dynamic String
+            -> $ Map String Dynamic
         'format-stored-db $ %{} 'CodeEntry
           :doc "|Serialize the typed database without transient sessions."
           :code $ quote $ defn format-stored-db (db)
             format-cirru-edn $ struct-with db $ :sessions ({})
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.schema/Database
+          :schema $ quote $ Fn app.schema/Database (-> String)
         'normalize-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-stored-db (raw)
             let
@@ -3158,9 +2988,8 @@
                 today $ normalize-stored-struct (stored-field db :today |$.today) |$.today
                 users $ decode-stored-string-map (stored-field db :users |$.users) |$.users
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
-                  hint-fn $ {}
-                    :args $ [] 'String 'Dynamic
-                    :return $ :: 'calcit.core/MapEntryDecision 'String $ :: 'Map 'Tag 'Dynamic
+                  hint-fn $ Fn String Dynamic $ ->
+                    calcit.core/MapEntryDecision String $ Map Tag Dynamic
                   if (nil? raw-user) (MapEntryDecision :drop)
                     let
                         user $ normalize-stored-struct raw-user |$.users.*
@@ -3171,9 +3000,8 @@
                             (:none) ({})
                           , |$.users.*.diaries
                         normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
-                          hint-fn $ {}
-                            :args $ [] 'String 'Dynamic
-                            :return $ :: 'calcit.core/MapEntryDecision 'String $ :: 'Map 'Tag 'Dynamic
+                          hint-fn $ Fn String Dynamic $ ->
+                            calcit.core/MapEntryDecision String $ Map Tag Dynamic
                           if (nil? raw-diary) (MapEntryDecision :drop)
                             let
                                 diary $ normalize-stored-struct raw-diary |$.users.*.diaries.*
@@ -3190,9 +3018,8 @@
                   , :today today
                 , :users normalized-users
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Dynamic
+            -> $ Map Tag Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |normalizes-empty-legacy-records)
             :code $ quote $ let
                 raw $ {}
@@ -3237,24 +3064,20 @@
                 :: 'Map 'Tag 'Dynamic
               (:ok data)
                 filter-map-kv data $ fn (field item)
-                  hint-fn $ {}
-                    :args $ [] 'Tag 'Dynamic
-                    :return $ :: 'calcit.core/MapEntryDecision 'Tag 'Dynamic
+                  hint-fn $ Fn Tag Dynamic $ -> (calcit.core/MapEntryDecision Tag Dynamic)
                   if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'Dynamic 'String
-            :return $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn Dynamic String
+            -> $ Map Tag Dynamic
         'parse-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-stored-db (text)
             match (parse-stored-db-with-format text)
               (:typed db) db
               (:legacy db) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> app.schema/Database)
         'parse-stored-db-with-format $ %{} 'CodeEntry
           :doc "|Decode typed storage directly and mark data that required legacy normalization."
           :code $ quote $ defn parse-stored-db-with-format (text)
@@ -3265,8 +3088,7 @@
                   normalize-stored-db $ parse-cirru-edn text
                   , app.schema/Database
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.storage/StoredDbFormat)
-            :args $ [] 'String
+          :schema $ quote $ Fn String (-> app.storage/StoredDbFormat)
           :tests $ []
             %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
               :code $ quote $ let
@@ -3308,9 +3130,7 @@
                 assert= true $ try
                   do (parse-stored-db-with-format text) false
                   fn (message)
-                    hint-fn $ {}
-                      :args $ [] 'String
-                      :return 'Bool
+                    hint-fn $ Fn String $ -> Bool
                     , true
               :tags $ #{} :regression
         'stored-field $ %{} 'CodeEntry
@@ -3321,21 +3141,17 @@
               (:none)
                 raise $ str path "|: missing field"
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Dynamic)
-            :args $ [] (:: 'Map 'Tag 'Dynamic) 'Tag 'String
+          :schema $ quote $ Fn (Map Tag Dynamic) Tag String (-> Dynamic)
         'try-parse-stored-db-with-format $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-parse-stored-db-with-format (text)
             try
               Result :ok $ parse-stored-db-with-format text
               fn (message)
-                hint-fn $ {}
-                  :args $ [] 'String
-                  :return $ :: 'Result 'app.storage/StoredDbFormat 'String
+                hint-fn $ Fn String $ -> (Result app.storage/StoredDbFormat String)
                 Result :err message
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String
-            :return $ :: 'Result 'app.storage/StoredDbFormat 'String
+          :schema $ quote $ Fn String
+            -> $ Result app.storage/StoredDbFormat String
           :tests $ []
             %{} 'TestEntry (:name |preserves-typed-and-legacy-result-variants)
               :code $ quote $ let
@@ -3431,7 +3247,7 @@
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
           :examples $ []
-          :schema $ :: 'Dynamic
+          :schema $ quote Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.style
           :require
@@ -3472,8 +3288,9 @@
                       (:none) logged-out
                 (:none) logged-out
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientStore)
-            :args $ [] 'app.schema/Database 'app.schema/Session $ :: 'List (:: 'List 'Dynamic)
+          :schema $ quote $ Fn app.schema/Database app.schema/Session
+            List $ List Dynamic
+            -> app.schema/ClientStore
           :tests $ [] $ %{} 'TestEntry (:name |optional-fields-round-trip-over-wire)
             :code $ quote $ let
                 today $ app.util/DateInfo :year 2026 :month 9 :day 29
@@ -3492,9 +3309,7 @@
                     {} $ 1 member
                     , :today today
                 send $ fn (session)
-                  hint-fn $ {}
-                    :args $ [] 'app.schema/Session
-                    :return 'app.schema/ClientStore
+                  hint-fn $ Fn app.schema/Session $ -> app.schema/ClientStore
                   let
                       server-store $ twig-container db session $ []
                       text $ format-cirru-edn $ :: :patch
@@ -3530,61 +3345,55 @@
                   (:none) (MapEntryDecision :drop)
               (:none) (MapEntryDecision :drop)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'String 'app.schema/User) 'Number 'app.schema/Session
-            :return $ :: 'MapEntryDecision 'Number 'String
+          :schema $ quote $ Fn (Map String app.schema/User) Number app.schema/Session
+            -> $ MapEntryDecision Number String
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
             filter-map-kv sessions $ fn (sid session)
-              hint-fn $ {}
-                :args $ [] 'Number 'app.schema/Session
-                :return $ :: 'MapEntryDecision 'Number 'String
+              hint-fn $ Fn Number app.schema/Session $ -> (MapEntryDecision Number String)
               twig-member-entry users sid session
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'Number 'app.schema/Session) (:: 'Map 'String 'app.schema/User)
-            :return $ :: 'Map 'Number 'String
+          :schema $ quote $ Fn (Map Number app.schema/Session) (Map String app.schema/User)
+            -> $ Map Number String
           :tests $ [] $ %{} 'TestEntry (:name |keeps-number-keys-and-drops-unresolved-users)
             :code $ quote $ let
                 make-session $ fn (id user-id)
-                  hint-fn $ {}
-                    :args $ [] 'Number $ :: 'Option 'String
-                    :return 'app.schema/Session
+                  hint-fn $ Fn Number (Option String) (-> app.schema/Session)
                   schema/Session :id id :user-id user-id :nickname | :messages ({}) :router
                     schema/Router :name :home :data $ Option :none
                     , :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
                 users $ assert-type
                   {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar (Option :none) :diaries ({})
-                  :: 'Map 'String 'app.schema/User
+                  quote $ Map String app.schema/User
                 sessions $ assert-type
                   {}
                     7 $ make-session 7 $ Option :some |u
                     8 $ make-session 8 $ Option :none
                     9 $ make-session 9 $ Option :some |missing
-                  :: 'Map 'Number 'app.schema/Session
+                  quote $ Map Number app.schema/Session
               assert=
                 {} $ 7 |Ada
                 twig-members sessions users
               assert= ({})
                 twig-members
-                  assert-type ({}) (:: 'Map 'Number 'app.schema/Session)
+                  assert-type ({})
+                    quote $ Map Number app.schema/Session
                   , users
               assert= ({})
-                twig-members sessions $ assert-type ({}) (:: 'Map 'String 'app.schema/User)
+                twig-members sessions $ assert-type ({})
+                  quote $ Map String app.schema/User
             :tags $ #{} :regression
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
             let
                 month-prefix $ slice (format-to-date cursor) 0 $ Option :some 8
               filter-map-kv diaries $ fn (date diary)
-                hint-fn $ {}
-                  :args $ [] 'String 'app.schema/Diary
-                  :return $ :: 'MapEntryDecision 'String $ :: 'Map 'Tag 'String
+                hint-fn $ Fn String app.schema/Diary $ ->
+                  MapEntryDecision String $ Map Tag String
                 if (starts-with? date month-prefix) (twig-overview-entry date diary) (MapEntryDecision :drop)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'String 'app.schema/Diary) 'app.util/DateInfo
-            :return $ :: 'Map 'String $ :: 'Map 'Tag 'String
+          :schema $ quote $ Fn (Map String app.schema/Diary) app.util/DateInfo
+            -> $ Map String $ Map Tag String
           :tests $ [] $ %{} 'TestEntry (:name |only-builds-selected-month)
             :code $ quote $ let
                 diaries $ {} (|2026-09-01 schema/diary) (|2026-09-30 schema/diary) (|2026-10-01 schema/diary) (|2025-09-01 schema/diary)
@@ -3602,15 +3411,13 @@
               :mood $ :mood diary
               :highlight $ :highlight diary
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String 'app.schema/Diary
-            :return $ :: 'MapEntryDecision 'String $ :: 'Map 'Tag 'String
+          :schema $ quote $ Fn String app.schema/Diary
+            -> $ MapEntryDecision String $ Map Tag String
         'twig-personal-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-data (diaries) (filter-map-kv diaries twig-personal-entry)
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] $ :: 'Map 'String 'app.schema/Diary
-            :return $ :: 'Map 'String $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn (Map String app.schema/Diary)
+            -> $ Map String $ Map Tag Dynamic
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
             MapEntryDecision :keep date $ {}
@@ -3624,9 +3431,8 @@
               :date $ :date diary
               :time $ :time diary
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] 'String 'app.schema/Diary
-            :return $ :: 'MapEntryDecision 'String $ :: 'Map 'Tag 'Dynamic
+          :schema $ quote $ Fn String app.schema/Diary
+            -> $ MapEntryDecision String $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.container
           :require
@@ -3640,8 +3446,7 @@
           :code $ quote $ defn twig-user (user)
             schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/ClientUser)
-            :args $ [] 'app.schema/User
+          :schema $ quote $ Fn app.schema/User (-> app.schema/ClientUser)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.user
           :require $ app.schema :as schema
@@ -3677,8 +3482,7 @@
               (:today date-info) (diary/set-today db date-info sid op-id op-time)
               _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/Op 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/Op Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require ([] app.updater.session :as session) ([] app.updater.user :as user) ([] app.updater.router :as router) ([] app.updater.diary :as diary) ([] app.schema :as schema)
@@ -3710,8 +3514,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/Diary 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/Diary Number String Number (-> app.schema/Database)
         'change $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn change (db change-data sid op-id op-time)
             let
@@ -3769,8 +3572,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/DiaryChange 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/DiaryChange Number String Number (-> app.schema/Database)
         'copy-yesterday $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn copy-yesterday (db date-info sid op-id op-time)
             let
@@ -3813,13 +3615,11 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
         'set-today $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-today (db op-data sid op-id op-time) (assoc db :today op-data)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.diary
           :require (app.schema :as schema)
@@ -3839,8 +3639,7 @@
                 next-session $ struct-with session $ :router router-data
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/Router 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/Router Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.router
           :require $ app.schema :as schema
@@ -3851,14 +3650,12 @@
             struct-with db $ :sessions $ assoc (:sessions db) sid
               struct-with schema/session $ :id sid
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ dissoc (:sessions db) sid
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
         'merge-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
@@ -3873,8 +3670,7 @@
                 next-session $ struct-with session $ :cursor next-cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/CursorPatch 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/CursorPatch Number String Number (-> app.schema/Database)
         'merge-cursor-value $ %{} 'CodeEntry (:doc "|Apply an optional cursor patch to a date.")
           :code $ quote $ defn merge-cursor-value (cursor patch)
             match (:year patch)
@@ -3890,8 +3686,7 @@
                         struct-with cursor $ :day value
                       (:none) cursor
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
-            :args $ [] 'app.util/DateInfo 'app.schema/CursorPatch
+          :schema $ quote $ Fn app.util/DateInfo app.schema/CursorPatch (-> app.util/DateInfo)
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message sid op-id op-time)
             let
@@ -3905,8 +3700,7 @@
                   dissoc (:messages session) (:id message)
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.schema/Message 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.schema/Message Number String Number (-> app.schema/Database)
         'set-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-cursor (db cursor sid op-id op-time)
             let
@@ -3919,8 +3713,7 @@
                 next-session $ struct-with session $ :cursor cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'app.util/DateInfo 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.session
           :require $ [] app.schema :as schema
@@ -3939,9 +3732,8 @@
                       MapEntryDecision :drop
               first $ &set:to-list $ distinct-values matching-users
           :examples $ []
-          :schema $ :: 'Fn $ {}
-            :args $ [] (:: 'Map 'String 'app.schema/User) 'String
-            :return $ :: 'Option 'app.schema/User
+          :schema $ quote $ Fn (Map String app.schema/User) String
+            -> $ Option app.schema/User
           :tests $ [] $ %{} 'TestEntry (:name |finds-typed-user-by-name)
             :code $ quote $ let
                 user $ %{} schema/User (:name |chen) (:id |user-1) (:nickname |chen) (:password |unused-hash)
@@ -3979,8 +3771,7 @@
                       schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database String String Number String Number (-> app.schema/Database)
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
@@ -3993,8 +3784,7 @@
                 next-session $ struct-with session $ :user-id (Option :none)
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
@@ -4019,8 +3809,7 @@
                     :sessions $ assoc (:sessions db) sid next-session
                     :users $ assoc (:users db) op-id next-user
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.schema/Database)
-            :args $ [] 'app.schema/Database 'String 'String 'Number 'String 'Number
+          :schema $ quote $ Fn app.schema/Database String String Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.user
           :require
@@ -4031,21 +3820,18 @@
       :defs $ {}
         'BrowserDate $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait BrowserDate
-            .get-full-year $ :: 'Fn $ {} (:return 'Number)
-              :args $ [] 'app.util/BrowserDate
-            .get-month $ :: 'Fn $ {} (:return 'Number)
-              :args $ [] 'app.util/BrowserDate
-            .get-date $ :: 'Fn $ {} (:return 'Number)
-              :args $ [] 'app.util/BrowserDate
+            .get-full-year $ quote $ Fn app.util/BrowserDate (-> Number)
+            .get-month $ quote $ Fn app.util/BrowserDate (-> Number)
+            .get-date $ quote $ Fn app.util/BrowserDate (-> Number)
           :examples $ []
           :ffi $ {} (:backend :js) (:kind :external-object) (:target :browser)
             :names $ {} (:get-date |getDate) (:get-full-year |getFullYear) (:get-month |getMonth)
-          :schema $ :: 'Trait
+          :schema $ quote Trait
           :tags $ #{} :ffi :js-host
         'DateInfo $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct DateInfo (:year 'Number) (:month 'Number) (:day 'Number)
           :examples $ []
-          :schema $ :: 'StructDef
+          :schema $ quote StructDef
         'format-to-date $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn format-to-date (date-info)
             str (:year date-info) |-
@@ -4056,8 +3842,7 @@
                 str $ :day date-info
                 , 2 |0
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'app.util/DateInfo
+          :schema $ quote $ Fn app.util/DateInfo (-> String)
         'get-days-by $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-days-by (year month1)
             cond
@@ -4073,16 +3858,14 @@
                   zero? $ &number:rem year 4
                   , 29 28
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Number)
-            :args $ [] 'Number 'Number
+          :schema $ quote $ Fn Number Number (-> Number)
         'get-native-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-native-today! ()
             let
                 now $ extract-time $ get-time!
               DateInfo :year now.:year :month now.:month :day now.:day
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
-            :args $ []
+          :schema $ quote $ Fn (-> app.util/DateInfo)
         'get-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-today! ()
             let
@@ -4091,9 +3874,7 @@
                 inc $ now .get-month
                 , :day $ now .get-date
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> app.util/DateInfo) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-calendar-fields)
             :code $ quote $ assert= (DateInfo :year 2024 :month 1 :day 1) (get-today!)
@@ -4113,9 +3894,7 @@
                     DateInfo :year year :month previous-month :day $ get-days-by year previous-month
                   DateInfo :year (dec year) :month 12 :day 31
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'app.util/DateInfo)
-            :args $ []
-            :features $ #{} :js-ffi
+          :schema $ quote $ Fn (-> app.util/DateInfo) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-year-rollover)
             :code $ quote $ assert= (DateInfo :year 2023 :month 12 :day 31) (get-yesterday!)
@@ -4123,24 +3902,22 @@
         'months-has-30 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def months-has-30 (#{} 4 6 9 11)
           :examples $ []
-          :schema $ :: 'Set 'Number
+          :schema $ quote $ Set Number
         'months-has-31 $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def months-has-31 (#{} 1 3 5 7 8 10 12)
           :examples $ []
-          :schema $ :: 'Set 'Number
+          :schema $ quote $ Set Number
         'pad-start $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn pad-start (acc n c)
             if
               &>= (.len acc) n
               , acc $ recur (str c acc) (dec n) c
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'String)
-            :args $ [] 'String 'Number 'String
+          :schema $ quote $ Fn String Number String (-> String)
         'zero? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn zero? (x) (= 0 x)
           :examples $ []
-          :schema $ :: 'Fn $ {} (:return 'Bool)
-            :args $ [] 'Number
+          :schema $ quote $ Fn Number (-> Bool)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.util
           :require
