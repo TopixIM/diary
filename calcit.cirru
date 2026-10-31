@@ -1082,10 +1082,10 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.empty
           :require
-            [] respo-ui.core :refer $ [] hsl
-            [] respo-ui.core :as ui
-            [] respo.comp.space :refer $ [] =<
-            [] respo.core :refer $ [] defcomp <> list-> span div a
+            respo-ui.core :refer $ hsl
+            respo-ui.core :as ui
+            respo.comp.space :refer $ =<
+            respo.core :refer $ defcomp <> list-> span div a
     'app.comp.login $ %{} 'FileEntry
       :defs $ {}
         'LoginState $ %{} 'CodeEntry (:doc |)
@@ -2349,7 +2349,7 @@
           :schema $ quote app.schema/User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
-          :require $ [] app.util :refer $ [] get-native-today!
+          :require $ app.util :refer $ get-native-today!
     'app.server $ %{} 'FileEntry
       :defs $ {}
         '*client-caches $ %{} 'CodeEntry (:doc |)
@@ -2955,9 +2955,9 @@
             app.$meta :refer $ calcit-dirname
             calcit.std.fs :refer $ path-exists? check-write-file! rename!
             calcit.std.time :refer $ set-interval
-            calcit.std.date :refer $ [] get-time! extract-time get-timestamp
+            calcit.std.date :refer $ get-time! extract-time get-timestamp
             calcit.std.path :refer $ join-path
-            app.storage :refer $ [] format-stored-db parse-stored-db-with-format try-parse-stored-db-with-format
+            app.storage :refer $ format-stored-db parse-stored-db-with-format try-parse-stored-db-with-format
     'app.storage $ %{} 'FileEntry
       :defs $ {}
         'StoredDbFormat $ %{} 'CodeEntry
@@ -3251,8 +3251,8 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.style
           :require
-            [] respo-ui.core :refer $ [] hsl
-            [] respo-ui.core :as ui
+            respo-ui.core :refer $ hsl
+            respo-ui.core :as ui
     'app.twig.container $ %{} 'FileEntry
       :defs $ {}
         'twig-container $ %{} 'CodeEntry (:doc |)
@@ -3436,10 +3436,10 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.container
           :require
-            app.twig.user :refer $ [] twig-user
+            app.twig.user :refer $ twig-user
             calcit.std.rand :refer $ rand-hex-color!
             app.schema :as schema
-            app.util :refer $ [] format-to-date
+            app.util :refer $ format-to-date
     'app.twig.user $ %{} 'FileEntry
       :defs $ {} $ 'twig-user
         %{} 'CodeEntry (:doc |)
@@ -3485,8 +3485,8 @@
           :schema $ quote $ Fn app.schema/Database app.schema/Op Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
-          :require ([] app.updater.session :as session) ([] app.updater.user :as user) ([] app.updater.router :as router) ([] app.updater.diary :as diary) ([] app.schema :as schema)
-            [] respo-message.updater :refer $ [] update-messages
+          :require (app.updater.session :as session) (app.updater.user :as user) (app.updater.router :as router) (app.updater.diary :as diary) (app.schema :as schema)
+            respo-message.updater :refer $ update-messages
     'app.updater.diary $ %{} 'FileEntry
       :defs $ {}
         'add-one $ %{} 'CodeEntry (:doc |)
@@ -3716,7 +3716,7 @@
           :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.session
-          :require $ [] app.schema :as schema
+          :require $ app.schema :as schema
     'app.updater.user $ %{} 'FileEntry
       :defs $ {}
         'find-user-by-name $ %{} 'CodeEntry
@@ -3813,7 +3813,7 @@
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.user
           :require
-            [] cumulo-util.core :refer $ [] find-first
+            cumulo-util.core :refer $ find-first
             calcit.std.hash :refer $ md5
             app.schema :as schema
     'app.util $ %{} 'FileEntry
