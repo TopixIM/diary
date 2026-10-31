@@ -37,7 +37,8 @@ assert.equal(navigationCalls, 1);
 
 // Use the actual WebSocket adapter with an injected socket; no network is opened.
 const sent = [];
-const socket = { send: (text) => sent.push(text), close() {} };
+// Real browser sockets expose the handler fields as null until assigned; ws-edn's typed host checks for them.
+const socket = { onopen: null, onmessage: null, onclose: null, onerror: null, send: (text) => sent.push(text), close() {} };
 const client = ws.create_client_with_$x_("wss://credentials-fixture.invalid/", core._$n__$M_(), () => socket);
 socket.onopen({});
 core.reset_$x_(ws._$s_global_client, core._PCT__$o__$o_(core.Option, tag("some"), client));
@@ -140,7 +141,7 @@ globalThis.window = { localStorage: { getItem: () => null }, addEventListener() 
 globalThis.document = { visibilityState: "visible", addEventListener() {}, removeEventListener() {} };
 Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: true } });
 globalThis.WebSocket = class {
-  constructor(url) { this.url = url; this.sent = []; sockets.push(this); }
+  constructor(url) { this.url = url; this.sent = []; this.onopen = this.onmessage = this.onclose = this.onerror = null; sockets.push(this); }
   send(text) { this.sent.push(text); }
   close() { this.onclose?.({}); }
 };
