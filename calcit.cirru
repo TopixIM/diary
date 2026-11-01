@@ -364,7 +364,7 @@
                           match (schema/try-decode-client-store raw)
                             (:err _) (Result :err :store-shape)
                             (:ok typed)
-                              Result :ok $ schema/ClientSnapshot :raw raw :store typed
+                              Result :ok $ schema/ClientSnapshot :raw next :store typed
           :examples $ []
           :schema $ quote $ Fn Dynamic Dynamic Bool
             -> $ Result app.schema/ClientSnapshot Tag
@@ -400,7 +400,9 @@
                 assert= 2 $ :count $ :store second
                 assert= |Ada $ :nickname $ :session (:store third)
                 assert= (:store third)
-                  schema/decode-client-store $ :raw third
+                  schema/decode-client-store $ decode-map-as
+                    normalize-wire-value $ :raw third
+                    :: 'Map 'Tag 'Dynamic
                 assert= | $ :nickname $ :session (:store initial-snapshot)
             %{} 'TestEntry (:name |rejects-non-list)
               :code $ quote $ let
@@ -2055,9 +2057,7 @@
           :examples $ []
           :schema $ quote StructDef
         'ClientSnapshot $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defstruct ClientSnapshot
-            :raw $ quote $ Map Tag Dynamic
-            :store 'app.schema/ClientStore
+          :code $ quote $ defstruct ClientSnapshot (:raw 'Dynamic) (:store 'app.schema/ClientStore)
           :examples $ []
           :schema $ quote StructDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
@@ -3291,50 +3291,101 @@
           :schema $ quote $ Fn app.schema/Database app.schema/Session
             List $ List Dynamic
             -> app.schema/ClientStore
-          :tests $ [] $ %{} 'TestEntry (:name |optional-fields-round-trip-over-wire)
-            :code $ quote $ let
-                today $ app.util/DateInfo :year 2026 :month 9 :day 29
-                entry $ struct-with schema/diary
-                  :date $ Option :some |2026-09-29
-                  :text |entry
-                  :time $ Option :some 123
-                user $ struct-with schema/user (:id |user-1) (:name |tester) (:nickname |Tester)
-                  :avatar $ Option :some |avatar.png
-                  :diaries $ {} $ |2026-09-29 entry
-                guest $ struct-with schema/session (:id 1) (:cursor today)
-                member $ struct-with guest $ :user-id (Option :some |user-1)
-                db $ schema/Database :users
-                  {} $ |user-1 user
-                  , :sessions
-                    {} $ 1 member
-                    , :today today
-                send $ fn (session)
-                  hint-fn $ Fn app.schema/Session $ -> app.schema/ClientStore
-                  let
-                      server-store $ twig-container db session $ []
-                      text $ format-cirru-edn $ :: :patch
-                        recollect.diff/diff-twig nil server-store $ {} $ :key :id
-                    match
-                      app.client-state/try-client-message ({}) (parse-cirru-edn text) true
-                      (:ok received)
-                        match received
-                          (:some snapshot) (:store snapshot)
-                          (:none) (raise |Expected-store-snapshot)
-                      (:err stage)
-                        raise $ str |Wire-store-rejected: stage
-                member-store $ send member
-                guest-store $ send guest
-              do
-                assert= (Option :some |user-1)
-                  :user-id $ :session member-store
-                assert= (Option :some |avatar.png)
-                  :avatar $ .unwrap $ :user member-store
-                assert= (Option :some entry) (:diary member-store)
-                assert= (Option :none)
-                  :user-id $ :session guest-store
-                assert= (Option :none) (:user guest-store)
-                assert= (Option :none) (:diary guest-store)
-            :tags $ #{} :regression
+          :tests $ []
+            %{} 'TestEntry (:name |optional-fields-round-trip-over-wire)
+              :code $ quote $ let
+                  today $ app.util/DateInfo :year 2026 :month 9 :day 29
+                  entry $ struct-with schema/diary
+                    :date $ Option :some |2026-09-29
+                    :text |entry
+                    :time $ Option :some 123
+                  user $ struct-with schema/user (:id |user-1) (:name |tester) (:nickname |Tester)
+                    :avatar $ Option :some |avatar.png
+                    :diaries $ {} $ |2026-09-29 entry
+                  guest $ struct-with schema/session (:id 1) (:cursor today)
+                  member $ struct-with guest $ :user-id (Option :some |user-1)
+                  db $ schema/Database :users
+                    {} $ |user-1 user
+                    , :sessions
+                      {} $ 1 member
+                      , :today today
+                  send $ fn (session)
+                    hint-fn $ Fn app.schema/Session $ -> app.schema/ClientStore
+                    let
+                        server-store $ twig-container db session $ []
+                        text $ format-cirru-edn $ :: :patch
+                          recollect.diff/diff-twig nil server-store $ {} $ :key :id
+                      match
+                        app.client-state/try-client-message ({}) (parse-cirru-edn text) true
+                        (:ok received)
+                          match received
+                            (:some snapshot) (:store snapshot)
+                            (:none) (raise |Expected-store-snapshot)
+                        (:err stage)
+                          raise $ str |Wire-store-rejected: stage
+                  member-store $ send member
+                  guest-store $ send guest
+                do
+                  assert= (Option :some |user-1)
+                    :user-id $ :session member-store
+                  assert= (Option :some |avatar.png)
+                    :avatar $ .unwrap $ :user member-store
+                  assert= (Option :some entry) (:diary member-store)
+                  assert= (Option :none)
+                    :user-id $ :session guest-store
+                  assert= (Option :none) (:user guest-store)
+                  assert= (Option :none) (:diary guest-store)
+              :tags $ #{} :regression
+            %{} 'TestEntry (:name |incremental-option-patches-apply-on-client)
+              :code $ quote $ let
+                  today $ app.util/DateInfo :year 2026 :month 9 :day 29
+                  entry $ struct-with schema/diary
+                    :date $ Option :some |2026-09-29
+                    :text |entry
+                    :time $ Option :some 123
+                  edited $ struct-with entry (:text |edited) (:mood |calm)
+                  guest $ struct-with schema/session (:id 1) (:cursor today)
+                  member $ struct-with guest $ :user-id (Option :some |user-1)
+                  store-of $ fn (diaries)
+                    hint-fn $ Fn (Map String app.schema/Diary) (-> app.schema/ClientStore)
+                    let
+                        user $ struct-with schema/user (:id |user-1) (:name |tester) (:nickname |Tester) (:diaries diaries)
+                        db $ schema/Database :users
+                          {} $ |user-1 user
+                          , :sessions
+                            {} $ 1 member
+                            , :today today
+                      twig-container db member $ []
+                  step $ fn (base old-store new-store)
+                    hint-fn $ Fn Dynamic Dynamic app.schema/ClientStore $ -> app.schema/ClientSnapshot
+                    let
+                        text $ format-cirru-edn $ :: :patch
+                          recollect.diff/diff-twig old-store new-store $ {} $ :key :id
+                      match
+                        app.client-state/try-client-message base (parse-cirru-edn text) (nil? old-store)
+                        (:ok received)
+                          match received
+                            (:some snapshot) snapshot
+                            (:none) (raise |Expected-store-snapshot)
+                        (:err stage)
+                          raise $ str |Wire-store-rejected: stage
+                  s0 $ store-of $ {}
+                  s1 $ store-of $ {} (|2026-09-29 entry)
+                  s2 $ store-of $ {} (|2026-09-29 edited)
+                  c0 $ step ({}) nil s0
+                  c1 $ step (:raw c0) s0 s1
+                  c2 $ step (:raw c1) s1 s2
+                  c3 $ step (:raw c2) s2 s0
+                do
+                  assert= (Option :none)
+                    :diary $ :store c0
+                  assert= (Option :some entry)
+                    :diary $ :store c1
+                  assert= (Option :some edited)
+                    :diary $ :store c2
+                  assert= (Option :none)
+                    :diary $ :store c3
+              :tags $ #{} :regression
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
             match (:user-id session)
