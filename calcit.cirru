@@ -6,7 +6,7 @@
     :default $ {} (:description |) (:init-fn 'app.client/main!) (:mode :js) (:reload-fn 'app.client/reload!) (:target :browser)
       :feature-policy $ {}
       :modules $ [] |respo.calcit/ |recollect/ |memof/ |respo-ui.calcit/ |ws-edn.calcit/ |cumulo-util.calcit/ |respo-message.calcit/ |cumulo-reel.calcit/ |respo-feather.calcit/ |alerts.calcit/
-      :type-slots $ {} $ :dispatch-op |app.schema/ClientOp
+      :type-slots $ {} $ :dispatch-op 'app.schema/ClientOp
     :server $ {} (:description |) (:init-fn 'app.server/main!) (:mode :native) (:reload-fn 'app.server/reload!) (:target :native)
       :feature-policy $ {}
       :modules $ [] |recollect/ |memof/ |cumulo-util.calcit/ |cumulo-reel.calcit/ |calcit.std/ |calcit-wss/
@@ -401,7 +401,7 @@
                 assert= (:store third)
                   schema/decode-client-store $ decode-map-as
                     normalize-wire-value $ :raw third
-                    quote $ Map Tag Dynamic
+                    Map Tag Dynamic
                 assert= | $ :nickname $ :session (:store initial-snapshot)
             %{} 'TestEntry (:name |rejects-non-list)
               :code $ quote $ let
@@ -1053,7 +1053,7 @@
           :examples $ []
           :schema $ quote $ Fn String
             Fn (Map Tag Dynamic)
-              Fn Dynamic & Dynamic $ -> Unit
+              Fn Dynamic (& Dynamic) (-> Unit)
               -> Dynamic
             -> respo.schema/Element
         'style-date-preview $ %{} 'CodeEntry (:doc |)
@@ -1268,8 +1268,7 @@
             %{} 'TestEntry (:name |empty-input-and-unmatched-kind)
               :code $ quote $ let
                   holiday $ HolidayEntry :name |fixture :type :holiday :days $ #{} |2026-01-01
-                  empty-entries $ assert-type ([])
-                    quote $ List app.comp.month/HolidayEntry
+                  empty-entries $ assert-type ([]) (List app.comp.month/HolidayEntry)
                 assert= 0 $ .len $ collect-special-days empty-entries :holiday
                 assert= 0 $ .len $ collect-special-days ([] holiday) :workingday
               :tags $ #{} :holiday-fold-contract
@@ -1681,7 +1680,7 @@
               d! $ app.schema/ClientOp :session/set-cursor next-cursor
           :examples $ []
           :schema $ quote $ Fn app.util/DateInfo Number
-            Fn Dynamic & Dynamic $ -> Unit
+            Fn Dynamic (& Dynamic) (-> Unit)
             -> Unit
           :tests $ []
             %{} 'TestEntry (:name |previous-year)
@@ -1874,7 +1873,7 @@
           :examples $ []
           :schema $ quote $ Fn Tag
             -> $ Fn (Map Tag Dynamic)
-              Fn Dynamic & Dynamic $ -> Unit
+              Fn Dynamic (& Dynamic) (-> Unit)
               -> Unit
           :tests $ []
             %{} 'TestEntry (:name |dispatch-home-returns-unit-once)
@@ -2874,27 +2873,28 @@
           :schema $ quote String
         'sync-clients! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sync-clients! (reel)
-            wss-each! $ fn (sid)
-              let
-                  db $ :db reel
-                  records $ :records reel
-                  session $ assert-type
-                    match
-                      get (:sessions db) sid
-                      (:some found) found
-                      (:none) schema/session
-                    , 'app.schema/Session
-                  old-store $ match (get @*client-caches sid)
-                    (:some cached) cached
-                    (:none) nil
-                  new-store $ twig-container db session records
-                  changes $ diff-twig old-store new-store $ {} (:key :id)
-                if
-                  not $ empty? changes
-                  do
-                    wss-send! sid $ format-cirru-edn $ :: :patch changes
-                    swap! *client-caches assoc sid new-store
-              , &unit
+            let
+                db $ :db reel
+                reel-length $ .len $ :records reel
+              wss-each! $ fn (sid)
+                let
+                    session $ assert-type
+                      match
+                        get (:sessions db) sid
+                        (:some found) found
+                        (:none) schema/session
+                      , 'app.schema/Session
+                    new-store $ twig-container db session reel-length
+                    options $ {} $ :key :id
+                    changes $ match (get @*client-caches sid)
+                      (:some cached) (diff-twig cached new-store options)
+                      (:none) (diff-twig nil new-store options)
+                  if
+                    not $ empty? changes
+                    do
+                      wss-send! sid $ format-cirru-edn $ :: :patch changes
+                      swap! *client-caches assoc sid new-store
+                , &unit
           :examples $ []
           :schema $ quote $ Fn (cumulo-reel.core/ReelState app.schema/Database) (-> Unit)
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
@@ -3261,10 +3261,9 @@
     'app.twig.container $ %{} 'FileEntry
       :defs $ {}
         'twig-container $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defn twig-container (db session records)
+          :code $ quote $ defn twig-container (db session reel-length)
             let
                 router $ :router session
-                reel-length $ .len records
                 session-count $ .len $ :sessions db
                 color $ rand-hex-color!
                 logged-out $ schema/ClientStore :logged-in? false :session session :reel-length reel-length :router
@@ -3292,9 +3291,7 @@
                       (:none) logged-out
                 (:none) logged-out
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Session
-            List $ List Dynamic
-            -> app.schema/ClientStore
+          :schema $ quote $ Fn app.schema/Database app.schema/Session Number (-> app.schema/ClientStore)
           :tests $ []
             %{} 'TestEntry (:name |optional-fields-round-trip-over-wire)
               :code $ quote $ let
@@ -3316,7 +3313,7 @@
                   send $ fn (session)
                     hint-fn $ Fn app.schema/Session $ -> app.schema/ClientStore
                     let
-                        server-store $ twig-container db session $ []
+                        server-store $ twig-container db session 7
                         text $ format-cirru-edn $ :: :patch
                           recollect.diff/diff-twig nil server-store $ {} $ :key :id
                       match
@@ -3335,6 +3332,7 @@
                   assert= (Option :some |avatar.png)
                     :avatar $ .unwrap $ :user member-store
                   assert= (Option :some entry) (:diary member-store)
+                  assert= 7 $ :reel-length member-store
                   assert= (Option :none)
                     :user-id $ :session guest-store
                   assert= (Option :none) (:user guest-store)
@@ -3359,7 +3357,7 @@
                           , :sessions
                             {} $ 1 member
                             , :today today
-                      twig-container db member $ []
+                      twig-container db member 0
                   step $ fn (base old-store new-store)
                     hint-fn $ Fn Dynamic Dynamic app.schema/ClientStore $ -> app.schema/ClientSnapshot
                     let
@@ -3419,24 +3417,22 @@
                     , :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
                 users $ assert-type
                   {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar (Option :none) :diaries ({})
-                  quote $ Map String app.schema/User
+                  Map String app.schema/User
                 sessions $ assert-type
                   {}
                     7 $ make-session 7 $ Option :some |u
                     8 $ make-session 8 $ Option :none
                     9 $ make-session 9 $ Option :some |missing
-                  quote $ Map Number app.schema/Session
+                  Map Number app.schema/Session
               assert=
                 {} $ 7 |Ada
                 twig-members sessions users
               assert= ({})
                 twig-members
-                  assert-type ({})
-                    quote $ Map Number app.schema/Session
+                  assert-type ({}) (Map Number app.schema/Session)
                   , users
               assert= ({})
-                twig-members sessions $ assert-type ({})
-                  quote $ Map String app.schema/User
+                twig-members sessions $ assert-type ({}) (Map String app.schema/User)
             :tags $ #{} :regression
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
