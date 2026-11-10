@@ -70,7 +70,7 @@ try {
       ["edit", "def", `${namespace}/replay-boundaries!`, "--input-format", "json-ast", "--code",
         JSON.stringify(["defn", "replay-boundaries!", [], ...trees, "&unit"])],
       ["edit", "schema", `${namespace}/replay-boundaries!`, "--input-format", "json-ast", "--code",
-        JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"]]])],
+        JSON.stringify(["Fn", ["->", "Unit"]])],
     );
   }
   const revision = JSON.parse(run("query", "config", "--format", "json")).revision;
@@ -78,7 +78,7 @@ try {
     ["edit", "def", "app.storage/replay-storage-tests!", "--input-format", "json-ast", "--code",
       JSON.stringify(["defn", "replay-storage-tests!", [], ...groups.map(([namespace]) => [`${namespace}/replay-boundaries!`]), "&unit"])],
     ["edit", "schema", "app.storage/replay-storage-tests!", "--input-format", "json-ast", "--code",
-      JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"]]])],
+      JSON.stringify(["Fn", ["->", "Unit"]])],
     ["config", "set", "init-fn", "app.storage/replay-storage-tests!"],
     ["config", "set", "reload-fn", "app.storage/replay-storage-tests!"],
   );
@@ -115,7 +115,7 @@ try {
       ["edit", "def", `${namespace}/replay-host-tests!`, "--input-format", "json-ast", "--code",
         JSON.stringify(["defn", "replay-host-tests!", [], ...trees, "&unit"])],
       ["edit", "schema", `${namespace}/replay-host-tests!`, "--input-format", "json-ast", "--code",
-        JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"], [":features", ["#{}", ":js-ffi"]]]])],
+        JSON.stringify(["Fn", ["->", "Unit"], [":features", ":js-ffi"]])],
     );
   }
   assert.equal(dateCount, 8);
@@ -123,7 +123,7 @@ try {
     ["edit", "def", "app.client/replay-browser-contracts!", "--input-format", "json-ast", "--code",
       JSON.stringify(["defn", "replay-browser-contracts!", [], ...dateGroups.map(([namespace]) => [`${namespace}/replay-host-tests!`]), "&unit"])],
     ["edit", "schema", "app.client/replay-browser-contracts!", "--input-format", "json-ast", "--code",
-      JSON.stringify(["::", "'Fn", ["{}", [":args", ["[]"]], [":return", "'Unit"]]])],
+      JSON.stringify(["Fn", ["->", "Unit"]])],
   );
   const dateRevision = JSON.parse(run("query", "config", "--format", "json")).revision;
   const dateTransaction = ["edit", "transaction", "--code", JSON.stringify(dateOperations), "--expect-revision", dateRevision, "--format", "json"];
