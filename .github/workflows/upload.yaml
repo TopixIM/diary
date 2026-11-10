@@ -114,21 +114,13 @@ jobs:
           cp deps.cirru calcit.cirru package.json yarn.lock dist-server/
 
       - name: Configure deploy key
-        if: steps.production.outputs.current == 'true' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+        if: steps.production.outputs.current == 'true'
         env:
           DEPLOY_KEY: ${{ secrets.rsync_private_key_tc }}
         run: |
           install -m 700 -d "$RUNNER_TEMP/diary-ssh"
           printf '%s\n' "$DEPLOY_KEY" > "$RUNNER_TEMP/diary-ssh/key"
           chmod 600 "$RUNNER_TEMP/diary-ssh/key"
-
-      - name: Upload PR preview
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-        run: >-
-          rsync -avzr --progress
-          -e "ssh -i $RUNNER_TEMP/diary-ssh/key -o StrictHostKeyChecking=accept-new"
-          dist/
-          rsync-user@chenyong.life:/web-assets/repo/${{ github.repository }}/pr/
 
       - name: Upload production web assets
         if: steps.production.outputs.current == 'true'
