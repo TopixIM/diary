@@ -652,7 +652,9 @@
                         to-respo-messages $ :messages session
                         {}
                         fn (info d!)
-                          hint-fn $ Fn (Map Dynamic Dynamic) Dynamic $ -> Dynamic
+                          hint-fn $ Fn (Map Tag Dynamic)
+                            Fn app.schema/ClientOp $ -> Unit
+                            -> Unit
                           match
                             get (:messages session) (message-id-of info)
                             (:some message)
@@ -700,7 +702,7 @@
                 if (string? id) id $ raise "|expected message id as a String"
               (:none) (raise "|expected message id as a String")
           :examples $ []
-          :schema $ quote $ Fn (Map Dynamic Dynamic) (-> String)
+          :schema $ quote $ Fn (Map Tag V) (-> String) (:generics V)
         'style-body $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def style-body
             {} $ :padding "|8px 16px"
@@ -710,10 +712,12 @@
           :doc "|Convert typed session messages to the map contract expected by respo-message."
           :code $ quote $ defn to-respo-messages (messages)
             filter-map-kv messages $ fn (id message)
-              MapEntryDecision :keep id $ &struct:to-map message
+              MapEntryDecision :keep id $ {}
+                :id $ :id message
+                :text $ :text message
           :examples $ []
           :schema $ quote $ Fn (Map String schema/Message)
-            -> $ Map String $ Map Tag Dynamic
+            -> $ Map String $ Map Tag String
           :tests $ [] $ %{} 'TestEntry (:name |converts-typed-toast-messages)
             :code $ quote $ let
                 messages $ {} $ |message-1
@@ -1850,24 +1854,24 @@
         'on-navigate $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-navigate (route)
             fn (event dispatch!)
-              hint-fn $ Fn (Map Tag Dynamic)
-                Fn Dynamic & Dynamic $ -> Unit
+              hint-fn $ Fn Event
+                Fn app.schema/ClientOp $ -> Unit
                 -> Unit
               dispatch! $ app.schema/ClientOp :router/change $ app.schema/Router :name route :data None
           :examples $ []
           :schema $ quote $ Fn Tag
-            -> $ Fn (Map Tag Dynamic)
-              Fn Dynamic (& Dynamic) (-> Unit)
+            -> $ Fn Event
+              Fn app.schema/ClientOp $ -> Unit
               -> Unit
+            :generics Event
           :tests $ []
             %{} 'TestEntry (:name |dispatch-home-returns-unit-once)
               :code $ quote $ let
                   recorded $ ref |
                   calls $ ref 0
-                  dispatch! $ fn (op & payloads)
-                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
-                    assert= ([]) payloads
-                    reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
+                  dispatch! $ fn (op)
+                    hint-fn $ Fn app.schema/ClientOp $ -> Unit
+                    reset! recorded $ format-cirru-edn op
                     swap! calls inc
                     , &unit
                   handler $ on-navigate :home
@@ -1880,10 +1884,9 @@
               :code $ quote $ let
                   recorded $ ref |
                   calls $ ref 0
-                  dispatch! $ fn (op & payloads)
-                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
-                    assert= ([]) payloads
-                    reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
+                  dispatch! $ fn (op)
+                    hint-fn $ Fn app.schema/ClientOp $ -> Unit
+                    reset! recorded $ format-cirru-edn op
                     swap! calls inc
                     , &unit
                   handler $ on-navigate :data
@@ -1896,10 +1899,9 @@
               :code $ quote $ let
                   recorded $ ref |
                   calls $ ref 0
-                  dispatch! $ fn (op & payloads)
-                    hint-fn $ Fn Dynamic & Dynamic $ -> Unit
-                    assert= ([]) payloads
-                    reset! recorded $ format-cirru-edn $ app.schema/decode-client-dispatch-op op
+                  dispatch! $ fn (op)
+                    hint-fn $ Fn app.schema/ClientOp $ -> Unit
+                    reset! recorded $ format-cirru-edn op
                     swap! calls inc
                     , &unit
                   handler $ on-navigate :profile
