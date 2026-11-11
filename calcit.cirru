@@ -81,11 +81,9 @@
             when config/dev? $ println |Dispatch op
             match op
               (:states cursor s)
-                if (list? cursor)
-                  reset! *states $ decode-map-as
-                    update-states (deref *states) cursor s
-                    Map Tag Dynamic
-                  raise $ str "|expected states cursor as a list, got: " cursor
+                reset! *states $ decode-map-as
+                  update-states (deref *states) cursor s
+                  Map Tag Dynamic
               (:effect/connect) (connect!)
               _ $ ws-send! $ to-server-op op
             , &unit
@@ -106,7 +104,7 @@
             render-app!
             connect!
             add-watch! *store :changes $ fn (store prev)
-              hint-fn $ Fn app.client/StorePayload app.client/StorePayload $ -> Unit
+              hint-fn $ Fn StorePayload StorePayload $ -> Unit
               render-app!
             add-watch! *states :changes $ fn (states prev)
               hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
@@ -166,7 +164,7 @@
               hud! |error $ str client-errors &newline server-errors
               do (remove-watch! *store :changes) (remove-watch! *states :changes) (clear-cache!) (render-app!)
                 add-watch! *store :changes $ fn (store prev)
-                  hint-fn $ Fn app.client/StorePayload app.client/StorePayload $ -> Unit
+                  hint-fn $ Fn StorePayload StorePayload $ -> Unit
                   render-app!
                 add-watch! *states :changes $ fn (states prev)
                   hint-fn $ Fn (Map Tag Dynamic) (Map Tag Dynamic) (-> Unit)
@@ -280,7 +278,7 @@
                 filter-map-kv
                   assert-type value $ Map Dynamic Dynamic
                   fn (key item)
-                    hint-fn $ Fn Dynamic Dynamic $ -> (calcit.core/MapEntryDecision Dynamic Dynamic)
+                    hint-fn $ Fn Dynamic Dynamic $ -> (MapEntryDecision Dynamic Dynamic)
                     if (wire-option? item 1) (MapEntryDecision :drop)
                       MapEntryDecision :keep key $ normalize-wire-value item
               (list? value) (map value normalize-wire-value)
@@ -653,7 +651,7 @@
                         {}
                         fn (info d!)
                           hint-fn $ Fn (Map Tag Dynamic)
-                            Fn app.schema/ClientOp $ -> Unit
+                            Fn schema/ClientOp $ -> Unit
                             -> Unit
                           match
                             get (:messages session) (message-id-of info)
@@ -673,7 +671,7 @@
                   :style $ {} $ :cursor :pointer
                   :on-click $ fn (e d!)
                     hint-fn $ Fn respo.schema/RespoEvent
-                      Fn app.schema/ClientOp $ -> Unit
+                      Fn schema/ClientOp $ -> Unit
                       -> Unit
                     d! $ app.schema/ClientOp :effect/connect
                 <>
@@ -800,7 +798,9 @@
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
                 date $ format-to-date date-info
-                cursor $ .unwrap-or (&map:get states :cursor) ([])
+                cursor $ decode-map-as
+                  .unwrap-or (&map:get states :cursor) ([])
+                  List app.schema/ClientStateKey
                 initial-state $ DiaryEditorState :text $ :text diary
                 state $ as-diary-editor-state $ match (&map:get states :data)
                   (:some original-state)
@@ -840,7 +840,7 @@
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
                             hint-fn $ Fn respo.schema/RespoEvent
-                              Fn app.schema/ClientOp $ -> Unit
+                              Fn schema/ClientOp $ -> Unit
                               -> Unit
                             d! $ app.schema/ClientOp :diary/copy-yesterday $ app.schema/CopyYesterday :date-info date-info
                       respo.core/show
@@ -849,7 +849,7 @@
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
                             hint-fn $ Fn respo.schema/RespoEvent
-                              Fn app.schema/ClientOp $ -> Unit
+                              Fn schema/ClientOp $ -> Unit
                               -> Unit
                             when
                               not $ blank? $ :text state
@@ -867,7 +867,7 @@
                             :style $ {} $ :margin-left 16
                             :on-click $ fn (e d!)
                               hint-fn $ Fn respo.schema/RespoEvent
-                                Fn app.schema/ClientOp $ -> Unit
+                                Fn schema/ClientOp $ -> Unit
                                 -> Unit
                               d! $ app.schema/ClientOp :states cursor nil
                           <> |Reset
@@ -878,7 +878,7 @@
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       d! $ app.schema/ClientOp :states cursor $ assoc state :text
                         decode-map-as (:value e) 'String
@@ -906,7 +906,7 @@
                   render-content (:food diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -922,7 +922,7 @@
                   render-content (:sleep diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -939,7 +939,7 @@
                   render-content (:mood diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -956,7 +956,7 @@
                   render-content (:place diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -973,7 +973,7 @@
                   render-content (:highlight diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -990,7 +990,7 @@
                   render-content (:met diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -1007,7 +1007,7 @@
                   render-content (:exercise diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -1024,7 +1024,7 @@
                   render-content (:pains diary)
                     fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
@@ -1114,7 +1114,9 @@
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
-                cursor $ .unwrap-or (&map:get states :cursor) ([])
+                cursor $ decode-map-as
+                  .unwrap-or (&map:get states :cursor) ([])
+                  List app.schema/ClientStateKey
                 state $ as-login-state $ .unwrap-or (&map:get states :data) initial-state
               div
                 {} $ :class-name $ str-spaced css/flex css/center
@@ -1129,7 +1131,7 @@
                         :value $ :username state
                         :on-input $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/ClientOp $ -> Unit
+                            Fn schema/ClientOp $ -> Unit
                             -> Unit
                           d! $ app.schema/ClientOp :states cursor $ assoc state :username
                             decode-map-as (:value e) 'String
@@ -1139,7 +1141,7 @@
                         :value $ :password state
                         :on-input $ fn (e d!)
                           hint-fn $ Fn respo.schema/RespoEvent
-                            Fn app.schema/ClientOp $ -> Unit
+                            Fn schema/ClientOp $ -> Unit
                             -> Unit
                           d! $ app.schema/ClientOp :states cursor $ assoc state :password
                             decode-map-as (:value e) 'String
@@ -1158,7 +1160,7 @@
           :examples $ []
           :schema $ quote LoginState
           :tests $ [] $ %{} 'TestEntry (:name |keeps-nominal-empty-credentials)
-            :code $ quote $ do (assert-type initial-state 'app.comp.login/LoginState)
+            :code $ quote $ do (assert-type initial-state LoginState)
               assert= | $ :username initial-state
               assert= | $ :password initial-state
               assert= initial-state $ LoginState :username | :password |
@@ -1267,7 +1269,7 @@
             %{} 'TestEntry (:name |empty-input-and-unmatched-kind)
               :code $ quote $ let
                   holiday $ HolidayEntry :name |fixture :type :holiday :days $ #{} |2026-01-01
-                  empty-entries $ assert-type ([]) (List app.comp.month/HolidayEntry)
+                  empty-entries $ assert-type ([]) (List HolidayEntry)
                 assert= 0 $ .len $ collect-special-days empty-entries :holiday
                 assert= 0 $ .len $ collect-special-days ([] holiday) :workingday
               :tags $ #{} :holiday-fold-contract
@@ -1949,7 +1951,7 @@
                     :style $ {} (:color :red) (:border-color :red)
                     :on-click $ fn (e d!)
                       hint-fn $ Fn respo.schema/RespoEvent
-                        Fn app.schema/ClientOp $ -> Unit
+                        Fn schema/ClientOp $ -> Unit
                         -> Unit
                       d! $ app.schema/ClientOp :user/log-out
                       js/localStorage.removeItem $ :storage-key config/site
@@ -2025,7 +2027,13 @@
     'app.schema $ %{} 'FileEntry
       :defs $ {}
         'ClientOp $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ defenum ClientOp (:states Dynamic Dynamic) (:session/connect) (:session/disconnect) (:session/remove-message app.schema/Message) (:session/set-cursor app.util/DateInfo) (:session/merge-cursor app.schema/CursorPatch)
+          :code $ quote $ defenum ClientOp
+            :states (List app.schema/ClientStateKey) Dynamic
+            :session/connect
+            :session/disconnect
+            :session/remove-message app.schema/Message
+            :session/set-cursor app.util/DateInfo
+            :session/merge-cursor app.schema/CursorPatch
             :user/log-in $ List String
             :user/sign-up $ List String
             :user/log-out
@@ -2050,6 +2058,10 @@
           :code $ quote $ defstruct ClientSnapshot (:raw Dynamic) (:store app.schema/ClientStore)
           :examples $ []
           :schema $ quote StructDef
+        'ClientStateKey $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion ClientStateKey Tag String Number
+          :examples $ []
+          :schema $ quote UnionDef
         'ClientStore $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstruct ClientStore (:logged-in? Bool) (:session app.schema/Session) (:reel-length Number) (:router app.schema/ClientRouter) (:today app.util/DateInfo) (:count Number) (:color String)
             :user $ Option app.schema/ClientUser
@@ -2150,7 +2162,11 @@
                 (:none)
                   match op
                     (:states cursor data)
-                      if (list? cursor) (ClientOp :states cursor data) (raise |Invalid-local-state-cursor)
+                      if (list? cursor)
+                        ClientOp :states
+                          decode-map-as cursor $ List app.schema/ClientStateKey
+                          , data
+                        raise |Invalid-local-state-cursor
                     _ $ raise |Expected-nominal-client-operation
                 (:some definition)
                   if (identical? definition ClientOp)
@@ -2545,7 +2561,7 @@
                 if (struct? value) (&struct:to-map value) value
                 Map Tag Dynamic
               fn (field item)
-                hint-fn $ Fn Tag Dynamic $ -> (calcit.core/MapEntryDecision Tag Dynamic)
+                hint-fn $ Fn Tag Dynamic $ -> (MapEntryDecision Tag Dynamic)
                 if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
           :examples $ []
           :schema $ quote $ Fn Dynamic
@@ -2638,7 +2654,7 @@
                 match op
                   (:diary/copy-yesterday payload)
                     let
-                        typed $ assert-type payload 'app.schema/CopyYesterday
+                        typed $ assert-type payload schema/CopyYesterday
                         date $ assert-type (:date-info typed) 'app.util/DateInfo
                       assert= 29 $ :day date
                   _ $ raise |Expected-copy-operation
@@ -2651,7 +2667,7 @@
                 match op
                   (:diary/copy-yesterday payload)
                     let
-                        typed $ assert-type payload 'app.schema/CopyYesterday
+                        typed $ assert-type payload schema/CopyYesterday
                         date $ assert-type (:date-info typed) 'app.util/DateInfo
                       assert= 30 $ :day date
                   _ $ raise |Expected-copy-operation
@@ -2687,7 +2703,7 @@
                 match op
                   (:router/change payload)
                     let
-                        router $ assert-type payload 'app.schema/Router
+                        router $ assert-type payload schema/Router
                       do
                         assert= :diary $ :name router
                         assert= None $ :data router
@@ -2701,7 +2717,7 @@
                 match op
                   (:session/merge-cursor payload)
                     let
-                        patch $ assert-type payload 'app.schema/CursorPatch
+                        patch $ assert-type payload schema/CursorPatch
                       do
                         assert= (Some 9) (:month patch)
                         assert= None $ :year patch
@@ -2725,7 +2741,7 @@
                     :date $ Some |2026-09-29
                     :text |entry
                 fn (diary)
-                  hint-fn $ Fn app.schema/Diary $ -> Unit
+                  hint-fn $ Fn schema/Diary $ -> Unit
                   let
                       original $ %:: schema/Op :diary/add-one diary
                     assert= original $ parse-client-op $ format-cirru-edn original
@@ -2867,7 +2883,7 @@
                         get (:sessions db) sid
                         (:some found) found
                         (:none) schema/session
-                      , 'app.schema/Session
+                      , schema/Session
                     new-store $ twig-container db session reel-length
                     options $ {} $ :key :id
                     changes $ match (get @*client-caches sid)
@@ -2978,7 +2994,7 @@
                 users $ decode-stored-string-map (stored-field db :users |$.users) |$.users
                 normalized-users $ filter-map-kv users $ fn (id raw-user)
                   hint-fn $ Fn String Dynamic $ ->
-                    calcit.core/MapEntryDecision String $ Map Tag Dynamic
+                    MapEntryDecision String $ Map Tag Dynamic
                   if (nil? raw-user) (MapEntryDecision :drop)
                     let
                         user $ normalize-stored-struct raw-user |$.users.*
@@ -2990,7 +3006,7 @@
                           , |$.users.*.diaries
                         normalized-diaries $ filter-map-kv diaries $ fn (date raw-diary)
                           hint-fn $ Fn String Dynamic $ ->
-                            calcit.core/MapEntryDecision String $ Map Tag Dynamic
+                            MapEntryDecision String $ Map Tag Dynamic
                           if (nil? raw-diary) (MapEntryDecision :drop)
                             let
                                 diary $ normalize-stored-struct raw-diary |$.users.*.diaries.*
@@ -3053,7 +3069,7 @@
                 Map Tag Dynamic
               (:ok data)
                 filter-map-kv data $ fn (field item)
-                  hint-fn $ Fn Tag Dynamic $ -> (calcit.core/MapEntryDecision Tag Dynamic)
+                  hint-fn $ Fn Tag Dynamic $ -> (MapEntryDecision Tag Dynamic)
                   if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
               (:err reason)
                 raise $ str path "|: " reason
@@ -3136,7 +3152,7 @@
             try
               Result :ok $ parse-stored-db-with-format text
               fn (message)
-                hint-fn $ Fn String $ -> (Result app.storage/StoredDbFormat String)
+                hint-fn $ Fn String $ -> (Result StoredDbFormat String)
                 Result :err message
           :examples $ []
           :schema $ quote $ Fn String
@@ -3295,7 +3311,7 @@
                       {} $ 1 member
                       , :today today
                   send $ fn (session)
-                    hint-fn $ Fn app.schema/Session $ -> app.schema/ClientStore
+                    hint-fn $ Fn schema/Session $ -> schema/ClientStore
                     let
                         server-store $ twig-container db session 7
                         text $ format-cirru-edn $ :: :patch
@@ -3332,7 +3348,7 @@
                   guest $ struct-with schema/session (:id 1) (:cursor today)
                   member $ struct-with guest $ :user-id (Some |user-1)
                   store-of $ fn (diaries)
-                    hint-fn $ Fn (Map String app.schema/Diary) (-> app.schema/ClientStore)
+                    hint-fn $ Fn (Map String schema/Diary) (-> schema/ClientStore)
                     let
                         user $ struct-with schema/user (:id |user-1) (:name |tester) (:nickname |Tester) (:diaries diaries)
                         db $ schema/Database :users
@@ -3342,7 +3358,7 @@
                             , :today today
                       twig-container db member 0
                   step $ fn (base old-store new-store)
-                    hint-fn $ Fn Dynamic Dynamic app.schema/ClientStore $ -> app.schema/ClientSnapshot
+                    hint-fn $ Fn Dynamic Dynamic schema/ClientStore $ -> schema/ClientSnapshot
                     let
                         text $ format-cirru-edn $ :: :patch
                           recollect.diff/diff-twig old-store new-store $ {} $ :key :id
@@ -3384,7 +3400,7 @@
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
             filter-map-kv sessions $ fn (sid session)
-              hint-fn $ Fn Number app.schema/Session $ -> (MapEntryDecision Number String)
+              hint-fn $ Fn Number schema/Session $ -> (MapEntryDecision Number String)
               twig-member-entry users sid session
           :examples $ []
           :schema $ quote $ Fn (Map Number schema/Session) (Map String schema/User)
@@ -3392,33 +3408,33 @@
           :tests $ [] $ %{} 'TestEntry (:name |keeps-number-keys-and-drops-unresolved-users)
             :code $ quote $ let
                 make-session $ fn (id user-id)
-                  hint-fn $ Fn Number (Option String) (-> app.schema/Session)
+                  hint-fn $ Fn Number (Option String) (-> schema/Session)
                   schema/Session :id id :user-id user-id :nickname | :messages ({}) :router (schema/Router :name :home :data None) :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
                 users $ assert-type
                   {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar None :diaries ({})
-                  Map String app.schema/User
+                  Map String schema/User
                 sessions $ assert-type
                   {}
                     7 $ make-session 7 $ Some |u
                     8 $ make-session 8 None
                     9 $ make-session 9 $ Some |missing
-                  Map Number app.schema/Session
+                  Map Number schema/Session
               assert=
                 {} $ 7 |Ada
                 twig-members sessions users
               assert= ({})
                 twig-members
-                  assert-type ({}) (Map Number app.schema/Session)
+                  assert-type ({}) (Map Number schema/Session)
                   , users
               assert= ({})
-                twig-members sessions $ assert-type ({}) (Map String app.schema/User)
+                twig-members sessions $ assert-type ({}) (Map String schema/User)
             :tags $ #{} :regression
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
             let
                 month-prefix $ slice (format-to-date cursor) 0 $ Some 8
               filter-map-kv diaries $ fn (date diary)
-                hint-fn $ Fn String app.schema/Diary $ ->
+                hint-fn $ Fn String schema/Diary $ ->
                   MapEntryDecision String $ Map Tag String
                 if (starts-with? date month-prefix) (twig-overview-entry date diary) (MapEntryDecision :drop)
           :examples $ []
@@ -3665,7 +3681,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :router router-data
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
@@ -3694,7 +3710,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 cursor $ :cursor session
                 next-cursor $ merge-cursor-value cursor patch
                 next-session $ struct-with session $ :cursor next-cursor
@@ -3725,7 +3741,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :messages
                   dissoc (:messages session) (:id message)
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
@@ -3739,7 +3755,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :cursor cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
@@ -3755,7 +3771,7 @@
             let
                 matching-users $ filter-map-kv users $ fn (id user)
                   let
-                      typed-user $ assert-type user 'app.schema/User
+                      typed-user $ assert-type user schema/User
                     if
                       = username $ :name typed-user
                       MapEntryDecision :keep id typed-user
@@ -3788,7 +3804,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 next-session $ match maybe-user
                   (:some user)
                     if
@@ -3810,7 +3826,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
                 next-session $ struct-with session $ :user-id None
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
@@ -3824,7 +3840,7 @@
                     get (:sessions db) sid
                     (:some found) found
                     (:none) schema/session
-                  , 'app.schema/Session
+                  , schema/Session
               if (.some? maybe-user)
                 let
                     next-session $ struct-with session $ :messages
