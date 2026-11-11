@@ -31,7 +31,7 @@
         '*store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *store (StorePayload :initial)
           :examples $ []
-          :schema $ quote $ Ref app.client/StorePayload
+          :schema $ quote $ Ref StorePayload
         'BrowserDate $ %{} 'CodeEntry (:doc |)
           :code $ quote $ deftrait BrowserDate
             .get-hours $ Fn app.client/BrowserDate $ -> Number
@@ -49,7 +49,7 @@
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! () (reset! *awaiting-snapshot? true)
             let
-                host $ unsafe-coerce js/location.hostname 'String
+                host $ unsafe-coerce js/location.hostname String
                 port $ config/site :port
               ws-connect!
                 if config/dev? (str |ws:// host |: port) |wss://diary.chenyong.life/ws
@@ -90,7 +90,7 @@
               _ $ ws-send! $ to-server-op op
             , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/ClientOp (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn schema/ClientOp (-> Unit) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'dispatch-host! $ %{} 'CodeEntry
           :doc "|在宿主（JS）边界把未检查的 op 解码为 ClientOp 后分发；Respo 渲染直接使用带类型的 dispatch!。"
@@ -208,12 +208,12 @@
         'store-snapshot $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn store-snapshot (state)
             match state
-              (:online snapshot) (Option :some snapshot)
+              (:online snapshot) (Some snapshot)
               (:offline snapshot) snapshot
-              (:initial) (Option :none)
+              (:initial) None
           :examples $ []
-          :schema $ quote $ Fn app.client/StorePayload
-            -> $ Option app.schema/ClientSnapshot
+          :schema $ quote $ Fn StorePayload
+            -> $ Option schema/ClientSnapshot
         'to-server-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn to-server-op (op)
             match op
@@ -238,7 +238,7 @@
               (:reel/reset) (schema/Op :reel/reset)
               (:reel/merge) (schema/Op :reel/merge)
           :examples $ []
-          :schema $ quote $ Fn app.schema/ClientOp (-> app.schema/Op)
+          :schema $ quote $ Fn schema/ClientOp (-> schema/Op)
           :tests $ [] $ %{} 'TestEntry (:name |sends-op-with-server-nominal-type)
             :code $ quote $ do
               assert= :user/log-in $ &enum:nth
@@ -308,18 +308,18 @@
                   match
                     try-client-patch base (&enum:nth message 1) awaiting-snapshot?
                     (:ok snapshot)
-                      Result :ok $ Option :some snapshot
+                      Result :ok $ Some snapshot
                     (:err stage) (Result :err stage)
                   Result :err :message-envelope
                 :effect/pong $ if
                   = 1 $ &enum:count message
-                  Result :ok $ Option :none
+                  Result :ok None
                   Result :err :message-envelope
                 _ $ Result :err :message-envelope
               Result :err :message-envelope
           :examples $ []
           :schema $ quote $ Fn Dynamic Dynamic Bool
-            -> $ Result (Option app.schema/ClientSnapshot) Tag
+            -> $ Result (Option schema/ClientSnapshot) Tag
           :tests $ []
             %{} 'TestEntry (:name |rejects-map)
               :code $ quote $ assert= (Result :err :message-envelope)
@@ -334,8 +334,7 @@
               :code $ quote $ assert= (Result :err :message-envelope)
                 try-client-message ({}) (:: :patch) true
             %{} 'TestEntry (:name |pong-does-not-replace-snapshot)
-              :code $ quote $ assert=
-                Result :ok $ Option :none
+              :code $ quote $ assert= (Result :ok None)
                 try-client-message ({}) (:: :effect/pong) true
         'try-client-patch $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-client-patch (base changes awaiting-snapshot?)
@@ -366,7 +365,7 @@
                               Result :ok $ schema/ClientSnapshot :raw next :store typed
           :examples $ []
           :schema $ quote $ Fn Dynamic Dynamic Bool
-            -> $ Result app.schema/ClientSnapshot Tag
+            -> $ Result schema/ClientSnapshot Tag
           :tests $ []
             %{} 'TestEntry (:name |retains-raw-and-decoded-state-across-patches)
               :code $ quote $ let
@@ -602,11 +601,11 @@
                     :cursor $ [] :panel |item 7
                     :diary $ {} $ :data data
                   child $ checked-child-states root :diary
-                assert= (get child :data) (Option :some data)
+                assert= (get child :data) (Some data)
                 assert= (get child :cursor)
-                  Option :some $ [] :panel |item 7 :diary
+                  Some $ [] :panel |item 7 :diary
                 assert= (get root :cursor)
-                  Option :some $ [] :panel |item 7
+                  Some $ [] :panel |item 7
             %{} 'TestEntry (:name |missing-branch-keeps-empty-seed)
               :code $ quote $ assert=
                 {} $ :cursor $ [] :diary
@@ -634,7 +633,7 @@
                       router-data $ either (:data router) ({})
                       diary $ .unwrap-or (:diary store-typed) schema/diary
                       user $ .unwrap-or (:user store-typed)
-                        schema/ClientUser :name | :id | :nickname | :avatar $ Option :none
+                        schema/ClientUser :name | :id | :nickname | :avatar None
                     div
                       {} $ :class-name $ str-spaced css/preset css/global css/fullscreen css/row
                       comp-navigation (:logged-in? store-typed) (:count store-typed)
@@ -671,9 +670,9 @@
                 {}
                   :style $ {} $ :cursor :pointer
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
                     d! $ app.schema/ClientOp :effect/connect
                 <>
                   if (= state :offline) "|Socket broken! Click to retry." |Loading...
@@ -713,7 +712,7 @@
             filter-map-kv messages $ fn (id message)
               MapEntryDecision :keep id $ &struct:to-map message
           :examples $ []
-          :schema $ quote $ Fn (Map String app.schema/Message)
+          :schema $ quote $ Fn (Map String schema/Message)
             -> $ Map String $ Map Tag Dynamic
           :tests $ [] $ %{} 'TestEntry (:name |converts-typed-toast-messages)
             :code $ quote $ let
@@ -763,10 +762,11 @@
                 {} $ :style $ {} (:padding "|16px 0")
                 button $ {} (:class-name css/button-primary) (:inner-text |Copy)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
                     copy! $ format-cirru-edn $ &map:to-list diaries
+                    , &unit
           :examples $ []
           :schema $ quote $ Fn (Map String Dynamic) (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
@@ -791,7 +791,7 @@
               if (&struct:matches? value DiaryEditorState) value $ raise "|expected DiaryEditorState in component states"
               raise "|expected DiaryEditorState in component states"
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.comp.diary/DiaryEditorState)
+          :schema $ quote $ Fn Dynamic (-> DiaryEditorState)
         'comp-diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
@@ -835,36 +835,37 @@
                         button $ {} (:class-name css/button) (:inner-text "|Like last day")
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
-                              -> Dynamic
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/ClientOp $ -> Unit
+                              -> Unit
                             d! $ app.schema/ClientOp :diary/copy-yesterday $ app.schema/CopyYesterday :date-info date-info
                       respo.core/show
                         not= (:text diary) (:text state)
                         button $ {} (:class-name css/button-primary) (:inner-text |Save)
                           :style $ {} $ :margin-left 16
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
-                              -> Dynamic
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/ClientOp $ -> Unit
+                              -> Unit
                             when
                               not $ blank? $ :text state
-                              d! $ app.schema/ClientOp :diary/add-one $ app.schema/Diary :food (:food diary) :sleep (:sleep diary) :mood (:mood diary) :place (:place diary) :highlight (:highlight diary) :met (:met diary) :exercise (:exercise diary) :pains (:pains diary) :text (:text state) :date (Option :some date) :time (:time diary)
-                              d! $ :: :states cursor nil
+                              d! $ app.schema/ClientOp :diary/add-one $ app.schema/Diary :food (:food diary) :sleep (:sleep diary) :mood (:mood diary) :place (:place diary) :highlight (:highlight diary) :met (:met diary) :exercise (:exercise diary) :pains (:pains diary) :text (:text state) :date (Some date) :time (:time diary)
+                              d! $ app.schema/ClientOp :states cursor nil
                               let
                                   lost-copy |diary-lost-copy
                                 js/localStorage.setItem lost-copy $ :text state
                                 js/console.info "|Latest diary saved to" $ to-lispy-string lost-copy
+                            , &unit
                       respo.core/show
                         not= (:text diary) (:text state)
                         a
                           {} (:class-name css/link)
                             :style $ {} $ :margin-left 16
                             :on-click $ fn (e d!)
-                              hint-fn $ Fn (Map Tag Dynamic)
-                                Fn Dynamic & Dynamic $ -> Unit
-                                -> Dynamic
-                              d! $ :: :states cursor nil
+                              hint-fn $ Fn respo.schema/RespoEvent
+                                Fn app.schema/ClientOp $ -> Unit
+                                -> Unit
+                              d! $ app.schema/ClientOp :states cursor nil
                           <> |Reset
                   textarea $ {}
                     :value $ :text state
@@ -872,15 +873,13 @@
                     :class-name $ str-spaced css/flex css/textarea
                     :style $ {} (:min-height 320) (:flex-shrink 0)
                     :on-input $ fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
-                      d! $ :: :states cursor $ assoc state :text
-                        decode-map-as
-                          .unwrap $ &map:get e :value
-                          , 'String
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
+                      d! $ app.schema/ClientOp :states cursor $ assoc state :text
+                        decode-map-as (:value e) 'String
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo app.schema/Diary (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo schema/Diary (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'comp-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-guide (text)
@@ -902,9 +901,9 @@
                   comp-guide "|What did you eat?"
                   render-content (:food diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :food :date date :data data
@@ -918,9 +917,9 @@
                   comp-guide "|How did you sleep?"
                   render-content (:sleep diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :sleep :date date :data data
@@ -935,9 +934,9 @@
                   comp-guide "|How you feel?"
                   render-content (:mood diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :mood :date date :data data
@@ -952,9 +951,9 @@
                   comp-guide "|Where you went?"
                   render-content (:place diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :place :date date :data data
@@ -969,9 +968,9 @@
                   comp-guide "|What's the highlights?"
                   render-content (:highlight diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :highlight :date date :data data
@@ -986,9 +985,9 @@
                   comp-guide "|People met?"
                   render-content (:met diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :met :date date :data data
@@ -1003,9 +1002,9 @@
                   comp-guide |Exercises?
                   render-content (:exercise diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :exercise :date date :data data
@@ -1020,15 +1019,15 @@
                   comp-guide |Pains?
                   render-content (:pains diary)
                     fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       .show plugin d! $ fn (data)
                         hint-fn $ Fn String $ -> Unit
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :pains :date date :data data
                   .render plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.schema/Diary String (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Tag Dynamic) schema/Diary String (-> respo.schema/Component)
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
             {} $ |$0 $ {}
@@ -1052,9 +1051,9 @@
               if (blank? x) (comp-empty) (<> x)
           :examples $ []
           :schema $ quote $ Fn String
-            Fn (Map Tag Dynamic)
-              Fn Dynamic (& Dynamic) (-> Unit)
-              -> Dynamic
+            Fn respo.schema/RespoEvent
+              Fn schema/ClientOp $ -> Unit
+              -> Unit
             -> respo.schema/Element
         'style-date-preview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle style-date-preview
@@ -1107,7 +1106,7 @@
               if (&struct:matches? value LoginState) value $ raise "|expected LoginState in component states"
               raise "|expected LoginState in component states"
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.comp.login/LoginState)
+          :schema $ quote $ Fn Dynamic (-> LoginState)
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
@@ -1125,25 +1124,21 @@
                       input $ {} (:placeholder |Username) (:class-name css/input)
                         :value $ :username state
                         :on-input $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
-                            -> Dynamic
-                          d! $ :: :states cursor $ assoc state :username
-                            decode-map-as
-                              .unwrap $ &map:get e :value
-                              , 'String
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/ClientOp $ -> Unit
+                            -> Unit
+                          d! $ app.schema/ClientOp :states cursor $ assoc state :username
+                            decode-map-as (:value e) 'String
                     =< nil 8
                     div ({})
                       input $ {} (:placeholder |Password) (:class-name css/input)
                         :value $ :password state
                         :on-input $ fn (e d!)
-                          hint-fn $ Fn (Map Tag Dynamic)
-                            Fn Dynamic & Dynamic $ -> Unit
-                            -> Dynamic
-                          d! $ :: :states cursor $ assoc state :password
-                            decode-map-as
-                              .unwrap $ &map:get e :value
-                              , 'String
+                          hint-fn $ Fn respo.schema/RespoEvent
+                            Fn app.schema/ClientOp $ -> Unit
+                            -> Unit
+                          d! $ app.schema/ClientOp :states cursor $ assoc state :password
+                            decode-map-as (:value e) 'String
                   =< nil 8
                   div
                     {} $ :style $ {} (:text-align :right)
@@ -1157,7 +1152,7 @@
         'initial-state $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def initial-state (LoginState :username | :password |)
           :examples $ []
-          :schema $ quote app.comp.login/LoginState
+          :schema $ quote LoginState
           :tests $ [] $ %{} 'TestEntry (:name |keeps-nominal-empty-credentials)
             :code $ quote $ do (assert-type initial-state 'app.comp.login/LoginState)
               assert= | $ :username initial-state
@@ -1262,7 +1257,7 @@
                   .union days $ :days entry
                   , days
           :examples $ []
-          :schema $ quote $ Fn (List app.comp.month/HolidayEntry) Tag
+          :schema $ quote $ Fn (List HolidayEntry) Tag
             -> $ Set String
           :tests $ []
             %{} 'TestEntry (:name |empty-input-and-unmatched-kind)
@@ -1319,9 +1314,9 @@
                       assoc day-style :border-bottom $ str "|4px solid " $ hsl 200 80 80
                       , day-style
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
                     d! $ app.schema/ClientOp :session/set-cursor $ app.util/DateInfo :year (this-day :year) :month (this-day :month) :day (this-day :day)
                 div
                   {} (:class-name css/column)
@@ -1339,7 +1334,7 @@
                   <> preview-mood style-preview
                   <> preview-highlight style-preview
           :examples $ []
-          :schema $ quote $ Fn Number Number app.comp.month/LuxonDateTime app.util/DateInfo app.util/DateInfo
+          :schema $ quote $ Fn Number Number LuxonDateTime app.util/DateInfo app.util/DateInfo
             Map String $ Map Tag String
             -> respo.schema/Component
             :features :js-ffi
@@ -1365,7 +1360,7 @@
                     <> | $ str-spaced css/font-fancy style-date-hint
               comp-divider "|32px 0"
               respo.core/show
-                option:some? $ :time diary
+                .some? $ :time diary
                 div
                   {}
                     :class-name $ str-spaced css/column css/flex
@@ -1392,27 +1387,27 @@
                   comp-divider "|32px 0"
               =< nil 16
               if
-                option:some? $ :time diary
+                .some? $ :time diary
                 div ({})
                   button
                     {} (:class-name css/button)
                       :on-click $ fn (e d!)
-                        hint-fn $ Fn (Map Tag Dynamic)
-                          Fn Dynamic & Dynamic $ -> Unit
-                          -> Dynamic
-                        d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data (Option :none)
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn app.schema/ClientOp $ -> Unit
+                          -> Unit
+                        d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data None
                     <> "|Edit diary"
                 div ({})
                   button
                     {} (:class-name css/button-primary)
                       :on-click $ fn (e d!)
-                        hint-fn $ Fn (Map Tag Dynamic)
-                          Fn Dynamic & Dynamic $ -> Unit
-                          -> Dynamic
-                        d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data (Option :none)
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn app.schema/ClientOp $ -> Unit
+                          -> Unit
+                        d! $ app.schema/ClientOp :router/change $ app.schema/Router :name :diary :data None
                     <> "|Add diary"
           :examples $ []
-          :schema $ quote $ Fn app.comp.month/LuxonDateTime app.schema/Diary (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn LuxonDateTime app.schema/Diary (-> respo.schema/Component) (:features :js-ffi)
         'comp-divider $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-divider (padding)
             div $ {} $ :style
@@ -1495,66 +1490,66 @@
                     [] n $ span $ {} (:inner-text n)
                       :class-name $ str-spaced css/center css-month-entry
                       :on-click $ fn (e d!)
-                        hint-fn $ Fn (Map Tag Dynamic)
-                          Fn Dynamic & Dynamic $ -> Unit
-                          -> Dynamic
-                        d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :none) :month (Option :some n) :day (Option :none)
+                        hint-fn $ Fn respo.schema/RespoEvent
+                          Fn app.schema/ClientOp $ -> Unit
+                          -> Unit
+                        d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year None :month (Some n) :day None
               div
                 {} $ :class-name css/row-middle
                 span $ {} (:inner-text |2026) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2026) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2026) :month None :day None
                 span $ {} (:inner-text |2025) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2025) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2025) :month None :day None
                 span $ {} (:inner-text |2024) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2024) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2024) :month None :day None
                 span $ {} (:inner-text |2023) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2023) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2023) :month None :day None
                 span $ {} (:inner-text |2022) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2022) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2022) :month None :day None
                 span $ {} (:inner-text |2021) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2021) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2021) :month None :day None
                 span $ {} (:inner-text |2020) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2020) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2020) :month None :day None
                 span $ {} (:inner-text |2019) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2019) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2019) :month None :day None
                 span $ {} (:inner-text |2018) (:class-name css-year-entry)
                   :on-click $ fn (e d!)
-                    hint-fn $ Fn (Map Tag Dynamic)
-                      Fn Dynamic & Dynamic $ -> Unit
-                      -> Dynamic
-                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Option :some 2018) :month (Option :none) :day (Option :none)
+                    hint-fn $ Fn respo.schema/RespoEvent
+                      Fn app.schema/ClientOp $ -> Unit
+                      -> Unit
+                    d! $ app.schema/ClientOp :session/merge-cursor $ app.schema/CursorPatch :year (Some 2018) :month None :day None
           :examples $ []
           :schema $ quote $ Fn (-> respo.schema/Element)
         'comp-weekdays $ %{} 'CodeEntry (:doc |)
@@ -1630,7 +1625,7 @@
                   , false
                 true $ includes? (#{} 6 7) (day :weekday)
           :examples $ []
-          :schema $ quote $ Fn app.comp.month/LuxonDateTime (-> Bool) (:features :js-ffi)
+          :schema $ quote $ Fn LuxonDateTime (-> Bool) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry
             :name |checked-holiday-map-lookup-preserves-classification
@@ -1646,7 +1641,7 @@
               .!fromObject DateTime $ to-js-data date-info
               , 'app.comp.month/LuxonDateTime
           :examples $ []
-          :schema $ quote $ Fn app.util/DateInfo (-> app.comp.month/LuxonDateTime) (:features :js-ffi)
+          :schema $ quote $ Fn app.util/DateInfo (-> LuxonDateTime) (:features :js-ffi)
           :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-map-keeps-method-dispatch)
             :code $ quote $ assert= |2024-01-01
               (luxon-from-map (app.util/DateInfo :year 2024 :month 1 :day 1))
@@ -1656,7 +1651,7 @@
           :code $ quote $ defn luxon-from-millis (timestamp)
             js-cast (.!fromMillis DateTime timestamp) 'app.comp.month/LuxonDateTime
           :examples $ []
-          :schema $ quote $ Fn Number (-> app.comp.month/LuxonDateTime) (:features :js-ffi)
+          :schema $ quote $ Fn Number (-> LuxonDateTime) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-luxon-millis-keeps-method-dispatch)
             :code $ quote $ assert= |2024-01-01
@@ -1748,7 +1743,7 @@
                 raise $ str-spaced |failed |to |parse |holiday |data: message
           :examples $ []
           :schema $ quote $ Fn String
-            -> $ List app.comp.month/HolidayEntry
+            -> $ List HolidayEntry
           :tests $ [] $ %{} 'TestEntry (:name |decodes-legacy-holiday-maps)
             :code $ quote $ do
               is= 12 $ .len $ parse-holidays (inline |2018.cirru)
@@ -1766,7 +1761,7 @@
           :code $ quote $ defn same-luxon-day? (a b)
             and (a .has-same? b |month) (a .has-same? b |day)
           :examples $ []
-          :schema $ quote $ Fn app.comp.month/LuxonDateTime app.comp.month/LuxonDateTime (-> Bool) (:features :js-ffi)
+          :schema $ quote $ Fn LuxonDateTime LuxonDateTime (-> Bool) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'special-days $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def special-days
@@ -1869,7 +1864,7 @@
               hint-fn $ Fn (Map Tag Dynamic)
                 Fn Dynamic & Dynamic $ -> Unit
                 -> Unit
-              dispatch! $ app.schema/ClientOp :router/change $ app.schema/Router :name route :data (Option :none)
+              dispatch! $ app.schema/ClientOp :router/change $ app.schema/Router :name route :data None
           :examples $ []
           :schema $ quote $ Fn Tag
             -> $ Fn (Map Tag Dynamic)
@@ -1890,7 +1885,7 @@
                 assert= &unit $ handler ({}) dispatch!
                 assert= 1 @calls
                 assert=
-                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :home :data (Option :none)
+                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :home :data None
                   , @recorded
             %{} 'TestEntry (:name |dispatch-data-returns-unit-once)
               :code $ quote $ let
@@ -1906,7 +1901,7 @@
                 assert= &unit $ handler ({}) dispatch!
                 assert= 1 @calls
                 assert=
-                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :data :data (Option :none)
+                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :data :data None
                   , @recorded
             %{} 'TestEntry (:name |dispatch-profile-returns-unit-once)
               :code $ quote $ let
@@ -1922,7 +1917,7 @@
                 assert= &unit $ handler ({}) dispatch!
                 assert= 1 @calls
                 assert=
-                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :profile :data (Option :none)
+                  format-cirru-edn $ app.schema/ClientOp :router/change $ app.schema/Router :name :profile :data None
                   , @recorded
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.navigation
@@ -1962,14 +1957,15 @@
                   {} (:class-name css/button)
                     :style $ {} (:color :red) (:border-color :red)
                     :on-click $ fn (e d!)
-                      hint-fn $ Fn (Map Tag Dynamic)
-                        Fn Dynamic & Dynamic $ -> Unit
-                        -> Dynamic
+                      hint-fn $ Fn respo.schema/RespoEvent
+                        Fn app.schema/ClientOp $ -> Unit
+                        -> Unit
                       d! $ app.schema/ClientOp :user/log-out
                       js/localStorage.removeItem $ :storage-key config/site
+                      , &unit
                   <> "|Log out"
           :examples $ []
-          :schema $ quote $ Fn app.schema/ClientUser (Map Number String) (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn schema/ClientUser (Map Number String) (-> respo.schema/Component) (:features :js-ffi)
           :tags $ #{} :js-ffi
         'css-member-label $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-member-label
@@ -2013,27 +2009,26 @@
           :schema $ quote $ Fn (Option String) (-> Number)
           :tests $ []
             %{} 'TestEntry (:name |uses-configured-default-when-port-is-absent)
-              :code $ quote $ assert= (:port site)
-                resolve-port $ Option :none
+              :code $ quote $ assert= (:port site) (resolve-port None)
             %{} 'TestEntry (:name |unwraps-valid-port-result)
               :code $ quote $ assert= 6001
-                resolve-port $ Option :some |6001
+                resolve-port $ Some |6001
             %{} 'TestEntry (:name |keeps-explicit-zero-port)
               :code $ quote $ assert= 0
-                resolve-port $ Option :some |0
+                resolve-port $ Some |0
             %{} 'TestEntry (:name |rejects-invalid-port-text)
               :code $ quote $ each ([] | |oops |6001oops)
                 fn (text)
                   assert= "|expected a numeric server port" $ try
                     do
-                      resolve-port $ Option :some text
+                      resolve-port $ Some text
                       , |unexpected-success
                     fn (message) message
         'site $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def site
             SiteConfig :port 11008 :title |Diary :icon |http://cdn.tiye.me/logo/topix.png :dev-ui |http://localhost:8100/main.css :release-ui |http://cdn.tiye.me/favored-fonts/main.css :cdn-url |http://cdn.tiye.me/diary/ :cdn-folder |tiye.me:cdn/diary :theme |#eeeeff :storage-key |diary :storage-file |storage.cirru
           :examples $ []
-          :schema $ quote app.config/SiteConfig
+          :schema $ quote SiteConfig
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.config
     'app.schema $ %{} 'FileEntry
@@ -2156,7 +2151,7 @@
           :code $ quote $ def database
             Database :sessions ({}) :users ({}) :today $ app.util/DateInfo :year 2018 :month 6 :day 18
           :examples $ []
-          :schema $ quote app.schema/Database
+          :schema $ quote Database
         'decode-client-dispatch-op $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-dispatch-op (op)
             if (enum? op)
@@ -2205,11 +2200,11 @@
                     raise |Expected-nominal-client-operation
               raise |Expected-client-operation
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> app.schema/ClientOp)
+          :schema $ quote $ Fn Dynamic (-> ClientOp)
           :tests $ []
             %{} 'TestEntry (:name |nominal-operation-preserves-payload)
               :code $ quote $ let
-                  op $ ClientOp :router/change $ Router :name :data :data (Option :none)
+                  op $ ClientOp :router/change $ Router :name :data :data None
                 assert= op $ decode-client-dispatch-op op
             %{} 'TestEntry (:name |anonymous-local-states-only)
               :code $ quote $ assert=
@@ -2234,7 +2229,7 @@
                 []
                   ClientOp :session/remove-message $ Message :id |one :text |notice
                   ClientOp :session/set-cursor $ app.util/DateInfo :year 2024 :month 2 :day 29
-                  ClientOp :session/merge-cursor $ CursorPatch :year (Option :none) :month (Option :some 3) :day $ Option :none
+                  ClientOp :session/merge-cursor $ CursorPatch :year None :month (Some 3) :day None
                   ClientOp :router/change router
                   ClientOp :diary/add-one diary
                   ClientOp :diary/change $ DiaryChange :field :food :date |2024-02-29 :data |lunch
@@ -2252,7 +2247,7 @@
         'decode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-client-store (raw) (decode-map-as raw app.schema/ClientStore)
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) (-> app.schema/ClientStore)
+          :schema $ quote $ Fn (Map Tag Dynamic) (-> ClientStore)
           :tests $ [] $ %{} 'TestEntry (:name |decodes-plain-wire-maps)
             :code $ quote $ let
                 raw $ {} (:logged-in? false) (:reel-length 0) (:count 1) (:color |#123456)
@@ -2269,33 +2264,31 @@
                 assert= 9 $ :id $ :session decoded
         'diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def diary
-            Diary :date (Option :none) :food | :sleep | :mood | :place | :highlight | :met | :exercise | :pains | :text | :time $ Option :none
+            Diary :date None :food | :sleep | :mood | :place | :highlight | :met | :exercise | :pains | :text | :time None
           :examples $ []
-          :schema $ quote app.schema/Diary
+          :schema $ quote Diary
         'notification $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def notification (Notification :id | :kind :info :text |)
           :examples $ []
-          :schema $ quote app.schema/Notification
+          :schema $ quote Notification
         'page $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def page
-            Page :id | :title | :time $ Option :none
+          :code $ quote $ def page (Page :id | :title | :time None)
           :examples $ []
-          :schema $ quote app.schema/Page
+          :schema $ quote Page
         'router $ %{} 'CodeEntry (:doc |)
-          :code $ quote $ def router
-            Router :name :home :data $ Option :none
+          :code $ quote $ def router (Router :name :home :data None)
           :examples $ []
-          :schema $ quote app.schema/Router
+          :schema $ quote Router
         'session $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def session
-            Session :user-id (Option :none) :id 0 :nickname | :router router :messages ({}) :cursor $ get-native-today!
+            Session :user-id None :id 0 :nickname | :router router :messages ({}) :cursor $ get-native-today!
           :examples $ []
-          :schema $ quote app.schema/Session
+          :schema $ quote Session
         'try-decode-client-store $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-decode-client-store (raw) (try-decode-map-as raw app.schema/ClientStore)
           :examples $ []
           :schema $ quote $ Fn (Map Tag Dynamic)
-            -> $ Result app.schema/ClientStore String
+            -> $ Result ClientStore String
           :tests $ [] $ %{} 'TestEntry (:name |rejects-incomplete-patches)
             :code $ quote $ match
               try-decode-client-store $ {} $ :logged-in? false
@@ -2348,9 +2341,9 @@
               :tags $ #{} :regression
         'user $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def user
-            User :name | :id | :nickname | :avatar (Option :none) :password | :diaries $ {}
+            User :name | :id | :nickname | :avatar None :password | :diaries $ {}
           :examples $ []
-          :schema $ quote app.schema/User
+          :schema $ quote User
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.schema
           :require $ app.util :refer $ get-native-today!
@@ -2359,7 +2352,7 @@
         '*client-caches $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *client-caches ({})
           :examples $ []
-          :schema $ quote $ Ref (Map Number app.schema/ClientStore)
+          :schema $ quote $ Ref (Map Number schema/ClientStore)
         '*initial-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *initial-db
             if
@@ -2367,18 +2360,18 @@
               do (println "|Found local EDN data") (load-stored-db! storage-file)
               do (println "|Found no data") schema/database
           :examples $ []
-          :schema $ quote $ Ref app.schema/Database
+          :schema $ quote $ Ref schema/Database
         '*reader-reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reader-reel @*reel
           :examples $ []
-          :schema $ quote $ Ref (cumulo-reel.core/ReelState app.schema/Database)
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState schema/Database)
         '*reel $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defref *reel
             %{} cumulo-reel.core/ReelState (:base @*initial-db) (:db @*initial-db)
               :records $ []
               :merged? false
           :examples $ []
-          :schema $ quote $ Ref (cumulo-reel.core/ReelState app.schema/Database)
+          :schema $ quote $ Ref (cumulo-reel.core/ReelState schema/Database)
         'check-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn check-today! ()
             let
@@ -2413,7 +2406,7 @@
                 _ $ reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
               , &unit
           :examples $ []
-          :schema $ quote $ Fn app.schema/Op Number (-> Unit)
+          :schema $ quote $ Fn schema/Op Number (-> Unit)
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -2437,7 +2430,7 @@
                 (:err reason)
                   raise $ str |Invalid-stored-database:- reason
           :examples $ []
-          :schema $ quote $ Fn String (-> app.schema/Database)
+          :schema $ quote $ Fn String (-> schema/Database)
           :tests $ []
             %{} 'TestEntry
               :name |invalid-input-preserves-storage-and-existing-backup
@@ -2552,7 +2545,7 @@
               println $ str "|Migrated storage to typed data; legacy backup: " backup-file
               , &unit
           :examples $ []
-          :schema $ quote $ Fn String String app.schema/Database (-> Unit)
+          :schema $ quote $ Fn String String schema/Database (-> Unit)
         'normalize-client-payload $ %{} 'CodeEntry
           :doc "|Convert a nominal legacy operation payload to a map without unbounded recursion. Legacy clients sent nil for absent optional fields; those entries are dropped so the decoder fills `Option :none`."
           :code $ quote $ defn normalize-client-payload (value)
@@ -2624,7 +2617,7 @@
                   (:reel/merge) (schema/Op :reel/merge)
                   _ $ raise |Unsupported-client-operation
           :examples $ []
-          :schema $ quote $ Fn String (-> app.schema/Op)
+          :schema $ quote $ Fn String (-> schema/Op)
           :tests $ []
             %{} 'TestEntry (:name |decodes-legacy-map-date-payload)
               :code $ quote $ let
@@ -2706,7 +2699,7 @@
                         router $ assert-type payload 'app.schema/Router
                       do
                         assert= :diary $ :name router
-                        assert= (Option :none) (:data router)
+                        assert= None $ :data router
                   _ $ raise |Expected-router-operation
               :tags $ #{} :regression
             %{} 'TestEntry (:name |fills-omitted-cursor-patch-fields)
@@ -2719,8 +2712,8 @@
                     let
                         patch $ assert-type payload 'app.schema/CursorPatch
                       do
-                        assert= (Option :some 9) (:month patch)
-                        assert= (Option :none) (:year patch)
+                        assert= (Some 9) (:month patch)
+                        assert= None $ :year patch
                   _ $ raise |Expected-cursor-patch-operation
               :tags $ #{} :regression
             %{} 'TestEntry (:name |preserves-nominal-operation-payload)
@@ -2734,11 +2727,11 @@
               :code $ quote $ each
                 []
                   struct-with schema/diary
-                    :date $ Option :some |2026-09-29
+                    :date $ Some |2026-09-29
                     :text |entry
-                    :time $ Option :some 123
+                    :time $ Some 123
                   struct-with schema/diary
-                    :date $ Option :some |2026-09-29
+                    :date $ Some |2026-09-29
                     :text |entry
                 fn (diary)
                   hint-fn $ Fn app.schema/Diary $ -> Unit
@@ -2751,7 +2744,7 @@
                   user $ struct-with schema/user (:id |user-1) (:name |tester)
                   session $ %{} schema/Session (:id 1) (:nickname |) (:router schema/router)
                     :messages $ {}
-                    :user-id $ Option :some |user-1
+                    :user-id $ Some |user-1
                     :cursor $ %{} app.util/DateInfo (:year 2026) (:month 9) (:day 29)
                   db $ %{} schema/Database
                     :users $ {} $ |user-1 user
@@ -2769,7 +2762,7 @@
                   saved $ .unwrap $ &map:get (:diaries updated-user) |2026-09-29
                 do
                   assert= |saved-entry $ :text saved
-                  assert= (Option :some 123) (:time saved)
+                  assert= (Some 123) (:time saved)
               :tags $ #{} :regression
             %{} 'TestEntry (:name |updates-cursor-from-partial-map-payload)
               :code $ quote $ let
@@ -2896,7 +2889,7 @@
                       swap! *client-caches assoc sid new-store
                 , &unit
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.core/ReelState app.schema/Database) (-> Unit)
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState schema/Database) (-> Unit)
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
             :code $ quote $ let
                 before @*client-caches
@@ -2908,7 +2901,7 @@
           :code $ quote $ defn updater-from-record (db op sid op-id op-time)
             updater db (decode-map-as op 'app.schema/Op) (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database OpInput SidInput IdInput TimeInput (-> app.schema/Database) (:generics OpInput SidInput IdInput TimeInput)
+          :schema $ quote $ Fn schema/Database OpInput SidInput IdInput TimeInput (-> schema/Database) (:generics OpInput SidInput IdInput TimeInput)
         'validate-storage-migration $ %{} 'CodeEntry
           :doc "|Check the typed temporary file without changing storage, backups or the candidate."
           :code $ quote $ defn validate-storage-migration (path)
@@ -2985,7 +2978,7 @@
           :code $ quote $ defn format-stored-db (db)
             format-cirru-edn $ struct-with db $ :sessions ({})
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database (-> String)
+          :schema $ quote $ Fn schema/Database (-> String)
         'normalize-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn normalize-stored-db (raw)
             let
@@ -3046,13 +3039,13 @@
                 assert= false $ contains? diaries |2026-09-28
                 assert= |legacy-entry $ :text diary
                 assert= | $ :sleep diary
-                assert= (Option :none) (:avatar user)
-                assert= (Option :some |2026-09-29) (:date diary)
-                assert= (Option :some 123) (:time diary)
+                assert= None $ :avatar user
+                assert= (Some |2026-09-29) (:date diary)
+                assert= (Some 123) (:time diary)
                 let
                     no-time $ .unwrap $ &map:get diaries |2026-09-30
-                  assert= (Option :none) (:date no-time)
-                  assert= (Option :none) (:time no-time)
+                  assert= None $ :date no-time
+                  assert= None $ :time no-time
                 match
                   parse-stored-db-with-format $ format-stored-db db
                   (:typed typed-db) (assert= db typed-db)
@@ -3082,7 +3075,7 @@
               (:typed db) db
               (:legacy db) db
           :examples $ []
-          :schema $ quote $ Fn String (-> app.schema/Database)
+          :schema $ quote $ Fn String (-> schema/Database)
         'parse-stored-db-with-format $ %{} 'CodeEntry
           :doc "|Decode typed storage directly and mark data that required legacy normalization."
           :code $ quote $ defn parse-stored-db-with-format (text)
@@ -3093,7 +3086,7 @@
                   normalize-stored-db $ parse-cirru-edn text
                   , app.schema/Database
           :examples $ []
-          :schema $ quote $ Fn String (-> app.storage/StoredDbFormat)
+          :schema $ quote $ Fn String (-> StoredDbFormat)
           :tests $ []
             %{} 'TestEntry (:name |legacy-data-serializes-as-typed-storage)
               :code $ quote $ let
@@ -3121,9 +3114,9 @@
                     let
                         user $ .unwrap $ &map:get (:users db) |u1
                         diary $ .unwrap $ &map:get (:diaries user) |2026-09-29
-                      assert= (Option :none) (:avatar user)
-                      assert= (Option :some |2026-09-29) (:date diary)
-                      assert= (Option :some 123) (:time diary)
+                      assert= None $ :avatar user
+                      assert= (Some |2026-09-29) (:date diary)
+                      assert= (Some 123) (:time diary)
                       assert= |hi $ :text diary
                   _ $ raise |Expected-legacy-storage
               :tags $ #{} :regression
@@ -3156,7 +3149,7 @@
                 Result :err message
           :examples $ []
           :schema $ quote $ Fn String
-            -> $ Result app.storage/StoredDbFormat String
+            -> $ Result StoredDbFormat String
           :tests $ []
             %{} 'TestEntry (:name |preserves-typed-and-legacy-result-variants)
               :code $ quote $ let
@@ -3268,11 +3261,11 @@
                 color $ rand-hex-color!
                 logged-out $ schema/ClientStore :logged-in? false :session session :reel-length reel-length :router
                   schema/ClientRouter :name (:name router) :data nil
-                  , :today (:today db) :count session-count :color color :user (Option :none) :diary $ Option :none
+                  , :today (:today db) :count session-count :color color :user None :diary None
               match (:user-id session)
                 (:some user-id-value)
                   let
-                      user-id $ assert-type user-id-value 'String
+                      user-id $ assert-type user-id-value String
                     match
                       get (:users db) user-id
                       (:some user)
@@ -3286,25 +3279,25 @@
                             current-diary $ get (:diaries user)
                               format-to-date $ :cursor session
                           schema/ClientStore :logged-in? true :session session :reel-length reel-length :router client-router :today (:today db) :count session-count :color color :user
-                            Option :some $ twig-user user
+                            Some $ twig-user user
                             , :diary current-diary
                       (:none) logged-out
                 (:none) logged-out
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Session Number (-> app.schema/ClientStore)
+          :schema $ quote $ Fn schema/Database schema/Session Number (-> schema/ClientStore)
           :tests $ []
             %{} 'TestEntry (:name |optional-fields-round-trip-over-wire)
               :code $ quote $ let
                   today $ app.util/DateInfo :year 2026 :month 9 :day 29
                   entry $ struct-with schema/diary
-                    :date $ Option :some |2026-09-29
+                    :date $ Some |2026-09-29
                     :text |entry
-                    :time $ Option :some 123
+                    :time $ Some 123
                   user $ struct-with schema/user (:id |user-1) (:name |tester) (:nickname |Tester)
-                    :avatar $ Option :some |avatar.png
+                    :avatar $ Some |avatar.png
                     :diaries $ {} $ |2026-09-29 entry
                   guest $ struct-with schema/session (:id 1) (:cursor today)
-                  member $ struct-with guest $ :user-id (Option :some |user-1)
+                  member $ struct-with guest $ :user-id (Some |user-1)
                   db $ schema/Database :users
                     {} $ |user-1 user
                     , :sessions
@@ -3327,27 +3320,26 @@
                   member-store $ send member
                   guest-store $ send guest
                 do
-                  assert= (Option :some |user-1)
+                  assert= (Some |user-1)
                     :user-id $ :session member-store
-                  assert= (Option :some |avatar.png)
+                  assert= (Some |avatar.png)
                     :avatar $ .unwrap $ :user member-store
-                  assert= (Option :some entry) (:diary member-store)
+                  assert= (Some entry) (:diary member-store)
                   assert= 7 $ :reel-length member-store
-                  assert= (Option :none)
-                    :user-id $ :session guest-store
-                  assert= (Option :none) (:user guest-store)
-                  assert= (Option :none) (:diary guest-store)
+                  assert= None $ :user-id $ :session guest-store
+                  assert= None $ :user guest-store
+                  assert= None $ :diary guest-store
               :tags $ #{} :regression
             %{} 'TestEntry (:name |incremental-option-patches-apply-on-client)
               :code $ quote $ let
                   today $ app.util/DateInfo :year 2026 :month 9 :day 29
                   entry $ struct-with schema/diary
-                    :date $ Option :some |2026-09-29
+                    :date $ Some |2026-09-29
                     :text |entry
-                    :time $ Option :some 123
+                    :time $ Some 123
                   edited $ struct-with entry (:text |edited) (:mood |calm)
                   guest $ struct-with schema/session (:id 1) (:cursor today)
-                  member $ struct-with guest $ :user-id (Option :some |user-1)
+                  member $ struct-with guest $ :user-id (Some |user-1)
                   store-of $ fn (diaries)
                     hint-fn $ Fn (Map String app.schema/Diary) (-> app.schema/ClientStore)
                     let
@@ -3379,14 +3371,12 @@
                   c2 $ step (:raw c1) s1 s2
                   c3 $ step (:raw c2) s2 s0
                 do
-                  assert= (Option :none)
-                    :diary $ :store c0
-                  assert= (Option :some entry)
+                  assert= None $ :diary $ :store c0
+                  assert= (Some entry)
                     :diary $ :store c1
-                  assert= (Option :some edited)
+                  assert= (Some edited)
                     :diary $ :store c2
-                  assert= (Option :none)
-                    :diary $ :store c3
+                  assert= None $ :diary $ :store c3
               :tags $ #{} :regression
         'twig-member-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-member-entry (users sid session)
@@ -3398,7 +3388,7 @@
                   (:none) (MapEntryDecision :drop)
               (:none) (MapEntryDecision :drop)
           :examples $ []
-          :schema $ quote $ Fn (Map String app.schema/User) Number app.schema/Session
+          :schema $ quote $ Fn (Map String schema/User) Number schema/Session
             -> $ MapEntryDecision Number String
         'twig-members $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-members (sessions users)
@@ -3406,23 +3396,21 @@
               hint-fn $ Fn Number app.schema/Session $ -> (MapEntryDecision Number String)
               twig-member-entry users sid session
           :examples $ []
-          :schema $ quote $ Fn (Map Number app.schema/Session) (Map String app.schema/User)
+          :schema $ quote $ Fn (Map Number schema/Session) (Map String schema/User)
             -> $ Map Number String
           :tests $ [] $ %{} 'TestEntry (:name |keeps-number-keys-and-drops-unresolved-users)
             :code $ quote $ let
                 make-session $ fn (id user-id)
                   hint-fn $ Fn Number (Option String) (-> app.schema/Session)
-                  schema/Session :id id :user-id user-id :nickname | :messages ({}) :router
-                    schema/Router :name :home :data $ Option :none
-                    , :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
+                  schema/Session :id id :user-id user-id :nickname | :messages ({}) :router (schema/Router :name :home :data None) :cursor $ app.util/DateInfo :year 2026 :month 9 :day 30
                 users $ assert-type
-                  {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar (Option :none) :diaries ({})
+                  {} $ |u $ schema/User :name |Ada :id |u :nickname |Ada :password | :avatar None :diaries ({})
                   Map String app.schema/User
                 sessions $ assert-type
                   {}
-                    7 $ make-session 7 $ Option :some |u
-                    8 $ make-session 8 $ Option :none
-                    9 $ make-session 9 $ Option :some |missing
+                    7 $ make-session 7 $ Some |u
+                    8 $ make-session 8 None
+                    9 $ make-session 9 $ Some |missing
                   Map Number app.schema/Session
               assert=
                 {} $ 7 |Ada
@@ -3437,13 +3425,13 @@
         'twig-overview $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-overview (diaries cursor)
             let
-                month-prefix $ slice (format-to-date cursor) 0 $ Option :some 8
+                month-prefix $ slice (format-to-date cursor) 0 $ Some 8
               filter-map-kv diaries $ fn (date diary)
                 hint-fn $ Fn String app.schema/Diary $ ->
                   MapEntryDecision String $ Map Tag String
                 if (starts-with? date month-prefix) (twig-overview-entry date diary) (MapEntryDecision :drop)
           :examples $ []
-          :schema $ quote $ Fn (Map String app.schema/Diary) app.util/DateInfo
+          :schema $ quote $ Fn (Map String schema/Diary) app.util/DateInfo
             -> $ Map String $ Map Tag String
           :tests $ [] $ %{} 'TestEntry (:name |only-builds-selected-month)
             :code $ quote $ let
@@ -3462,12 +3450,12 @@
               :mood $ :mood diary
               :highlight $ :highlight diary
           :examples $ []
-          :schema $ quote $ Fn String app.schema/Diary
+          :schema $ quote $ Fn String schema/Diary
             -> $ MapEntryDecision String $ Map Tag String
         'twig-personal-data $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-data (diaries) (filter-map-kv diaries twig-personal-entry)
           :examples $ []
-          :schema $ quote $ Fn (Map String app.schema/Diary)
+          :schema $ quote $ Fn (Map String schema/Diary)
             -> $ Map String $ Map Tag Dynamic
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
@@ -3482,7 +3470,7 @@
               :date $ :date diary
               :time $ :time diary
           :examples $ []
-          :schema $ quote $ Fn String app.schema/Diary
+          :schema $ quote $ Fn String schema/Diary
             -> $ MapEntryDecision String $ Map Tag Dynamic
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.container
@@ -3497,7 +3485,7 @@
           :code $ quote $ defn twig-user (user)
             schema/ClientUser :name (:name user) :id (:id user) :nickname (:nickname user) :avatar $ :avatar user
           :examples $ []
-          :schema $ quote $ Fn app.schema/User (-> app.schema/ClientUser)
+          :schema $ quote $ Fn schema/User (-> schema/ClientUser)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.user
           :require $ app.schema :as schema
@@ -3533,7 +3521,7 @@
               (:today date-info) (diary/set-today db date-info sid op-id op-time)
               _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Op Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require (app.updater.session :as session) (app.updater.user :as user) (app.updater.router :as router) (app.updater.diary :as diary) (app.schema :as schema)
@@ -3549,14 +3537,14 @@
                   match (:user-id session-data)
                     (:some uid-value)
                       let
-                          uid $ assert-type uid-value 'String
+                          uid $ assert-type uid-value String
                         match
                           get (:users db) uid
                           (:some user)
                             match (:date diary-data)
                               (:some date)
                                 let
-                                    next-diary $ struct-with diary-data $ :time (Option :some op-time)
+                                    next-diary $ struct-with diary-data $ :time (Some op-time)
                                     next-user $ struct-with user $ :diaries
                                       assoc (:diaries user) date next-diary
                                   struct-with db $ :users $ assoc (:users db) uid next-user
@@ -3565,7 +3553,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Diary Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Diary Number String Number (-> schema/Database)
         'change $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn change (db change-data sid op-id op-time)
             let
@@ -3575,7 +3563,7 @@
                   match (:user-id session-data)
                     (:some uid-value)
                       let
-                          uid $ assert-type uid-value 'String
+                          uid $ assert-type uid-value String
                         match
                           get (:users db) uid
                           (:some user)
@@ -3614,8 +3602,8 @@
                                                   struct-with old-diary $ :text $ :data change-data
                                                   , old-diary
                                 next-diary $ struct-with changed-diary
-                                  :date $ Option :some date
-                                  :time $ Option :some op-time
+                                  :date $ Some date
+                                  :time $ Some op-time
                                 next-user $ struct-with user $ :diaries
                                   assoc (:diaries user) date next-diary
                               struct-with db $ :users $ assoc (:users db) uid next-user
@@ -3623,7 +3611,7 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/DiaryChange Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/DiaryChange Number String Number (-> schema/Database)
         'copy-yesterday $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn copy-yesterday (db date-info sid op-id op-time)
             let
@@ -3647,7 +3635,7 @@
                   match (:user-id session-data)
                     (:some uid-value)
                       let
-                          uid $ assert-type uid-value 'String
+                          uid $ assert-type uid-value String
                         match
                           get (:users db) uid
                           (:some user)
@@ -3656,8 +3644,8 @@
                               (:some yesterday-diary)
                                 let
                                     next-diary $ struct-with yesterday-diary
-                                      :date $ Option :some today
-                                      :time $ Option :some op-time
+                                      :date $ Some today
+                                      :time $ Some op-time
                                     next-user $ struct-with user $ :diaries
                                       assoc (:diaries user) today next-diary
                                   struct-with db $ :users $ assoc (:users db) uid next-user
@@ -3666,11 +3654,11 @@
                     (:none) db
                 (:none) db
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database app.util/DateInfo Number String Number (-> schema/Database)
         'set-today $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-today (db op-data sid op-id op-time) (assoc db :today op-data)
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database app.util/DateInfo Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.diary
           :require (app.schema :as schema)
@@ -3690,7 +3678,7 @@
                 next-session $ struct-with session $ :router router-data
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Router Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Router Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.router
           :require $ app.schema :as schema
@@ -3701,12 +3689,12 @@
             struct-with db $ :sessions $ assoc (:sessions db) sid
               struct-with schema/session $ :id sid
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'disconnect $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn disconnect (db sid op-id op-time)
             struct-with db $ :sessions $ dissoc (:sessions db) sid
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'merge-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn merge-cursor (db patch sid op-id op-time)
             let
@@ -3721,7 +3709,7 @@
                 next-session $ struct-with session $ :cursor next-cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/CursorPatch Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/CursorPatch Number String Number (-> schema/Database)
         'merge-cursor-value $ %{} 'CodeEntry (:doc "|Apply an optional cursor patch to a date.")
           :code $ quote $ defn merge-cursor-value (cursor patch)
             match (:year patch)
@@ -3737,7 +3725,7 @@
                         struct-with cursor $ :day value
                       (:none) cursor
           :examples $ []
-          :schema $ quote $ Fn app.util/DateInfo app.schema/CursorPatch (-> app.util/DateInfo)
+          :schema $ quote $ Fn app.util/DateInfo schema/CursorPatch (-> app.util/DateInfo)
         'remove-message $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn remove-message (db message sid op-id op-time)
             let
@@ -3751,7 +3739,7 @@
                   dissoc (:messages session) (:id message)
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.schema/Message Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Message Number String Number (-> schema/Database)
         'set-cursor $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn set-cursor (db cursor sid op-id op-time)
             let
@@ -3764,7 +3752,7 @@
                 next-session $ struct-with session $ :cursor cursor
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database app.util/DateInfo Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database app.util/DateInfo Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.session
           :require $ app.schema :as schema
@@ -3783,13 +3771,13 @@
                       MapEntryDecision :drop
               first $ &set:to-list $ distinct-values matching-users
           :examples $ []
-          :schema $ quote $ Fn (Map String app.schema/User) String
-            -> $ Option app.schema/User
+          :schema $ quote $ Fn (Map String schema/User) String
+            -> $ Option schema/User
           :tests $ [] $ %{} 'TestEntry (:name |finds-typed-user-by-name)
             :code $ quote $ let
                 user $ %{} schema/User (:name |chen) (:id |user-1) (:nickname |chen) (:password |unused-hash)
                   :diaries $ {}
-                  :avatar $ Option :none
+                  :avatar None
                 users $ {} $ |user-1 user
               do
                 match (find-user-by-name users |chen)
@@ -3814,7 +3802,7 @@
                   (:some user)
                     if
                       = (md5 password) (:password user)
-                      struct-with session $ :user-id $ Option :some (:id user)
+                      struct-with session $ :user-id $ Some (:id user)
                       struct-with session $ :messages $ assoc (:messages session) op-id
                         schema/Message :id op-id :text $ str "|Wrong password for " username
                   (:none)
@@ -3822,7 +3810,7 @@
                       schema/Message :id op-id :text $ str "|No user named: " username
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database String String Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database String String Number String Number (-> schema/Database)
         'log-out $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn log-out (db sid op-id op-time)
             let
@@ -3832,10 +3820,10 @@
                     (:some found) found
                     (:none) schema/session
                   , 'app.schema/Session
-                next-session $ struct-with session $ :user-id (Option :none)
+                next-session $ struct-with session $ :user-id None
               struct-with db $ :sessions $ assoc (:sessions db) sid next-session
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database Number String Number (-> schema/Database)
         'sign-up $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn sign-up (db username password sid op-id op-time)
             let
@@ -3852,15 +3840,15 @@
                       assoc (:messages session) op-id $ schema/Message :id op-id :text $ str "|Name is taken: " username
                   struct-with db $ :sessions $ assoc (:sessions db) sid next-session
                 let
-                    next-session $ struct-with session $ :user-id (Option :some op-id)
+                    next-session $ struct-with session $ :user-id (Some op-id)
                     next-user $ struct-with schema/user (:id op-id) (:name username) (:nickname username)
                       :password $ md5 password
-                      :avatar $ Option :none
+                      :avatar None
                   struct-with db
                     :sessions $ assoc (:sessions db) sid next-session
                     :users $ assoc (:users db) op-id next-user
           :examples $ []
-          :schema $ quote $ Fn app.schema/Database String String Number String Number (-> app.schema/Database)
+          :schema $ quote $ Fn schema/Database String String Number String Number (-> schema/Database)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater.user
           :require
@@ -3893,7 +3881,7 @@
                 str $ :day date-info
                 , 2 |0
           :examples $ []
-          :schema $ quote $ Fn app.util/DateInfo (-> String)
+          :schema $ quote $ Fn DateInfo (-> String)
         'get-days-by $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-days-by (year month1)
             cond
@@ -3916,7 +3904,7 @@
                 now $ extract-time $ get-time!
               DateInfo :year now.:year :month now.:month :day now.:day
           :examples $ []
-          :schema $ quote $ Fn (-> app.util/DateInfo)
+          :schema $ quote $ Fn (-> DateInfo)
         'get-today! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-today! ()
             let
@@ -3925,7 +3913,7 @@
                 inc $ now .get-month
                 , :day $ now .get-date
           :examples $ []
-          :schema $ quote $ Fn (-> app.util/DateInfo) (:features :js-ffi)
+          :schema $ quote $ Fn (-> DateInfo) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-calendar-fields)
             :code $ quote $ assert= (DateInfo :year 2024 :month 1 :day 1) (get-today!)
@@ -3945,7 +3933,7 @@
                     DateInfo :year year :month previous-month :day $ get-days-by year previous-month
                   DateInfo :year (dec year) :month 12 :day 31
           :examples $ []
-          :schema $ quote $ Fn (-> app.util/DateInfo) (:features :js-ffi)
+          :schema $ quote $ Fn (-> DateInfo) (:features :js-ffi)
           :tags $ #{} :js-ffi
           :tests $ [] $ %{} 'TestEntry (:name |checked-date-preserves-year-rollover)
             :code $ quote $ assert= (DateInfo :year 2023 :month 12 :day 31) (get-yesterday!)
