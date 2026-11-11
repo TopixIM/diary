@@ -1296,8 +1296,8 @@
                   (:some _) true
                   (:none) false
                 info $ .unwrap-or info-option $ {}
-                preview-mood $ text-or-empty $ .unwrap-or (&map:get info :mood) |
-                preview-highlight $ text-or-empty $ .unwrap-or (&map:get info :highlight) |
+                preview-mood $ .unwrap-or (&map:get info :mood) |
+                preview-highlight $ .unwrap-or (&map:get info :highlight) |
               div
                 {}
                   :class-name $ str-spaced css-cell-size css/center css-day-cell
@@ -1353,7 +1353,7 @@
                   (:some millis)
                     <>
                       let
-                          date $ luxon-from-millis $ required-millis millis
+                          date $ luxon-from-millis millis
                         date .to-format "|(yyyy-MM-dd hh:mm)"
                       str-spaced css/font-fancy style-date-hint
                   (:none)
@@ -1675,7 +1675,7 @@
               d! $ app.schema/ClientOp :session/set-cursor next-cursor
           :examples $ []
           :schema $ quote $ Fn app.util/DateInfo Number
-            Fn Dynamic (& Dynamic) (-> Unit)
+            Fn app.schema/ClientOp $ -> Unit
             -> Unit
           :tests $ []
             %{} 'TestEntry (:name |previous-year)
@@ -1752,11 +1752,6 @@
               is= 14 $ .len $ parse-holidays (inline |2021.cirru)
               is= 13 $ .len $ parse-holidays (inline |2026.cirru)
             :tags $ #{} :regression
-        'required-millis $ %{} 'CodeEntry (:doc "|日记预览需要毫秒时间戳。")
-          :code $ quote $ defn required-millis (value)
-            if (number? value) value $ raise "|expected diary time in milliseconds"
-          :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Number)
         'same-luxon-day? $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn same-luxon-day? (a b)
             and (a .has-same? b |month) (a .has-same? b |day)
@@ -1805,12 +1800,6 @@
               :border-top $ str "|1px solid " $ hsl 0 0 94
           :examples $ []
           :schema $ quote String
-        'text-or-empty $ %{} 'CodeEntry (:doc "|预览字段为字符串，nil 视为空文本。")
-          :code $ quote $ defn text-or-empty (value)
-            if (string? value) value $ if (nil? value) | $ raise
-              str "|expected text, got: " $ type-of value
-          :examples $ []
-          :schema $ quote $ Fn Dynamic (-> String)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.month
           :require
