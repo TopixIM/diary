@@ -4,6 +4,7 @@ import { _$s_states, _$s_store, _$s_awaiting_snapshot_$q_, _$s_resync_attempted_
 import { comp_container } from "../js-out/app.comp.container.mjs";
 import { get_today_$x_ } from "../js-out/app.util.mjs";
 import { on_submit } from "../js-out/app.comp.login.mjs";
+import { event__GT_edn as toRespoEvent } from "../js-out/respo.util.format.mjs";
 import { on_navigate } from "../js-out/app.comp.navigation.mjs";
 import { comp_month_footer } from "../js-out/app.comp.month.mjs";
 import { ClientOp, Op } from "../js-out/app.schema.mjs";
@@ -361,6 +362,7 @@ try {
     assert.equal(core.deref(_$s_states), stateAfterLocalEdit);
     assert.deepEqual(submitted, []);
   }
+  const click = toRespoEvent(new Event("click"));
   for (const [signup, username, password, variant] of [
     [false, "fixture-user", "fixture-password", "user/log-in"],
     [true, "fixture-user", "fixture-password", "user/sign-up"],
@@ -369,7 +371,7 @@ try {
     actions.length = 0;
     order.length = 0;
     submitted.length = 0;
-    const result = on_submit(username, password, signup)(core._$n__$M_(), wrapped);
+    const result = on_submit(username, password, signup)(click, wrapped);
     assert.equal(result, undefined);
     assert.deepEqual(order, ["dispatch", "storage"]);
     assert.equal(actions.length, 1);
@@ -386,7 +388,7 @@ try {
   // silently skipping storage or swallowing an error after dispatch.
   order.length = 0;
   globalThis.localStorage.setItem = () => { order.push("storage"); throw new Error("fixture quota exceeded"); };
-  assert.throws(() => on_submit("fixture-user", "fixture-password", false)(core._$n__$M_(), wrapped), /fixture quota exceeded/);
+  assert.throws(() => on_submit("fixture-user", "fixture-password", false)(click, wrapped), /fixture quota exceeded/);
   assert.deepEqual(order, ["dispatch", "storage"]);
 } finally {
   core.reset_$x_(_$s_states, originalStates);
