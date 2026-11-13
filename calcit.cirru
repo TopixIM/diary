@@ -574,7 +574,7 @@
                   if (= size 1) :none :some
               , false
           :examples $ []
-          :schema $ quote $ Fn Dynamic Number (-> Bool)
+          :schema $ quote $ Fn Input Number (-> Bool) (:generics Input)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.client-state
           :require (app.schema :as schema)
@@ -793,7 +793,7 @@
               if (&struct:matches? value DiaryEditorState) value $ raise "|expected DiaryEditorState in component states"
               raise "|expected DiaryEditorState in component states"
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> DiaryEditorState)
+          :schema $ quote $ Fn Input (-> DiaryEditorState) (:generics Input)
         'comp-diary $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-diary (states date-info diary)
             let
@@ -1110,7 +1110,7 @@
               if (&struct:matches? value LoginState) value $ raise "|expected LoginState in component states"
               raise "|expected LoginState in component states"
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> LoginState)
+          :schema $ quote $ Fn Input (-> LoginState) (:generics Input)
         'comp-login $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-login (states)
             let
@@ -2321,8 +2321,9 @@
                   Result :err |Invalid-credentials
               (:err _) (Result :err |Invalid-credentials)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn Input
             -> $ Result (List String) String
+            :generics Input
           :tests $ []
             %{} 'TestEntry (:name |accepts-exactly-two-strings)
               :code $ quote $ assert=
@@ -2406,8 +2407,9 @@
               (:ok credentials) credentials
               (:err _) (raise |Invalid-credentials)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn Input
             -> $ List String
+            :generics Input
         'dispatch! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn dispatch! (op sid)
             let
