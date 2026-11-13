@@ -1167,9 +1167,9 @@
             :tags $ #{} :component-state :unit
         'on-submit $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-submit (username password signup?)
-            fn (e dispatch!)
-              hint-fn $ Fn (Map Tag Dynamic)
-                Fn Dynamic $ -> Unit
+            fn (_event dispatch!)
+              hint-fn $ Fn respo.schema/RespoEvent
+                Fn schema/ClientOp $ -> Unit
                 -> Unit
               dispatch! $ if signup?
                 schema/ClientOp :user/sign-up $ [] username password
@@ -1179,8 +1179,8 @@
               , &unit
           :examples $ []
           :schema $ quote $ Fn String String Bool
-            -> $ Fn (Map Tag Dynamic)
-              Fn Dynamic $ -> Unit
+            -> $ Fn respo.schema/RespoEvent
+              Fn schema/ClientOp $ -> Unit
               -> Unit
             :features :js-ffi
           :tags $ #{} :js-ffi
@@ -1189,11 +1189,15 @@
               :code $ quote $ let
                   recorded $ ref |
                   deliver $ fn (op)
-                    hint-fn $ Fn Dynamic $ -> Unit
+                    hint-fn $ Fn schema/ClientOp $ -> Unit
                     reset! recorded $ format-cirru-edn op
                     , &unit
                   handler $ on-submit |fixture-user |fixture-password false
-                  result $ handler ({}) deliver
+                  event $
+                    fn ()
+                      hint-fn $ Fn (-> respo.schema/RespoEvent) (:features :js-ffi)
+                      respo.util.format/event->edn $ js-cast (new js/Event |click) 'respo.dom/DomEvent
+                  result $ handler event deliver
                 assert= &unit result
                 assert=
                   format-cirru-edn $ schema/ClientOp :user/log-in $ [] |fixture-user |fixture-password
@@ -1203,11 +1207,15 @@
               :code $ quote $ let
                   recorded $ ref |
                   deliver $ fn (op)
-                    hint-fn $ Fn Dynamic $ -> Unit
+                    hint-fn $ Fn schema/ClientOp $ -> Unit
                     reset! recorded $ format-cirru-edn op
                     , &unit
                   handler $ on-submit |fixture-user |fixture-password true
-                  result $ handler ({}) deliver
+                  event $
+                    fn ()
+                      hint-fn $ Fn (-> respo.schema/RespoEvent) (:features :js-ffi)
+                      respo.util.format/event->edn $ js-cast (new js/Event |click) 'respo.dom/DomEvent
+                  result $ handler event deliver
                 assert= &unit result
                 assert=
                   format-cirru-edn $ schema/ClientOp :user/sign-up $ [] |fixture-user |fixture-password
