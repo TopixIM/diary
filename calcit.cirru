@@ -316,8 +316,9 @@
                 _ $ Result :err :message-envelope
               Result :err :message-envelope
           :examples $ []
-          :schema $ quote $ Fn Dynamic Dynamic Bool
+          :schema $ quote $ Fn Dynamic Message Bool
             -> $ Result (Option schema/ClientSnapshot) Tag
+            :generics Message
           :tests $ []
             %{} 'TestEntry (:name |rejects-map)
               :code $ quote $ assert= (Result :err :message-envelope)
@@ -362,8 +363,9 @@
                             (:ok typed)
                               Result :ok $ schema/ClientSnapshot :raw next :store typed
           :examples $ []
-          :schema $ quote $ Fn Dynamic Dynamic Bool
+          :schema $ quote $ Fn Dynamic Changes Bool
             -> $ Result schema/ClientSnapshot Tag
+            :generics Changes
           :tests $ []
             %{} 'TestEntry (:name |retains-raw-and-decoded-state-across-patches)
               :code $ quote $ let
@@ -2574,8 +2576,9 @@
                 hint-fn $ Fn Tag Dynamic $ -> (MapEntryDecision Tag Dynamic)
                 if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn Input
             -> $ Map Tag Dynamic
+            :generics Input
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
