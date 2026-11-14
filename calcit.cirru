@@ -96,7 +96,7 @@
             dispatch! $ app.schema/decode-client-dispatch-op op
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Input (-> Unit) (:generics Input) (:features :js-ffi)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -2215,7 +2215,7 @@
                     raise |Expected-nominal-client-operation
               raise |Expected-client-operation
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> ClientOp)
+          :schema $ quote $ Fn Input (-> ClientOp) (:generics Input)
           :tests $ []
             %{} 'TestEntry (:name |nominal-operation-preserves-payload)
               :code $ quote $ let
