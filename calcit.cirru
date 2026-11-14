@@ -2576,8 +2576,9 @@
                 hint-fn $ Fn Tag Dynamic $ -> (MapEntryDecision Tag Dynamic)
                 if (nil? item) (MapEntryDecision :drop) (MapEntryDecision :keep field item)
           :examples $ []
-          :schema $ quote $ Fn Dynamic
+          :schema $ quote $ Fn Input
             -> $ Map Tag Dynamic
+            :generics Input
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
