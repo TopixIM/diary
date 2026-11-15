@@ -2991,8 +2991,9 @@
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ quote $ Fn Dynamic String
+          :schema $ quote $ Fn Input String
             -> $ Map String Dynamic
+            :generics Input
         'format-stored-db $ %{} 'CodeEntry
           :doc "|Serialize the typed database without transient sessions."
           :code $ quote $ defn format-stored-db (db)
@@ -3087,8 +3088,9 @@
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ quote $ Fn Dynamic String
+          :schema $ quote $ Fn Input String
             -> $ Map Tag Dynamic
+            :generics Input
         'parse-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-stored-db (text)
             match (parse-stored-db-with-format text)
@@ -3159,7 +3161,7 @@
               (:none)
                 raise $ str path "|: missing field"
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) Tag String (-> Dynamic)
+          :schema $ quote $ Fn (Map Tag V) Tag String (-> V) (:generics V)
         'try-parse-stored-db-with-format $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-parse-stored-db-with-format (text)
             try
