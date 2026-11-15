@@ -2991,8 +2991,9 @@
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ quote $ Fn Dynamic String
+          :schema $ quote $ Fn Input String
             -> $ Map String Dynamic
+            :generics Input
         'format-stored-db $ %{} 'CodeEntry
           :doc "|Serialize the typed database without transient sessions."
           :code $ quote $ defn format-stored-db (db)
@@ -3087,8 +3088,9 @@
               (:err reason)
                 raise $ str path "|: " reason
           :examples $ []
-          :schema $ quote $ Fn Dynamic String
+          :schema $ quote $ Fn Input String
             -> $ Map Tag Dynamic
+            :generics Input
         'parse-stored-db $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn parse-stored-db (text)
             match (parse-stored-db-with-format text)
@@ -3159,7 +3161,7 @@
               (:none)
                 raise $ str path "|: missing field"
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) Tag String (-> Dynamic)
+          :schema $ quote $ Fn (Map Tag V) Tag String (-> V) (:generics V)
         'try-parse-stored-db-with-format $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn try-parse-stored-db-with-format (text)
             try
@@ -3273,6 +3275,47 @@
             respo-ui.core :as ui
     'app.twig.container $ %{} 'FileEntry
       :defs $ {}
+        'PersonalField $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion PersonalField String (Option PersonalScalar)
+          :examples $ []
+          :schema $ quote UnionDef
+        'PersonalScalar $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defunion PersonalScalar String Number
+          :examples $ []
+          :schema $ quote UnionDef
+        'personal-fields $ %{} 'CodeEntry (:doc |)
+          :code $ quote $ defn personal-fields (diary)
+            {}
+              :mood $ :mood diary
+              :highlight $ :highlight diary
+              :food $ :food diary
+              :sleep $ :sleep diary
+              :met $ :met diary
+              :exercise $ :exercise diary
+              :place $ :place diary
+              :date $ :date diary
+              :time $ :time diary
+          :examples $ []
+          :schema $ quote $ Fn schema/Diary
+            -> $ Map Tag PersonalField
+          :tests $ [] $ %{} 'TestEntry (:name |preserves-wire-fields-and-options)
+            :code $ quote $ let
+                entry $ struct-with schema/diary (:mood |calm) (:food |rice) (:text |private-body) (:pains |private-pains)
+                  :date $ Some |2026-09-29
+                  :time $ Some 123
+                projected $ personal-fields entry
+                blank $ personal-fields schema/diary
+              assert= |calm $ .unwrap $ get projected :mood
+              assert= |rice $ .unwrap $ get projected :food
+              assert= (Some |2026-09-29)
+                .unwrap $ get projected :date
+              assert= (Some 123)
+                .unwrap $ get projected :time
+              assert= None $ .unwrap $ get blank :date
+              assert= None $ .unwrap $ get blank :time
+              assert= false $ .contains-key? projected :text
+              assert= false $ .contains-key? projected :pains
+            :tags $ #{} :regression
         'twig-container $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-container (db session reel-length)
             let
@@ -3476,22 +3519,13 @@
           :code $ quote $ defn twig-personal-data (diaries) (filter-map-kv diaries twig-personal-entry)
           :examples $ []
           :schema $ quote $ Fn (Map String schema/Diary)
-            -> $ Map String $ Map Tag Dynamic
+            -> $ Map String $ Map Tag PersonalField
         'twig-personal-entry $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn twig-personal-entry (date diary)
-            MapEntryDecision :keep date $ {}
-              :mood $ :mood diary
-              :highlight $ :highlight diary
-              :food $ :food diary
-              :sleep $ :sleep diary
-              :met $ :met diary
-              :exercise $ :exercise diary
-              :place $ :place diary
-              :date $ :date diary
-              :time $ :time diary
+            MapEntryDecision :keep date $ personal-fields diary
           :examples $ []
           :schema $ quote $ Fn String schema/Diary
-            -> $ MapEntryDecision String $ Map Tag Dynamic
+            -> $ MapEntryDecision String $ Map Tag PersonalField
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.twig.container
           :require
