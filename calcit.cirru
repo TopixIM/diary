@@ -64,7 +64,7 @@
                     reject-server-data! :wire
               , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'current-hour! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn current-hour! ()
             let
@@ -88,7 +88,7 @@
               _ $ ws-send! $ to-server-op op
             , &unit
           :examples $ []
-          :schema $ quote $ Fn schema/ClientOp (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn schema/ClientOp (-> Unit) (:features :io :js-ffi :state)
           :tags $ #{} :js-ffi
         'dispatch-host! $ %{} 'CodeEntry
           :doc "|在宿主（JS）边界把未检查的 op 解码为 ClientOp 后分发；Respo 渲染直接使用带类型的 dispatch!。"
@@ -96,7 +96,7 @@
             dispatch! $ app.schema/decode-client-dispatch-op op
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Input (-> Unit) (:generics Input) (:features :js-ffi)
+          :schema $ quote $ Fn Input (-> Unit) (:generics Input) (:features :io :js-ffi :state)
         'main! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn main! ()
             println "|Running mode:" $ if config/dev? |dev |release
@@ -125,7 +125,7 @@
             println "|App started!"
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'mount-target $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn mount-target ()
             unsafe-coerce (js/document.querySelector |.app) (JsNullish respo.dom/DomElement)
@@ -149,14 +149,14 @@
                 (:err stage) (reject-server-data! stage)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Dynamic (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Dynamic (-> Unit) (:features :io :js-ffi :state)
           :tags $ #{} :js-ffi
         'reject-server-data! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reject-server-data! (stage) (js/console.warn |Client-sync-rejected stage) (reset! *awaiting-snapshot? true)
             when (not @*resync-attempted?) (reset! *resync-attempted? true) (connect!)
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Tag (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn Tag (-> Unit) (:features :io :js-ffi :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! ()
             if
@@ -172,7 +172,7 @@
                 hud! |ok~ |Ok
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'render-app! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-app! ()
             let
@@ -183,7 +183,7 @@
                 store $ deref *store
               render! (mount-target) (comp-container states store) dispatch!
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'simulate-login! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn simulate-login! ()
             match
@@ -202,7 +202,7 @@
               (:none) (println "|Found no storage.")
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit) (:features :js-ffi)
+          :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
         'store-snapshot $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn store-snapshot (state)
             match state
@@ -663,7 +663,7 @@
                       respo.core/show dev? $ comp-reel (:reel-length store-typed) ({})
               , |comp-container
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.client/StorePayload (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Tag Dynamic) app.client/StorePayload (-> respo.schema/Component) (:features :io :js-ffi :state)
         'comp-offline $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-offline (state)
             div
@@ -885,7 +885,7 @@
                       d! $ app.schema/ClientOp :states cursor $ assoc state :text
                         decode-map-as (:value e) 'String
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo schema/Diary (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo schema/Diary (-> respo.schema/Component) (:features :io :js-ffi :state)
           :tags $ #{} :js-ffi
         'comp-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-guide (text)
@@ -1033,7 +1033,7 @@
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :pains :date date :data data
                   .render plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) schema/Diary String (-> respo.schema/Component)
+          :schema $ quote $ Fn (Map Tag Dynamic) schema/Diary String (-> respo.schema/Component) (:features :io :state)
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
             {} $ |$0 $ {}
@@ -2402,7 +2402,7 @@
                 dispatch! (:: :today today) -1
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'decode-credentials $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn decode-credentials (raw)
             match (schema/try-decode-credentials raw)
@@ -2425,7 +2425,7 @@
                 _ $ reset! *reel $ reel-reducer @*reel updater op sid op-id op-time config/dev?
               , &unit
           :examples $ []
-          :schema $ quote $ Fn schema/Op Number (-> Unit)
+          :schema $ quote $ Fn schema/Op Number (-> Unit) (:features :io :state)
         'get-backup-path! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn get-backup-path! ()
             let
@@ -2449,7 +2449,7 @@
                 (:err reason)
                   raise $ str |Invalid-stored-database:- reason
           :examples $ []
-          :schema $ quote $ Fn String (-> schema/Database)
+          :schema $ quote $ Fn String (-> schema/Database) (:features :io)
           :tests $ []
             %{} 'TestEntry
               :name |invalid-input-preserves-storage-and-existing-backup
@@ -2547,7 +2547,7 @@
             set-interval 37000 $ fn () $ check-today!
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'migrate-storage! $ %{} 'CodeEntry
           :doc "|Back up legacy text, validate a typed temporary file, then atomically replace storage."
           :code $ quote $ defn migrate-storage! (path legacy-text db)
@@ -2564,7 +2564,7 @@
               println $ str "|Migrated storage to typed data; legacy backup: " backup-file
               , &unit
           :examples $ []
-          :schema $ quote $ Fn String String schema/Database (-> Unit)
+          :schema $ quote $ Fn String String schema/Database (-> Unit) (:features :io)
         'normalize-client-payload $ %{} 'CodeEntry
           :doc "|Convert a nominal legacy operation payload to a map without unbounded recursion. Legacy clients sent nil for absent optional fields; those entries are dropped so the decoder fills `Option :none`."
           :code $ quote $ defn normalize-client-payload (value)
@@ -2582,7 +2582,7 @@
         'on-exit! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn on-exit! () (persist-db!) (; println "|exit code is...") (quit! 0)
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'parse-client-op $ %{} 'CodeEntry
           :doc "|Accept nominal operations and legacy map payloads from JS clients."
           :code $ quote $ defn parse-client-op (text)
@@ -2838,7 +2838,7 @@
               check-write-file! backup-path file-content
               , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :state)
         'reload! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn reload! () (println "|Code updated..")
             if (not config/dev?) (raise "|reloading only happens in dev mode")
@@ -2846,7 +2846,7 @@
             reset! *reel $ refresh-reel @*reel @*initial-db updater-from-record
             sync-clients! @*reader-reel
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :io :state)
         'render-loop! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn render-loop! ()
             when
@@ -2855,7 +2855,7 @@
               sync-clients! @*reader-reel
             , &unit
           :examples $ []
-          :schema $ quote $ Fn (-> Unit)
+          :schema $ quote $ Fn (-> Unit) (:features :state)
         'run-server! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn run-server! (port)
             wss-serve! (&{} :port port)
@@ -2876,7 +2876,7 @@
                 , &unit
             , &unit
           :examples $ []
-          :schema $ quote $ Fn Number (-> Unit)
+          :schema $ quote $ Fn Number (-> Unit) (:features :io :state)
         'storage-file $ %{} 'CodeEntry (:doc |)
           :code $ quote $ def storage-file
             if (empty? calcit-dirname)
@@ -2909,7 +2909,7 @@
                       swap! *client-caches assoc sid new-store
                 , &unit
           :examples $ []
-          :schema $ quote $ Fn (cumulo-reel.core/ReelState schema/Database) (-> Unit)
+          :schema $ quote $ Fn (cumulo-reel.core/ReelState schema/Database) (-> Unit) (:features :state)
           :tests $ [] $ %{} 'TestEntry (:name |empty-client-sync-returns-unit)
             :code $ quote $ let
                 before @*client-caches
@@ -2921,7 +2921,7 @@
           :code $ quote $ defn updater-from-record (db op sid op-id op-time)
             updater db (decode-map-as op 'app.schema/Op) (decode-map-as sid 'Number) (decode-map-as op-id 'String) (decode-map-as op-time 'Number)
           :examples $ []
-          :schema $ quote $ Fn schema/Database OpInput SidInput IdInput TimeInput (-> schema/Database) (:generics OpInput SidInput IdInput TimeInput)
+          :schema $ quote $ Fn schema/Database OpInput SidInput IdInput TimeInput (-> schema/Database) (:generics OpInput SidInput IdInput TimeInput) (:features :io)
         'validate-storage-migration $ %{} 'CodeEntry
           :doc "|Check the typed temporary file without changing storage, backups or the candidate."
           :code $ quote $ defn validate-storage-migration (path)
@@ -2931,7 +2931,7 @@
               (:err reason)
                 raise $ str "|Typed storage migration validation failed: " reason
           :examples $ []
-          :schema $ quote $ Fn String (-> Unit)
+          :schema $ quote $ Fn String (-> Unit) (:features :io)
           :tests $ [] $ %{} 'TestEntry
             :name |invalid-candidate-is-retained-with-original-and-backup
             :code $ quote $ let
@@ -3575,7 +3575,7 @@
               (:today date-info) (diary/set-today db date-info sid op-id op-time)
               _ $ do (eprintln "|Unknown op:" op) db
           :examples $ []
-          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database)
+          :schema $ quote $ Fn schema/Database schema/Op Number String Number (-> schema/Database) (:features :io)
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.updater
           :require (app.updater.session :as session) (app.updater.user :as user) (app.updater.router :as router) (app.updater.diary :as diary) (app.schema :as schema)
