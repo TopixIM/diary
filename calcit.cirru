@@ -3267,7 +3267,7 @@
               :color $ hsl 240 80 80
               :font-family ui/font-fancy
           :examples $ []
-          :schema $ quote Dynamic
+          :schema $ quote $ Map Tag respo.schema/CssValue
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.style
           :require
