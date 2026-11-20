@@ -11,6 +11,7 @@ Preview http://diary.topix.im
 https://github.com/Cumulo/calcium-workflow/
 
 项目配对使用正式 Calcit / @calcit/procs `0.44.0`，默认入口为 browser JS，server 为 native。升级后请按锁文件重装依赖并重新编译；部署前需备份存档，并确认服务端使用配套工具链和 native 模块。
+标准库 0.2.58 与 Calcit 0.44.0 配对，服务端须为目标架构构建 native 库。
 Calcit 模块版本以 `deps.cirru` 为准，npm runtime 以 `package.json` 和 `yarn.lock` 为准。
 安装使用 `caps --ci`、`yarn install --immutable` 和 `caps verify --toolchain`，不替换模块缓存中的源码。
 CI 依次执行完整 strict workflow、格式与入口检查、公开定义检查、项目边界测试和前端构建。
