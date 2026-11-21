@@ -1458,8 +1458,8 @@
                       a
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/ClientOp $ -> Unit
                               -> Unit
                             on-change-month! cursor -1 d!
                         comp-i :chevron-left 16 $ hsl 200 80 70
@@ -1467,8 +1467,8 @@
                       a
                         {} (:class-name css-month-switch)
                           :on-click $ fn (e d!)
-                            hint-fn $ Fn (Map Tag Dynamic)
-                              Fn Dynamic & Dynamic $ -> Unit
+                            hint-fn $ Fn respo.schema/RespoEvent
+                              Fn app.schema/ClientOp $ -> Unit
                               -> Unit
                             on-change-month! cursor 1 d!
                         comp-i :chevron-right 16 $ hsl 200 80 70
