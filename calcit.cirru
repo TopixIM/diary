@@ -51,17 +51,16 @@
             let
                 host $ unsafe-coerce js/location.hostname String
                 port $ config/site :port
-              ws-connect!
+                opened $ fn (event) (simulate-login!) &unit
+                closed $ fn (event) (reset! *awaiting-snapshot? true)
+                  reset! *store $ StorePayload :offline $ store-snapshot @*store
+                  js/console.error "|Lost connection!"
+                  , &unit
+                failed $ fn (error) (reject-server-data! :wire) &unit
+              ws-edn.client/ws-connect-typed!
                 if config/dev? (str |ws:// host |: port) |wss://diary.chenyong.life/ws
-                {}
-                  :on-open $ fn (event) (simulate-login!)
-                  :on-close $ fn (event) (reset! *awaiting-snapshot? true)
-                    reset! *store $ StorePayload :offline $ store-snapshot @*store
-                    js/console.error "|Lost connection!"
-                  :on-data on-server-data
-                  :on-error $ fn (_error)
-                    hint-fn $ Fn Dynamic $ -> Unit
-                    reject-server-data! :wire
+                ws-edn.client/ClientConfig :retry-base-ms None :retry-max-ms None :retry-jitter None :heartbeat-timeout-ms None :class-mapper $ {}
+                ws-edn.client/ClientCallbacks :on-open (Some opened) :on-close (Some closed) :on-error (Some failed) :on-data $ Some on-server-data
               , &unit
           :examples $ []
           :schema $ quote $ Fn (-> Unit) (:features :io :js-ffi :state)
