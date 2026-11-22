@@ -49,7 +49,8 @@
         'connect! $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defn connect! () (reset! *awaiting-snapshot? true)
             let
-                host $ unsafe-coerce js/location.hostname String
+                location $ browser/location-host
+                host $ location :hostname
                 port $ config/site :port
                 opened $ fn (event) (simulate-login!) &unit
                 closed $ fn (event) (reset! *awaiting-snapshot? true)
