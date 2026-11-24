@@ -772,7 +772,7 @@
                     copy! $ format-cirru-edn $ &map:to-list diaries
                     , &unit
           :examples $ []
-          :schema $ quote $ Fn (Map String Dynamic) (-> respo.schema/Component) (:features :js-ffi)
+          :schema $ quote $ Fn (Map String V) (-> respo.schema/Component) (:generics V) (:features :js-ffi)
           :tags $ #{} :js-ffi
       :ns $ %{} 'NsEntry (:doc |)
         :code $ quote $ ns app.comp.data-gather
@@ -885,7 +885,7 @@
                       d! $ app.schema/ClientOp :states cursor $ assoc state :text
                         decode-map-as (:value e) 'String
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) app.util/DateInfo schema/Diary (-> respo.schema/Component) (:features :io :js-ffi :state)
+          :schema $ quote $ Fn (Map Tag V) app.util/DateInfo schema/Diary (-> respo.schema/Component) (:generics V) (:features :io :js-ffi :state)
           :tags $ #{} :js-ffi
         'comp-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defcomp comp-guide (text)
@@ -1033,7 +1033,7 @@
                         d! $ app.schema/ClientOp :diary/change $ app.schema/DiaryChange :field :pains :date date :data data
                   .render plugin
           :examples $ []
-          :schema $ quote $ Fn (Map Tag Dynamic) schema/Diary String (-> respo.schema/Component) (:features :io :state)
+          :schema $ quote $ Fn (Map Tag V) schema/Diary String (-> respo.schema/Component) (:generics V) (:features :io :state)
         'css-guide $ %{} 'CodeEntry (:doc |)
           :code $ quote $ defstyle css-guide
             {} $ |$0 $ {}
